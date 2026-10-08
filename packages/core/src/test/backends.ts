@@ -26,7 +26,7 @@ export const storageBackends: StorageBackend[] = [
   {
     name: "NodeFsStorage",
     create: async () => {
-      const root = await mkdtemp(join(tmpdir(), "betternotes-core-"));
+      const root = await mkdtemp(join(tmpdir(), "betternotez-core-"));
       return {
         open: () => new NodeFsStorage(root),
         cleanup: () => rm(root, { recursive: true, force: true }),
