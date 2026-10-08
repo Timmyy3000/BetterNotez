@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 import { InvalidError, NotFoundError } from "./errors.js";
+import { AnnotationId } from "./ids.js";
 import { Library } from "./library.js";
 import { CLOCK, decodeText, pdfBytes, storageBackends, type StorageEnv } from "./test/backends.js";
 
@@ -313,6 +314,46 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
 
       expect(await library.listAnnotations(lecture.id)).toEqual([]);
       await expect(library.removeAnnotation(lecture.id, box.id)).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it("writes a whole annotation under its id, replacing the stored one or adding it", async () => {
+      const lecture = await importSampleLecture();
+      const box = {
+        id: AnnotationId.parse("01TEXTBOX00000000000000000"),
+        kind: "text" as const,
+        page: 1,
+        author: "user" as const,
+        x: 0.1,
+        y: 0.1,
+        width: 0.2,
+        height: 0.05,
+        text: "first",
+        fontSize: 12,
+        color: "#000000",
+      };
+
+      await library.setAnnotation(lecture.id, box);
+      expect(await library.listAnnotations(lecture.id)).toEqual([box]);
+
+      await library.setAnnotation(lecture.id, { ...box, text: "second", page: 3 });
+      expect(await library.listAnnotations(lecture.id)).toEqual([{ ...box, text: "second", page: 3 }]);
+      await expect(library.setAnnotation(lecture.id, { ...box, page: 4 })).rejects.toBeInstanceOf(InvalidError);
+    });
+
+    it("keeps the opacity of a translucent stroke", async () => {
+      const lecture = await importSampleLecture();
+      const stroke = await library.addAnnotation(lecture.id, {
+        kind: "ink",
+        page: 1,
+        author: "user",
+        points: [[0.1, 0.1, 0.5]],
+        color: "#eab308",
+        size: 10,
+        opacity: 0.35,
+      });
+
+      expect(await library.listAnnotations(lecture.id)).toEqual([stroke]);
+      expect(stroke).toMatchObject({ opacity: 0.35 });
     });
 
     it("keeps annotations when the library is opened again", async () => {

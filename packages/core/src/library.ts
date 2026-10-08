@@ -265,6 +265,22 @@ export class Library {
     return annotation;
   }
 
+  /** Writes a whole annotation under its own id, replacing the stored one or adding it. */
+  async setAnnotation(lectureId: string, annotation: Annotation): Promise<Annotation> {
+    const { lecture, dir } = await this.locateLecture(lectureId);
+    const next = Annotation.parse(annotation);
+    assertPageInRange(next.page, lecture.pageCount);
+    const annotations = await this.readAnnotations(dir);
+    const stored = annotations.some((existing) => existing.id === next.id);
+    await this.writeJson(
+      `${dir}/annotations.json`,
+      stored
+        ? annotations.map((existing) => (existing.id === next.id ? next : existing))
+        : [...annotations, next],
+    );
+    return next;
+  }
+
   async updateAnnotation(
     lectureId: string,
     annotationId: string,
