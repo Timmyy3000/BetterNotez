@@ -17,6 +17,7 @@ npm run build
 
 - `packages/core`: domain types, storage interface, and library operations (`@betternotez/core`).
 - `packages/mcp`: local MCP server that lets an AI assistant read and edit a library, without deleting (`@betternotez/mcp`).
+- `apps/app`: the web and desktop shell (`@betternotez/app`). Run `npm run dev` to start it. `npm run test:e2e` builds it and runs the Playwright journeys in `apps/app/e2e`.
 
 ## License
 
