@@ -6,7 +6,7 @@ import { TauriFsStorage } from "./tauri";
 /** The desktop app keeps the library in a folder on disk. The web app keeps it in IndexedDB. */
 export async function createStorage(): Promise<Storage> {
   if ("__TAURI_INTERNALS__" in window) {
-    return new TauriFsStorage(await join(await homeDir(), "BetterNotes Library"));
+    return new TauriFsStorage(await join(await homeDir(), "BetterNotez Library"));
   }
   return new IndexedDbStorage();
 }
