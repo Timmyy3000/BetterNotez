@@ -7,6 +7,7 @@ import { Link, useSearchParams } from "react-router";
 import { useStore } from "zustand";
 import { useLibrary } from "../library";
 import { errorMessage } from "../lib/errors";
+import { savePdf } from "../lib/save-pdf";
 import { Button, iconButtonClass } from "../ui/button";
 import { commitTextEdit, createAnnotationStore } from "./annotation-store";
 import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type Tool } from "./editor";
@@ -121,7 +122,7 @@ export function LectureView({
   async function exportPdf() {
     try {
       const bytes = await exportAnnotatedPdf(pdfBytes, store.getState().annotations);
-      saveFile(bytes, `${fileName(lecture.title)}.pdf`);
+      await savePdf(bytes, `${fileName(lecture.title)}.pdf`);
     } catch (error) {
       toast.error(`The PDF could not be exported. ${errorMessage(error)}`);
     }
@@ -194,13 +195,4 @@ function parsePage(value: string | null, pageCount: number): number {
 
 function fileName(title: string): string {
   return title.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Lecture";
-}
-
-function saveFile(bytes: Uint8Array, name: string): void {
-  const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "application/pdf" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

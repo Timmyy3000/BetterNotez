@@ -1,0 +1,19 @@
+[package]
+name = "betternotez"
+version = "0.1.0"
+description = "A free, open-source study app for lecture PDFs."
+edition = "2021"
+license = "AGPL-3.0-only"
+repository = "https://github.com/Timmyy3000/BetterNotez"
+
+[lib]
+name = "betternotez_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = { version = "2", features = ["watch"] }

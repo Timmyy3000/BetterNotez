@@ -8,3 +8,4 @@ target/
 test-results/
 playwright-report/
 *.tsbuildinfo
+apps/app/src-tauri/gen/
