@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run bundle -w @betternotez/mcp
+      - run: npm run test:bundle -w @betternotez/mcp
 
   desktop-check:
     runs-on: ubuntu-22.04

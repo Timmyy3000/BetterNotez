@@ -4,17 +4,27 @@ A local MCP server that lets an AI assistant read and update a BetterNotez libra
 
 The assistant can create and edit everything. It cannot delete anything. Deletes happen only in the app.
 
-## Run it
+## Install it
 
-Requires Node.js 22 or newer.
+Download `betternotez-mcp.mjs` from the [latest release](https://github.com/Timmyy3000/BetterNotez/releases/latest) into a folder you will keep. It is one self-contained file, so there is nothing to install beside it. It needs Node.js 22 or newer.
 
 ```sh
-npm install
-npm run build
-node packages/mcp/dist/index.js --library "/path/to/BetterNotez Library"
+node /path/to/betternotez-mcp.mjs --library "/path/to/BetterNotez Library"
 ```
 
 The server talks over stdio, so running it by hand only shows that it starts. Connect it to an assistant using one of the snippets below.
+
+## Build from source
+
+For contributors. Requires Node.js 22 or newer.
+
+```sh
+npm install
+npm run build         # compiled modules in dist/
+npm run bundle        # single file, dist/betternotez-mcp.mjs, the same file as the release
+npm run test:bundle   # runs that file alone, in a folder with no node_modules
+node dist/index.js --library "/path/to/BetterNotez Library"
+```
 
 ### Choosing the library folder
 
@@ -35,11 +45,7 @@ Add this to `claude_desktop_config.json`, then restart Claude Desktop:
   "mcpServers": {
     "betternotez": {
       "command": "node",
-      "args": [
-        "/absolute/path/to/BetterNotez/packages/mcp/dist/index.js",
-        "--library",
-        "/absolute/path/to/BetterNotez Library"
-      ]
+      "args": ["/absolute/path/to/betternotez-mcp.mjs"]
     }
   }
 }
@@ -48,8 +54,10 @@ Add this to `claude_desktop_config.json`, then restart Claude Desktop:
 ## Connect Claude Code
 
 ```sh
-claude mcp add betternotez -- node /absolute/path/to/BetterNotez/packages/mcp/dist/index.js --library "/absolute/path/to/BetterNotez Library"
+claude mcp add betternotez -- node /absolute/path/to/betternotez-mcp.mjs
 ```
+
+From a source checkout, use `packages/mcp/dist/index.js` in place of `betternotez-mcp.mjs`.
 
 ## Tools
 
