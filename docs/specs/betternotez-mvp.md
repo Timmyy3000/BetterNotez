@@ -1,4 +1,4 @@
-# BetterNotes MVP
+# BetterNotez MVP
 
 ## Status
 
@@ -27,7 +27,7 @@ A free, fully open-source, Goodnotes-style study app with a sleek, minimalist, r
 1. As a student, I create a folder per subject and add lecture PDFs, optionally tagging each with a lecture date.
 2. As a student, I open a lecture PDF and write, type, draw diagrams, and add notes on its pages.
 3. As a student, I keep a notepad attached to each lecture.
-4. As a student, I connect Claude and say "Let's talk about Lecture 1 in Digital Systems in BetterNotes"; it reads that lecture and can update my content.
+4. As a student, I connect Claude and say "Let's talk about Lecture 1 in Digital Systems in BetterNotez"; it reads that lecture and can update my content.
 5. As a student, I lay out my weekly timetable by adding subject cards to a calendar-like planner.
 6. As a student, I track study tasks on a simple task board.
 
@@ -120,7 +120,7 @@ A free, fully open-source, Goodnotes-style study app with a sleek, minimalist, r
 
 ### Assumptions
 
-- Students bring their own MCP-capable AI client (e.g., Claude). BetterNotes provides no AI model or API keys.
+- Students bring their own MCP-capable AI client (e.g., Claude). BetterNotez provides no AI model or API keys.
 - Desktop is the main target for MCP and local storage. The web build may have reduced capability.
 
 ## Open questions
@@ -130,7 +130,7 @@ None.
 
 ## Success measures
 
-- The founder uses BetterNotes for a full semester instead of Goodnotes.
+- The founder uses BetterNotez for a full semester instead of Goodnotes.
 - A new user can go from first launch to an annotated lecture in under 2 minutes.
 - Claude completes the journey "talk about Lecture N in Subject X" without manual file handling.
 
