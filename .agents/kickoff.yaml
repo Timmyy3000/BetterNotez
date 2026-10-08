@@ -1,0 +1,25 @@
+version: 2
+budget: medium (high)
+implementation_delegation_default: always
+roles:
+  t3:
+    planning: claudeAgent/claude-haiku-5-5 (high)
+    plan review: [claudeAgent/claude-haiku-5-5 (high)]
+    code review: inherit-parent
+    feature, refactoring: claudeAgent/claude-haiku-5-5 (high)
+    bug-fix: claudeAgent/claude-haiku-5-5 (high)
+    perf-issue: claudeAgent/claude-haiku-5-5 (high)
+    hillclimb: claudeAgent/claude-haiku-5-5 (high)
+    hardest tasks: claudeAgent/claude-haiku-5-5 (high)
+    judgment and prose: claudeAgent/claude-haiku-5-5 (high)
+    how explorer: claudeAgent/claude-haiku-5-5 (high)
+    how explainer: claudeAgent/claude-haiku-5-5 (high)
+    why investigators: claudeAgent/claude-haiku-5-5 (high)
+    why synthesizer: claudeAgent/claude-haiku-5-5 (high)
+    reflect tooling: claudeAgent/claude-haiku-5-5 (high)
+    reflect judgment, divergent, synthesizer: claudeAgent/claude-haiku-5-5 (high)
+    arena runners: [claudeAgent/claude-haiku-5-5 (high)]
+    arena cross-judge pool: [claudeAgent/claude-haiku-5-5 (high)]
+    architect runners: [claudeAgent/claude-haiku-5-5 (high)]
+    interrogate reviewers: [claudeAgent/claude-haiku-5-5 (high)]
+    swarm workers: claudeAgent/claude-haiku-5-5 (high)
