@@ -61,6 +61,7 @@ Coordinates on a page are normalized from 0 to 1, with the origin at the top-lef
 | `create_subject` | Create a subject with `name` and optional `color`. |
 | `update_subject` | Change `subjectId` with optional `name` or `color`. |
 | `list_lectures` | List lectures, optionally for one `subjectId`. |
+| `import_lecture` | Import a PDF from an absolute `pdfPath` on the student's computer into `subjectId`. Copies the PDF into the library and caches its text. Takes optional `title` (defaults to the file name) and `date`. |
 | `find_lecture` | Rank lectures for a phrase such as "Lecture 1 in Digital Systems". |
 | `get_lecture` | Return a lecture with its notes, annotations, and whether its PDF text is cached. |
 | `get_lecture_text` | Return PDF text per page, with optional `fromPage` and `toPage`. |
@@ -76,12 +77,14 @@ Coordinates on a page are normalized from 0 to 1, with the origin at the top-lef
 | `create_planner_card` | Add a subject card for `day` (0 is Monday), `start`, and `end`. |
 | `update_planner_card` | Move or edit a card by `cardId`. |
 | `search` | Search subject names, lecture titles, notepads, text boxes, and PDF text. |
+| `request_deletion` | Explain to the student how to delete something in the app. Nothing is deleted. Takes `what`. |
 
 Every annotation the assistant creates has author `ai`. Annotations the student made keep their author when the assistant edits them.
 
 ## Notes
 
-- The assistant cannot delete. A delete request gets an error result that says the tool is not found.
+- The assistant cannot delete. Calling a tool named `delete_*` or `remove_*` gets an error result that says the tool is not found. For a deletion request, `request_deletion` replies that nothing was deleted and that the student can delete it in the app.
+- `import_lecture` cannot read password-protected or corrupt PDFs. It says why and imports nothing.
 - Tool calls run one at a time, so overlapping requests cannot drop each other's writes.
-- PDF text is only available after the student opens the lecture once in the app. Until then, `get_lecture_text` says so.
+- PDF text is cached when a lecture is imported with `import_lecture`, or when the student opens it in the app. Until then, `get_lecture_text` says so.
 - The app and this server both write the same folder. Writes are atomic per file, but the server does not lock against the app.

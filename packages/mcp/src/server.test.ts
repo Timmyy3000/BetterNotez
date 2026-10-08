@@ -1,15 +1,18 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { type Lecture, Library, type Subject } from "@betternotez/core";
 import { NodeFsStorage } from "@betternotez/core/node";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createServer } from "./server.js";
 
 const PDF = new TextEncoder().encode("%PDF-1.7\n%%EOF\n");
+const LOCKED_PDF = fileURLToPath(new URL("./fixtures/locked-lecture.pdf", import.meta.url));
 
 let root: string;
 let library: Library;
@@ -58,11 +61,33 @@ async function seedLecture(): Promise<{ subject: Subject; lecture: Lecture }> {
   return { subject, lecture };
 }
 
-describe("tool surface", () => {
-  it("offers the read, create, and edit tools and no delete or remove tool", async () => {
-    const { tools } = await client.listTools();
+async function makePdf(pages: string[]): Promise<Uint8Array> {
+  const document = await PDFDocument.create();
+  const font = await document.embedFont(StandardFonts.Helvetica);
+  for (const text of pages) {
+    document.addPage([300, 200]).drawText(text, { x: 20, y: 100, size: 18, font });
+  }
+  return document.save();
+}
 
-    expect(tools.map((tool) => tool.name).sort()).toEqual([
+async function snapshotFiles(dir: string): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  for (const name of await readdir(dir, { recursive: true })) {
+    const path = join(dir, name);
+    if ((await stat(path)).isFile()) {
+      files[name] = (await readFile(path)).toString("base64");
+    }
+  }
+  return files;
+}
+
+describe("tool surface", () => {
+  it("offers the read, create, and edit tools and no tool that deletes or removes", async () => {
+    const { tools } = await client.listTools();
+    const names = tools.map((tool) => tool.name);
+
+    expect(names.filter((name) => /^(delete|remove)_/.test(name))).toEqual([]);
+    expect(names.sort()).toEqual([
       "add_ink",
       "add_text_box",
       "create_planner_card",
@@ -71,10 +96,12 @@ describe("tool surface", () => {
       "find_lecture",
       "get_lecture",
       "get_lecture_text",
+      "import_lecture",
       "list_lectures",
       "list_planner",
       "list_subjects",
       "list_tasks",
+      "request_deletion",
       "search",
       "update_annotation",
       "update_lecture",
@@ -202,6 +229,128 @@ describe("Lecture 1 in Digital Systems", () => {
   });
 });
 
+describe("importing a lecture PDF", () => {
+  let inbox: string;
+
+  beforeEach(async () => {
+    inbox = await mkdtemp(join(tmpdir(), "betternotez-pdf-"));
+  });
+
+  afterEach(async () => {
+    await rm(inbox, { recursive: true, force: true });
+  });
+
+  it("copies the PDF into the library and caches each page's text", async () => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const source = await makePdf(["Cover page", "Gates and truth tables"]);
+    const pdfPath = join(inbox, "Lecture 1.pdf");
+    await writeFile(pdfPath, source);
+
+    const lecture = await callJson<Lecture>("import_lecture", { subjectId: subject.id, pdfPath });
+
+    expect(lecture).toMatchObject({ title: "Lecture 1", subjectId: subject.id, pageCount: 2 });
+    expect(await callJson<Lecture[]>("list_lectures", { subjectId: subject.id })).toEqual([lecture]);
+    expect(await library.getPdf(lecture.id)).toEqual(source);
+    expect(await callJson("get_lecture_text", { lectureId: lecture.id })).toEqual({
+      lectureId: lecture.id,
+      pages: [
+        { page: 1, text: "Cover page" },
+        { page: 2, text: "Gates and truth tables" },
+      ],
+    });
+  });
+
+  it("takes the title and date from the arguments", async () => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const pdfPath = join(inbox, "scan.pdf");
+    await writeFile(pdfPath, await makePdf(["Flip-flops"]));
+
+    const lecture = await callJson<Lecture>("import_lecture", {
+      subjectId: subject.id,
+      pdfPath,
+      title: "Week 3 review",
+      date: "2026-10-05",
+    });
+
+    expect(lecture).toMatchObject({ title: "Week 3 review", date: "2026-10-05", pageCount: 1 });
+  });
+
+  it("reports a file that does not exist", async () => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const pdfPath = join(inbox, "missing.pdf");
+
+    const result = await call("import_lecture", { subjectId: subject.id, pdfPath });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(`No file exists at ${pdfPath}.`);
+    expect(await callJson("list_lectures", {})).toEqual([]);
+  });
+
+  it.each([
+    ["a file that is not a PDF", "Just some notes."],
+    ["a corrupt PDF", "%PDF-1.4\n%garbage\n"],
+    ["an empty file", ""],
+  ])("refuses %s and imports nothing", async (_, contents) => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const pdfPath = join(inbox, "broken.pdf");
+    await writeFile(pdfPath, contents);
+
+    const result = await call("import_lecture", { subjectId: subject.id, pdfPath });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe("This file is not a valid PDF. It may be corrupt, or it may not be a PDF at all.");
+    expect(await callJson("list_lectures", {})).toEqual([]);
+  });
+
+  it("refuses a PDF with no pages", async () => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const pdfPath = join(inbox, "blank.pdf");
+    const pageTreeWithoutPages = [
+      "%PDF-1.4",
+      "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+      "2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj",
+      "trailer << /Root 1 0 R >>",
+      "%%EOF",
+      "",
+    ];
+    await writeFile(pdfPath, pageTreeWithoutPages.join("\n"));
+
+    const result = await call("import_lecture", { subjectId: subject.id, pdfPath });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe("This PDF has no pages.");
+    expect(await callJson("list_lectures", {})).toEqual([]);
+  });
+
+  it("explains that a password-protected PDF cannot be read", async () => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const pdfPath = join(inbox, "locked.pdf");
+    await copyFile(LOCKED_PDF, pdfPath);
+
+    const result = await call("import_lecture", { subjectId: subject.id, pdfPath });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(
+      "This PDF is password-protected, so BetterNotez cannot read it. Remove the password in another app, then import it again.",
+    );
+    expect(await callJson("list_lectures", {})).toEqual([]);
+  });
+
+  it("requires an absolute path", async () => {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+
+    const result = await call("import_lecture", { subjectId: subject.id, pdfPath: "Lecture 1.pdf" });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("must be an absolute path.");
+  });
+
+  it("reports a subject that does not exist and imports nothing", async () => {
+    const pdfPath = join(inbox, "Lecture 1.pdf");
+    await writeFile(pdfPath, await makePdf(["Gates"]));
+
+    const result = await call("import_lecture", { subjectId: "nope", pdfPath });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe("Subject not found: nope");
+    expect(await callJson("list_lectures", {})).toEqual([]);
+  });
+});
+
 describe("refusals and errors", () => {
   it.each(["delete_lecture", "delete_subject", "remove_annotation", "delete_task", "delete_planner_card"])(
     "refuses the AI attempt %s",
@@ -211,6 +360,19 @@ describe("refusals and errors", () => {
       expect(textOf(result)).toContain("not found");
     },
   );
+
+  it("explains that the student deletes in the app and changes nothing on disk", async () => {
+    await seedLecture();
+    const before = await snapshotFiles(root);
+
+    const result = await call("request_deletion", { what: "Lecture 1 in Digital Systems" });
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(textOf(result))).toEqual({
+      message:
+        'Nothing was deleted. BetterNotez does not let AI assistants delete anything. The student can delete "Lecture 1 in Digital Systems" in the BetterNotez app.',
+    });
+    expect(await snapshotFiles(root)).toEqual(before);
+  });
 
   it("reports a missing lecture by id", async () => {
     const result = await call("get_lecture", { lectureId: "nope" });
