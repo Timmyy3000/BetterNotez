@@ -69,8 +69,8 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await page.emulateMedia({ colorScheme: "light" });
 
   await page.getByRole("link", { name: /Karnaugh maps reduce expressions/ }).click();
-  await expect(page.getByRole("heading", { name: "Viewer coming soon" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Lecture 1 - Logic gates", exact: true })).toBeVisible();
+  await expect(page.getByText("Page 2 of 2")).toBeVisible();
 
   await page.getByRole("complementary").getByRole("link", { name: "Digital Systems" }).click();
   await page.getByRole("button", { name: "Actions for Lecture 1 - Logic gates" }).click();
