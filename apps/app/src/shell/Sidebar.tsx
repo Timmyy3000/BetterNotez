@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, ListChecks, Plus, Search } from "lucide-react";
+import { BookOpen, CalendarDays, Info, ListChecks, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink } from "react-router";
 import { useLibraryQuery } from "../library";
@@ -53,6 +53,13 @@ export function Sidebar() {
         </ul>
         {subjects.data?.length === 0 && <p className="px-3 text-sm text-muted-foreground">No subjects yet.</p>}
       </section>
+
+      <nav aria-label="Footer" className="flex flex-col gap-0.5">
+        <NavLink to="/about" className={({ isActive }) => navItemClass(isActive)}>
+          <Info />
+          About &amp; AI
+        </NavLink>
+      </nav>
 
       {creating && <SubjectDialog onClose={() => setCreating(false)} />}
     </aside>

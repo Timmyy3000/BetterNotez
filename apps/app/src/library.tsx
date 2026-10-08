@@ -1,28 +1,31 @@
 import { Library } from "@betternotez/core";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { errorMessage } from "./lib/errors";
+import { isDesktop } from "./lib/platform";
 import { createStorage } from "./storage";
+import { watchLibraryFolder } from "./storage/watch";
 import { notifyLibraryChanged, useAppStore } from "./store";
 
 const EXTERNAL_POLL_MS = 3000;
 
 /**
  * Reloads library reads while the calling page is open, so changes made outside the app (for
- * example by an AI through MCP) show up. Reloads on window focus and every few seconds while the
- * page is visible.
+ * example by an AI through MCP) show up. Reloads on window focus. On the web, and on the desktop
+ * when the folder cannot be watched, it also reloads every few seconds while the page is visible.
  */
 export function useLibraryRefresh(): void {
+  const watching = useAppStore((state) => state.watching);
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === "visible") notifyLibraryChanged();
     };
-    const timer = window.setInterval(refresh, EXTERNAL_POLL_MS);
+    const timer = watching ? undefined : window.setInterval(refresh, EXTERNAL_POLL_MS);
     window.addEventListener("focus", refresh);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("focus", refresh);
     };
-  }, []);
+  }, [watching]);
 }
 
 let opened: Promise<Library> | undefined;
@@ -41,6 +44,7 @@ const LibraryContext = createContext<Library | undefined>(undefined);
 
 export function LibraryProvider({ children }: { readonly children: ReactNode }) {
   const [state, setState] = useState<{ library?: Library; error?: unknown }>({});
+  const opened = state.library !== undefined;
 
   useEffect(() => {
     let mounted = true;
@@ -56,6 +60,31 @@ export function LibraryProvider({ children }: { readonly children: ReactNode }) 
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!opened || !isDesktop()) return;
+    let active = true;
+    let stopWatching: (() => void) | undefined;
+    watchLibraryFolder(notifyLibraryChanged).then(
+      (unwatch) => {
+        if (!active) {
+          unwatch();
+          return;
+        }
+        stopWatching = unwatch;
+        useAppStore.getState().setWatching(true);
+      },
+      (error: unknown) => {
+        // Without a watcher the pages fall back to polling, so the library still updates.
+        console.warn("The library folder could not be watched.", error);
+      },
+    );
+    return () => {
+      active = false;
+      stopWatching?.();
+      useAppStore.getState().setWatching(false);
+    };
+  }, [opened]);
 
   if (state.error !== undefined) {
     return (

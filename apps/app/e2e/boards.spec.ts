@@ -83,6 +83,59 @@ test("planner: add classes, drag one to another day, and keep the timetable afte
   expect(pageErrors).toEqual([]);
 });
 
+/** Adds a class on Tuesday through the dialog. */
+async function addTuesdayClass(page: Page, subject: string, start: string, end: string, location?: string): Promise<void> {
+  await page.getByRole("button", { name: /^Add (your first )?class$/ }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Add class" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Subject").selectOption(subject);
+  await dialog.getByLabel("Day").selectOption("Tuesday");
+  await dialog.getByLabel("Start").fill(start);
+  await dialog.getByLabel("End").fill(end);
+  if (location !== undefined) await dialog.getByLabel("Location").fill(location);
+  await dialog.getByRole("button", { name: "Add class" }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
+async function boxOf(locator: Locator): Promise<{ x: number; width: number }> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("Element is not on screen");
+  return box;
+}
+
+test("planner: overlapping classes stay inside their day and keep their details in a tooltip", async ({ page }) => {
+  mkdirSync(SHOTS, { recursive: true });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await createSubject(page, "Digital Systems");
+  await createSubject(page, "Linear Algebra");
+  await createSubject(page, "Physics Lab");
+  await page.getByRole("complementary").getByRole("link", { name: "Planner" }).click();
+
+  await addTuesdayClass(page, "Digital Systems", "09:00", "11:00", "Room B2");
+  await addTuesdayClass(page, "Linear Algebra", "09:30", "10:30");
+  await addTuesdayClass(page, "Physics Lab", "10:00", "12:00", "Lab 4");
+
+  const tuesday = page.getByRole("group", { name: "Tuesday" });
+  const cards = [
+    tuesday.getByRole("button", { name: /^Digital Systems, 09:00/ }),
+    tuesday.getByRole("button", { name: /^Linear Algebra, 09:30/ }),
+  ];
+  const physics = tuesday.getByRole("button", { name: /^Physics Lab, 10:00/ });
+  const column = await boxOf(tuesday);
+  for (const card of [...cards, physics]) {
+    const box = await boxOf(card);
+    expect(box.x).toBeGreaterThanOrEqual(column.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(column.x + column.width);
+    expect(box.width).toBeGreaterThanOrEqual(80);
+  }
+  await expect(physics).toHaveAttribute("title", "Physics Lab\n10:00–12:00\nLab 4");
+  await page.screenshot({ path: `${SHOTS}/planner-overlap.png`, animations: "disabled" });
+
+  expect(pageErrors).toEqual([]);
+});
+
 test("tasks: add tasks, move one to Doing, keep it after reload, and edit its due date", async ({ page }) => {
   mkdirSync(SHOTS, { recursive: true });
   const pageErrors: string[] = [];

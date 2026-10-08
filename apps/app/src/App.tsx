@@ -2,6 +2,7 @@ import { createHashRouter, RouterProvider } from "react-router";
 import { Toaster } from "sonner";
 import { LibraryProvider } from "./library";
 import { AppShell } from "./shell/AppShell";
+import { AboutPage } from "./pages/AboutPage";
 import { HomePage } from "./pages/HomePage";
 import { LecturePage } from "./pages/LecturePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -21,6 +22,7 @@ const router = createHashRouter([
       { path: "planner", element: <PlannerPage /> },
       { path: "tasks", element: <TasksPage /> },
       { path: "search", element: <SearchPage /> },
+      { path: "about", element: <AboutPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
