@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@betternotez/core": ["../core/src/index.ts"],
+      "@betternotez/core/node": ["../core/src/node.ts"]
+    }
+  },
+  "include": ["src", "vitest.config.ts"]
+}
