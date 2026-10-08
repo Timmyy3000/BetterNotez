@@ -1,0 +1,631 @@
+import { z } from "zod";
+import { InvalidError, NotFoundError } from "./errors.js";
+import { LectureId, SubjectId, newId, type AnnotationId } from "./ids.js";
+import {
+  Annotation,
+  type AnnotationDraft,
+  type Ink,
+  Lecture,
+  LibraryFile,
+  PlannerCard,
+  Subject,
+  Task,
+  TaskStatus,
+  type TextBox,
+} from "./model.js";
+import { type LectureMatch, matchSnippet, rankLectures } from "./query.js";
+import { type Storage } from "./storage.js";
+
+const DEFAULT_SUBJECT_COLOR = "#64748b";
+const PDF_HEADER = "%PDF-";
+const PDF_TEXT = z.array(z.string());
+
+export interface LibraryOptions {
+  readonly now?: () => Date;
+}
+
+export interface SubjectInput {
+  readonly name: string;
+  readonly color?: string;
+}
+
+export interface SubjectPatch {
+  readonly name?: string;
+  readonly color?: string;
+}
+
+export interface LecturePatch {
+  readonly title?: string;
+  readonly date?: string | null;
+}
+
+export type AnnotationPatch = Partial<Omit<TextBox, "id" | "kind">> | Partial<Omit<Ink, "id" | "kind">>;
+
+export interface PlannerCardInput {
+  readonly subjectId: string;
+  readonly day: number;
+  readonly start: string;
+  readonly end: string;
+  readonly location?: string;
+}
+
+export interface PlannerCardPatch {
+  readonly subjectId?: string;
+  readonly day?: number;
+  readonly start?: string;
+  readonly end?: string;
+  readonly location?: string | null;
+}
+
+export interface TaskInput {
+  readonly title: string;
+  readonly status?: TaskStatus;
+  readonly subjectId?: string;
+  readonly lectureId?: string;
+  readonly due?: string;
+}
+
+export interface TaskPatch {
+  readonly title?: string;
+  readonly status?: TaskStatus;
+  /** Sort key within the status column. A status change without `order` moves the task to the end. */
+  readonly order?: number;
+  readonly subjectId?: string | null;
+  readonly lectureId?: string | null;
+  readonly due?: string | null;
+}
+
+export interface SearchOptions {
+  /** Supplies page text for a lecture. Defaults to the cached text.json for that lecture. */
+  readonly pdfText?: (lectureId: string) => Promise<readonly string[]>;
+}
+
+export interface SearchHit {
+  readonly kind: "subject" | "lecture" | "notes" | "annotation" | "pdf";
+  readonly subjectId: SubjectId;
+  readonly lectureId?: LectureId;
+  readonly annotationId?: AnnotationId;
+  /** 1-based page number, for annotation and pdf hits. */
+  readonly page?: number;
+  readonly snippet: string;
+}
+
+interface LocatedLecture {
+  readonly lecture: Lecture;
+  readonly dir: string;
+}
+
+/**
+ * Library layout on storage:
+ *   library.json
+ *   planner.json, tasks.json
+ *   subjects/<subjectId>/subject.json
+ *   subjects/<subjectId>/lectures/<lectureId>/{lecture.json, lecture.pdf, annotations.json, notes.md, text.json}
+ *
+ * Every write parses the full record before storing it, and every read parses the stored JSON.
+ */
+export class Library {
+  private readonly storage: Storage;
+  private readonly clock: () => Date;
+
+  constructor(storage: Storage, options: LibraryOptions = {}) {
+    this.storage = storage;
+    this.clock = options.now ?? (() => new Date());
+  }
+
+  async init(): Promise<void> {
+    const existing = await this.readJson("library.json", LibraryFile);
+    if (existing === undefined) {
+      await this.writeJson("library.json", { version: 1 });
+    }
+  }
+
+  async listSubjects(): Promise<Subject[]> {
+    const subjects: Subject[] = [];
+    for (const name of await this.storage.list("subjects")) {
+      const subject = await this.readJson(`${subjectDir(name)}/subject.json`, Subject);
+      if (subject !== undefined) {
+        subjects.push(subject);
+      }
+    }
+    return subjects.sort(byId);
+  }
+
+  async getSubject(id: string): Promise<Subject> {
+    const subjectId = lookupId(SubjectId, id, "Subject");
+    const subject = await this.readJson(`${subjectDir(subjectId)}/subject.json`, Subject);
+    if (subject === undefined) {
+      throw new NotFoundError("Subject", id);
+    }
+    return subject;
+  }
+
+  async createSubject(input: SubjectInput): Promise<Subject> {
+    const subject = Subject.parse({
+      id: newId(),
+      name: input.name,
+      color: input.color ?? DEFAULT_SUBJECT_COLOR,
+      createdAt: this.timestamp(),
+    });
+    await this.writeJson(`${subjectDir(subject.id)}/subject.json`, subject);
+    return subject;
+  }
+
+  async updateSubject(id: string, patch: SubjectPatch): Promise<Subject> {
+    const current = await this.getSubject(id);
+    const subject = Subject.parse({
+      ...current,
+      name: patch.name ?? current.name,
+      color: patch.color ?? current.color,
+    });
+    await this.writeJson(`${subjectDir(current.id)}/subject.json`, subject);
+    return subject;
+  }
+
+  /** Deletes the subject with its lectures and planner cards. Tasks that linked to them lose those links. */
+  async deleteSubject(id: string): Promise<void> {
+    const subject = await this.getSubject(id);
+    const lectureIds = new Set((await this.listLectures(subject.id)).map((lecture) => lecture.id));
+    await this.unlinkTasks(subject.id, lectureIds);
+    const cards = await this.listPlannerCards();
+    await this.writeJson(
+      "planner.json",
+      cards.filter((card) => card.subjectId !== subject.id),
+    );
+    await this.storage.remove(subjectDir(subject.id));
+  }
+
+  async listLectures(subjectId?: string): Promise<Lecture[]> {
+    const subjectIds =
+      subjectId === undefined
+        ? await this.storage.list("subjects")
+        : [(await this.getSubject(subjectId)).id];
+    const lectures: Lecture[] = [];
+    for (const sid of subjectIds) {
+      for (const lid of await this.storage.list(`${subjectDir(sid)}/lectures`)) {
+        const lecture = await this.readJson(`${subjectDir(sid)}/lectures/${lid}/lecture.json`, Lecture);
+        if (lecture !== undefined) {
+          lectures.push(lecture);
+        }
+      }
+    }
+    return lectures.sort(byId);
+  }
+
+  async getLecture(id: string): Promise<Lecture> {
+    return (await this.locateLecture(id)).lecture;
+  }
+
+  async importLecture(
+    subjectId: string,
+    title: string,
+    pdf: Uint8Array,
+    pageCount: number,
+    date?: string,
+  ): Promise<Lecture> {
+    const subject = await this.getSubject(subjectId);
+    const timestamp = this.timestamp();
+    const lecture = Lecture.parse({
+      id: newId(),
+      subjectId: subject.id,
+      title,
+      date,
+      pageCount,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    if (!isPdf(pdf)) {
+      throw new InvalidError("The file is not a PDF.");
+    }
+    const dir = lectureDir(subject.id, lecture.id);
+    await this.storage.writeBytes(`${dir}/lecture.pdf`, pdf);
+    await this.writeJson(`${dir}/lecture.json`, lecture);
+    return lecture;
+  }
+
+  async updateLecture(id: string, patch: LecturePatch): Promise<Lecture> {
+    const { lecture, dir } = await this.locateLecture(id);
+    const next = Lecture.parse({
+      ...lecture,
+      title: patch.title ?? lecture.title,
+      date: resolveOptional(lecture.date, patch.date),
+      updatedAt: this.timestamp(),
+    });
+    await this.writeJson(`${dir}/lecture.json`, next);
+    return next;
+  }
+
+  /** Deletes the lecture with its PDF, annotations, notes, and text. Tasks that linked to it lose the link. */
+  async deleteLecture(id: string): Promise<void> {
+    const { lecture, dir } = await this.locateLecture(id);
+    await this.unlinkTasks(undefined, new Set([lecture.id]));
+    await this.storage.remove(dir);
+  }
+
+  async getPdf(id: string): Promise<Uint8Array> {
+    const { dir } = await this.locateLecture(id);
+    const bytes = await this.storage.readBytes(`${dir}/lecture.pdf`);
+    if (bytes === undefined) {
+      throw new NotFoundError("PDF", id);
+    }
+    return bytes;
+  }
+
+  async listAnnotations(lectureId: string): Promise<Annotation[]> {
+    const { dir } = await this.locateLecture(lectureId);
+    return this.readAnnotations(dir);
+  }
+
+  async addAnnotation(lectureId: string, draft: AnnotationDraft): Promise<Annotation> {
+    const { lecture, dir } = await this.locateLecture(lectureId);
+    const annotation = Annotation.parse({ ...draft, id: newId() });
+    assertPageInRange(annotation.page, lecture.pageCount);
+    const annotations = await this.readAnnotations(dir);
+    await this.writeJson(`${dir}/annotations.json`, [...annotations, annotation]);
+    return annotation;
+  }
+
+  async updateAnnotation(
+    lectureId: string,
+    annotationId: string,
+    patch: AnnotationPatch,
+  ): Promise<Annotation> {
+    const { lecture, dir } = await this.locateLecture(lectureId);
+    const annotations = await this.readAnnotations(dir);
+    const current = annotations.find((annotation) => annotation.id === annotationId);
+    if (current === undefined) {
+      throw new NotFoundError("Annotation", annotationId);
+    }
+    const next = Annotation.parse(mergeDefined(current, patch));
+    assertPageInRange(next.page, lecture.pageCount);
+    await this.writeJson(
+      `${dir}/annotations.json`,
+      annotations.map((annotation) => (annotation.id === annotationId ? next : annotation)),
+    );
+    return next;
+  }
+
+  async removeAnnotation(lectureId: string, annotationId: string): Promise<void> {
+    const { dir } = await this.locateLecture(lectureId);
+    const annotations = await this.readAnnotations(dir);
+    const remaining = annotations.filter((annotation) => annotation.id !== annotationId);
+    if (remaining.length === annotations.length) {
+      throw new NotFoundError("Annotation", annotationId);
+    }
+    await this.writeJson(`${dir}/annotations.json`, remaining);
+  }
+
+  async getNotes(lectureId: string): Promise<string> {
+    const { dir } = await this.locateLecture(lectureId);
+    return (await this.storage.readText(`${dir}/notes.md`)) ?? "";
+  }
+
+  async setNotes(lectureId: string, markdown: string): Promise<void> {
+    const { dir } = await this.locateLecture(lectureId);
+    await this.storage.writeText(`${dir}/notes.md`, markdown);
+  }
+
+  async appendNotes(lectureId: string, markdown: string): Promise<void> {
+    const current = await this.getNotes(lectureId);
+    const separator = current === "" || current.endsWith("\n") ? "" : "\n";
+    await this.setNotes(lectureId, `${current}${separator}${markdown}`);
+  }
+
+  async getPdfText(lectureId: string): Promise<string[] | undefined> {
+    const { dir } = await this.locateLecture(lectureId);
+    return this.readPdfText(dir);
+  }
+
+  /** Caches the text of each page, index 0 is page 1. Must hold one entry per page. */
+  async setPdfText(lectureId: string, pages: readonly string[]): Promise<void> {
+    const { lecture, dir } = await this.locateLecture(lectureId);
+    if (pages.length !== lecture.pageCount) {
+      throw new InvalidError(
+        `Expected text for ${lecture.pageCount} pages, got ${pages.length}.`,
+      );
+    }
+    await this.writeJson(`${dir}/text.json`, pages);
+  }
+
+  async listPlannerCards(): Promise<PlannerCard[]> {
+    return (await this.readJson("planner.json", z.array(PlannerCard))) ?? [];
+  }
+
+  async createPlannerCard(input: PlannerCardInput): Promise<PlannerCard> {
+    const subject = await this.getSubject(input.subjectId);
+    const card = PlannerCard.parse({ ...input, id: newId(), subjectId: subject.id });
+    await this.writeJson("planner.json", [...(await this.listPlannerCards()), card]);
+    return card;
+  }
+
+  async updatePlannerCard(id: string, patch: PlannerCardPatch): Promise<PlannerCard> {
+    const cards = await this.listPlannerCards();
+    const current = cards.find((card) => card.id === id);
+    if (current === undefined) {
+      throw new NotFoundError("Planner card", id);
+    }
+    if (patch.subjectId !== undefined) {
+      await this.getSubject(patch.subjectId);
+    }
+    const next = PlannerCard.parse({
+      ...current,
+      subjectId: patch.subjectId ?? current.subjectId,
+      day: patch.day ?? current.day,
+      start: patch.start ?? current.start,
+      end: patch.end ?? current.end,
+      location: resolveOptional(current.location, patch.location),
+    });
+    await this.writeJson(
+      "planner.json",
+      cards.map((card) => (card.id === id ? next : card)),
+    );
+    return next;
+  }
+
+  async removePlannerCard(id: string): Promise<void> {
+    const cards = await this.listPlannerCards();
+    const remaining = cards.filter((card) => card.id !== id);
+    if (remaining.length === cards.length) {
+      throw new NotFoundError("Planner card", id);
+    }
+    await this.writeJson("planner.json", remaining);
+  }
+
+  /** Tasks sorted by status (To do, Doing, Done), then by `order`. */
+  async listTasks(): Promise<Task[]> {
+    const statuses = TaskStatus.options;
+    return (await this.readTasks()).sort(
+      (a, b) =>
+        statuses.indexOf(a.status) - statuses.indexOf(b.status) || a.order - b.order,
+    );
+  }
+
+  async createTask(input: TaskInput): Promise<Task> {
+    const tasks = await this.readTasks();
+    const status = input.status ?? "todo";
+    const task = Task.parse({
+      id: newId(),
+      title: input.title,
+      status,
+      order: nextOrder(tasks, status),
+      subjectId: input.subjectId,
+      lectureId: input.lectureId,
+      due: input.due,
+    });
+    await this.checkTaskLinks(task);
+    await this.writeJson("tasks.json", [...tasks, task]);
+    return task;
+  }
+
+  async updateTask(id: string, patch: TaskPatch): Promise<Task> {
+    const tasks = await this.readTasks();
+    const current = tasks.find((task) => task.id === id);
+    if (current === undefined) {
+      throw new NotFoundError("Task", id);
+    }
+    const status = patch.status ?? current.status;
+    const otherTasks = tasks.filter((other) => other.id !== id);
+    const order =
+      patch.order ?? (status === current.status ? current.order : nextOrder(otherTasks, status));
+    const task = Task.parse({
+      ...current,
+      title: patch.title ?? current.title,
+      status,
+      order,
+      subjectId: resolveOptional(current.subjectId, patch.subjectId),
+      lectureId: resolveOptional(current.lectureId, patch.lectureId),
+      due: resolveOptional(current.due, patch.due),
+    });
+    await this.checkTaskLinks(task);
+    await this.writeJson(
+      "tasks.json",
+      tasks.map((other) => (other.id === id ? task : other)),
+    );
+    return task;
+  }
+
+  async removeTask(id: string): Promise<void> {
+    const tasks = await this.readTasks();
+    const remaining = tasks.filter((task) => task.id !== id);
+    if (remaining.length === tasks.length) {
+      throw new NotFoundError("Task", id);
+    }
+    await this.writeJson("tasks.json", remaining);
+  }
+
+  /**
+   * Ranks lectures for a phrase like "Lecture 1 in Digital Systems". A lecture number in the
+   * query must appear in the lecture title. Other words match subject name and title, with
+   * prefix and small typo tolerance.
+   */
+  async findLecture(query: string): Promise<LectureMatch[]> {
+    const subjects = await this.listSubjects();
+    const lectures = await this.listLectures();
+    return rankLectures(query, subjects, lectures);
+  }
+
+  /** Case-insensitive substring search over subject names, lecture titles, notes, text boxes, and PDF text. */
+  async search(query: string, options: SearchOptions = {}): Promise<SearchHit[]> {
+    const needle = query.trim().toLowerCase();
+    if (needle === "") {
+      return [];
+    }
+
+    const hits: SearchHit[] = [];
+    for (const subject of await this.listSubjects()) {
+      const snippet = matchSnippet(subject.name, needle);
+      if (snippet !== undefined) {
+        hits.push({ kind: "subject", subjectId: subject.id, snippet });
+      }
+    }
+
+    for (const lecture of await this.listLectures()) {
+      const dir = lectureDir(lecture.subjectId, lecture.id);
+      const where = { subjectId: lecture.subjectId, lectureId: lecture.id };
+
+      const titleSnippet = matchSnippet(lecture.title, needle);
+      if (titleSnippet !== undefined) {
+        hits.push({ kind: "lecture", ...where, snippet: titleSnippet });
+      }
+
+      const notes = await this.storage.readText(`${dir}/notes.md`);
+      const notesSnippet = notes === undefined ? undefined : matchSnippet(notes, needle);
+      if (notesSnippet !== undefined) {
+        hits.push({ kind: "notes", ...where, snippet: notesSnippet });
+      }
+
+      for (const annotation of await this.readAnnotations(dir)) {
+        if (annotation.kind !== "text") {
+          continue;
+        }
+        const snippet = matchSnippet(annotation.text, needle);
+        if (snippet !== undefined) {
+          hits.push({
+            kind: "annotation",
+            ...where,
+            annotationId: annotation.id,
+            page: annotation.page,
+            snippet,
+          });
+        }
+      }
+
+      const pages = options.pdfText
+        ? await options.pdfText(lecture.id)
+        : await this.readPdfText(dir);
+      for (const [index, text] of (pages ?? []).entries()) {
+        const snippet = matchSnippet(text, needle);
+        if (snippet !== undefined) {
+          hits.push({ kind: "pdf", ...where, page: index + 1, snippet });
+        }
+      }
+    }
+    return hits;
+  }
+
+  private async locateLecture(id: string): Promise<LocatedLecture> {
+    const lectureId = lookupId(LectureId, id, "Lecture");
+    for (const subjectKey of await this.storage.list("subjects")) {
+      const dir = lectureDir(subjectKey, lectureId);
+      const lecture = await this.readJson(`${dir}/lecture.json`, Lecture);
+      if (lecture !== undefined) {
+        return { lecture, dir };
+      }
+    }
+    throw new NotFoundError("Lecture", id);
+  }
+
+  private async checkTaskLinks(task: Task): Promise<void> {
+    if (task.subjectId !== undefined) {
+      await this.getSubject(task.subjectId);
+    }
+    if (task.lectureId === undefined) {
+      return;
+    }
+    const { lecture } = await this.locateLecture(task.lectureId);
+    if (task.subjectId !== undefined && task.subjectId !== lecture.subjectId) {
+      throw new InvalidError("That lecture belongs to a different subject.");
+    }
+  }
+
+  private async unlinkTasks(
+    deletedSubjectId: string | undefined,
+    deletedLectureIds: ReadonlySet<string>,
+  ): Promise<void> {
+    const tasks = await this.readTasks();
+    const unlinked = tasks.map((task) => {
+      const subjectGone = deletedSubjectId !== undefined && task.subjectId === deletedSubjectId;
+      const lectureGone = task.lectureId !== undefined && deletedLectureIds.has(task.lectureId);
+      if (!subjectGone && !lectureGone) {
+        return task;
+      }
+      return {
+        ...task,
+        subjectId: subjectGone ? undefined : task.subjectId,
+        lectureId: lectureGone ? undefined : task.lectureId,
+      };
+    });
+    await this.writeJson("tasks.json", unlinked);
+  }
+
+  private async readTasks(): Promise<Task[]> {
+    return (await this.readJson("tasks.json", z.array(Task))) ?? [];
+  }
+
+  private async readAnnotations(dir: string): Promise<Annotation[]> {
+    return (await this.readJson(`${dir}/annotations.json`, z.array(Annotation))) ?? [];
+  }
+
+  private async readPdfText(dir: string): Promise<string[] | undefined> {
+    return this.readJson(`${dir}/text.json`, PDF_TEXT);
+  }
+
+  private async readJson<T>(path: string, schema: z.ZodType<T>): Promise<T | undefined> {
+    const text = await this.storage.readText(path);
+    if (text === undefined) {
+      return undefined;
+    }
+    let value: unknown;
+    try {
+      value = JSON.parse(text);
+    } catch {
+      throw new InvalidError(`${path} is not valid JSON.`);
+    }
+    return schema.parse(value);
+  }
+
+  private async writeJson(path: string, value: unknown): Promise<void> {
+    await this.storage.writeText(path, `${JSON.stringify(value, null, 2)}\n`);
+  }
+
+  private timestamp(): string {
+    return this.clock().toISOString();
+  }
+}
+
+const subjectDir = (subjectId: string): string => `subjects/${subjectId}`;
+
+const lectureDir = (subjectId: string, lectureId: string): string =>
+  `${subjectDir(subjectId)}/lectures/${lectureId}`;
+
+function lookupId<S extends z.ZodType<string>>(schema: S, value: string, entity: string): z.output<S> {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new NotFoundError(entity, value);
+  }
+  return parsed.data;
+}
+
+function byId(a: { readonly id: string }, b: { readonly id: string }): number {
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+function isPdf(bytes: Uint8Array): boolean {
+  return new TextDecoder().decode(bytes.subarray(0, PDF_HEADER.length)) === PDF_HEADER;
+}
+
+/** `undefined` keeps the current value. `null` clears it. */
+function resolveOptional<T>(current: T | undefined, patch: T | null | undefined): T | undefined {
+  if (patch === undefined) {
+    return current;
+  }
+  return patch ?? undefined;
+}
+
+function mergeDefined(current: object, patch: object): unknown {
+  return {
+    ...current,
+    ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
+  };
+}
+
+function nextOrder(tasks: readonly Task[], status: TaskStatus): number {
+  const orders = tasks.filter((task) => task.status === status).map((task) => task.order);
+  return orders.length === 0 ? 0 : Math.max(...orders) + 1;
+}
+
+function assertPageInRange(page: number, pageCount: number): void {
+  if (page > pageCount) {
+    throw new InvalidError(`Page ${page} is outside this lecture's ${pageCount} pages.`);
+  }
+}
