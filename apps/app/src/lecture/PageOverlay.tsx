@@ -74,6 +74,7 @@ export function PageOverlay({
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
+    if (gesture.current !== undefined) return;
     if (event.pointerType === "pen") lastPenAt = performance.now();
     if ((drawing || erasing) && isPalm(event.pointerType)) return;
 
