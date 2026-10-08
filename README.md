@@ -16,6 +16,7 @@ npm run build
 ## Layout
 
 - `packages/core`: domain types, storage interface, and library operations (`@betternotez/core`).
+- `packages/mcp`: local MCP server that lets an AI assistant read and edit a library, without deleting (`@betternotez/mcp`).
 
 ## License
 
