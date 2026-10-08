@@ -6,6 +6,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { resolveLibraryPath } from "./config.js";
 import { createServer } from "./server.js";
 
+const nodeMajor = Number(process.versions.node.split(".")[0]);
+if (nodeMajor < 22) {
+  console.error(`betternotez-mcp: Node.js 22 or newer is required (found ${process.versions.node}).`);
+  process.exit(1);
+}
+
 try {
   const libraryPath = resolveLibraryPath(process.argv.slice(2), process.env, homedir());
   const library = new Library(new NodeFsStorage(libraryPath));
