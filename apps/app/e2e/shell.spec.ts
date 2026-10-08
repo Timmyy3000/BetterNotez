@@ -92,6 +92,17 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   expect(pageErrors).toEqual([]);
 });
 
+test("about page says the AI connection needs the desktop app on the web", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "About & AI" }).click();
+  await expect(page.getByRole("heading", { name: "About & AI" })).toBeVisible();
+  await expect(page.getByText(/needs the desktop app/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Download the desktop app" })).toHaveAttribute(
+    "href",
+    "https://github.com/Timmyy3000/BetterNotez/releases",
+  );
+});
+
 test("explains why a file cannot be imported and keeps the subject usable", async ({ page }) => {
   await createSubject(page, "Physics");
 

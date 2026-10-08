@@ -79,9 +79,24 @@ export function newBlock(anchor: number, current: number, range: Span): Span {
   return { start, end: Math.min(end, range.end) };
 }
 
+/** The narrowest a card may get before overlapping cards start to stack instead of sharing the day. */
+export const MIN_CARD_PX = 88;
+
 /**
- * Lays out spans that overlap in time side by side. Spans in one overlap cluster share the
- * width evenly, and each span takes the first lane that is free when it starts.
+ * Horizontal position and width of one lane in an overlap cluster, as CSS inside a day column.
+ * Cards share the day evenly while each stays at least MIN_CARD_PX wide. Past that, they stack:
+ * each lane starts further right, so later lanes cover the earlier ones, and the last card still
+ * ends at the day's edge.
+ */
+export function laneStyle(lane: number, lanes: number): { readonly left: string; readonly width: string } {
+  const share = `min(100%, max(${MIN_CARD_PX}px, ${100 / lanes}%))`;
+  const left = lanes === 1 ? "0px" : `calc((100% - ${share}) * ${lane / (lanes - 1)})`;
+  return { left: `calc(${left} + 2px)`, width: `calc(${share} - 4px)` };
+}
+
+/**
+ * Lays out spans that overlap in time side by side. Spans in one overlap cluster take the first
+ * lane that is free when they start. `laneStyle` decides how wide each lane is drawn.
  */
 export function layoutOverlaps<T extends Span>(items: readonly T[]): Placed<T>[] {
   const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end);
