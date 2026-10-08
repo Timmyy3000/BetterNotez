@@ -64,6 +64,8 @@ export const Ink = z.object({
   points: z.array(z.tuple([unitInterval, unitInterval, unitInterval])).min(1),
   color: hexColor,
   size: z.number().positive(),
+  /** Omitted for an opaque stroke. The app's highlighter sets it. */
+  opacity: unitInterval.optional(),
 });
 export type Ink = z.infer<typeof Ink>;
 
