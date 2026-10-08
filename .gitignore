@@ -1,0 +1,6 @@
+node_modules/
+dist/
+target/
+.agents/episode/
+*.log
+.DS_Store
