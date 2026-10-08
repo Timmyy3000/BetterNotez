@@ -10,7 +10,19 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useRef, useState, type PointerEvent } from "react";
 import { cn } from "../lib/cn";
-import { DAY_NAMES, HOUR_PX, layoutOverlaps, minutesToPx, newBlock, placeEnd, placeStart, pxToMinutes, toTime, type Span } from "./time";
+import {
+  DAY_NAMES,
+  HOUR_PX,
+  laneStyle,
+  layoutOverlaps,
+  minutesToPx,
+  newBlock,
+  placeEnd,
+  placeStart,
+  pxToMinutes,
+  toTime,
+  type Span,
+} from "./time";
 
 export interface Placement {
   readonly day: number;
@@ -191,6 +203,9 @@ function DayColumn({
   );
 }
 
+/** Above every lane, so a card being dragged stays on top of the cards it crosses. */
+const DRAGGING_Z = 1000;
+
 function BlockView({
   block,
   lane,
@@ -210,6 +225,7 @@ function BlockView({
   const top = minutesToPx(block.start, range.start);
   const height = minutesToPx(block.end, block.start);
   const time = `${toTime(block.start)}–${toTime(block.end)}`;
+  const label = [block.name, time, block.location].filter(Boolean);
 
   return (
     <div
@@ -217,28 +233,33 @@ function BlockView({
       data-block
       {...attributes}
       {...listeners}
-      aria-label={[block.name, time, block.location].filter(Boolean).join(", ")}
+      aria-label={label.join(", ")}
+      title={label.join("\n")}
       onClick={() => onOpen(block.id)}
       onKeyDown={(event) => {
         if (event.key === "Enter") onOpen(block.id);
       }}
       className={cn(
         "absolute overflow-hidden rounded-lg border-l-[3px] px-2 py-1.5 text-xs leading-snug shadow-sm outline-none transition-shadow cursor-grab hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing",
-        isDragging && "z-10 shadow-lg",
+        isDragging && "shadow-lg",
       )}
       style={{
         top,
         height,
-        left: `calc(${(lane / lanes) * 100}% + 2px)`,
-        width: `calc(${100 / lanes}% - 4px)`,
+        ...laneStyle(lane, lanes),
+        zIndex: isDragging ? DRAGGING_Z : lane,
         borderColor: block.color,
         backgroundColor: `color-mix(in srgb, ${block.color} 16%, var(--surface))`,
         transform: CSS.Translate.toString(transform),
       }}
     >
-      <p className="truncate font-semibold">{block.name}</p>
-      {height >= 36 && <p className="truncate text-muted-foreground">{time}</p>}
-      {height >= 56 && block.location !== undefined && <p className="truncate text-muted-foreground">{block.location}</p>}
+      <div className="@container h-full min-w-0">
+        <p className="truncate font-semibold">{block.name}</p>
+        {height >= 44 && <p className="truncate text-muted-foreground">{time}</p>}
+        {height >= 62 && block.location !== undefined && (
+          <p className="hidden truncate text-muted-foreground @[7rem]:block">{block.location}</p>
+        )}
+      </div>
       <ResizeHandle block={block} range={range} onChange={onChange} />
     </div>
   );
