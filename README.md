@@ -1,4 +1,4 @@
-# BetterNotes
+# BetterNotez
 
 A free, open-source study app for lecture PDFs: organize by subject, annotate with text boxes and freehand ink, keep a notepad per lecture, plan your week, and track tasks. Any MCP-capable AI assistant can read and update your material, but cannot delete it.
 
@@ -15,7 +15,7 @@ npm run build
 
 ## Layout
 
-- `packages/core`: domain types, storage interface, and library operations (`@betternotes/core`).
+- `packages/core`: domain types, storage interface, and library operations (`@betternotez/core`).
 
 ## License
 

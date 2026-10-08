@@ -48,7 +48,7 @@ describe.each(storageBackends)("findLecture and search on $name", ({ create }) =
 
     it("accepts a full sentence from a conversation", async () => {
       expect(
-        await titlesFor("Let's talk about Lecture 1 in Digital Systems in BetterNotes"),
+        await titlesFor("Let's talk about Lecture 1 in Digital Systems in BetterNotez"),
       ).toEqual(["Lecture 1: Logic gates"]);
     });
 

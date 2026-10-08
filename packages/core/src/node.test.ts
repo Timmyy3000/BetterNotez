@@ -10,7 +10,7 @@ describe("Library on a folder on disk", () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "betternotes-disk-"));
+    root = await mkdtemp(join(tmpdir(), "betternotez-disk-"));
   });
 
   afterEach(async () => {
