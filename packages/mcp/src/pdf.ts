@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises";
+// Loaded here, not from a sibling file, so the bundled server needs no pdf.worker.mjs next to it.
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import { getDocument, InvalidPDFException, PasswordException } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const NOT_PDF = "This file is not a valid PDF. It may be corrupt, or it may not be a PDF at all.";

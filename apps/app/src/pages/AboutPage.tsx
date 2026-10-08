@@ -6,7 +6,8 @@ import { libraryFolder } from "../storage";
 import { IconButton } from "../ui/tooltip";
 
 const RELEASES_URL = "https://github.com/Timmyy3000/BetterNotez/releases";
-const SERVER_PLACEHOLDER = "/absolute/path/to/BetterNotez/packages/mcp/dist/index.js";
+const LATEST_RELEASE_URL = "https://github.com/Timmyy3000/BetterNotez/releases/latest";
+const SERVER_PLACEHOLDER = "/absolute/path/to/betternotez-mcp.mjs";
 
 export function AboutPage() {
   const desktop = isDesktop();
@@ -71,9 +72,15 @@ export function AboutPage() {
               possible in the app.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              The server runs from a BetterNotez source checkout. Run <code className="text-foreground">npm install</code>{" "}
-              and <code className="text-foreground">npm run build</code> once, then replace the placeholder path below
-              with the path to <code className="text-foreground">packages/mcp/dist/index.js</code>.
+              Install{" "}
+              <a href="https://nodejs.org/" className="text-accent underline underline-offset-2">
+                Node.js
+              </a>{" "}
+              22 or newer. Then download <code className="text-foreground">betternotez-mcp.mjs</code> from the{" "}
+              <a href={LATEST_RELEASE_URL} className="text-accent underline underline-offset-2">
+                latest release
+              </a>{" "}
+              into a folder you will keep, and replace the placeholder path below with its full path.
             </p>
 
             <h3 className="mt-6 text-sm font-medium">Claude Desktop</h3>

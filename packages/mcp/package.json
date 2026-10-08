@@ -14,8 +14,10 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node -e \"require('node:fs').chmodSync('dist/index.js', 0o755)\"",
+    "bundle": "node scripts/bundle.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:bundle": "vitest run --config vitest.bundle.config.ts"
   },
   "dependencies": {
     "@betternotez/core": "0.1.0",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2",
     "pdf-lib": "^1.17.1",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
