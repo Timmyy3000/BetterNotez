@@ -5,9 +5,10 @@ import { AppShell } from "./shell/AppShell";
 import { HomePage } from "./pages/HomePage";
 import { LecturePage } from "./pages/LecturePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { PlannerPage, TasksPage } from "./pages/PlaceholderPages";
+import { PlannerPage } from "./pages/PlannerPage";
 import { SearchPage } from "./pages/SearchPage";
 import { SubjectPage } from "./pages/SubjectPage";
+import { TasksPage } from "./pages/TasksPage";
 import { TooltipProvider } from "./ui/tooltip";
 
 const router = createHashRouter([
