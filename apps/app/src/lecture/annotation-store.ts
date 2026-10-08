@@ -106,7 +106,7 @@ export function createAnnotationStore(library: Library, lectureId: string, annot
         const state = get();
         const busy = state.writes !== writesBefore || state.pending > 0 || state.interactions > 0;
         if (!busy && !sameAnnotations(onDisk, state.annotations)) {
-          set({ annotations: onDisk });
+          set({ annotations: onDisk, history: EMPTY_HISTORY });
         }
       },
     };

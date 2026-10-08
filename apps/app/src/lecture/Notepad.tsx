@@ -69,7 +69,12 @@ export function Notepad({ lectureId }: { readonly lectureId: string }) {
 
   useRefreshWhileVisible(async () => {
     const startedAt = saves.current;
-    const onDisk = await library.getNotes(lectureId);
+    let onDisk: string;
+    try {
+      onDisk = await library.getNotes(lectureId);
+    } catch {
+      return;
+    }
     // A read that overlaps a save, or lands on unsaved typing, must not overwrite the field.
     if (saves.current !== startedAt || unsaved()) return;
     if (onDisk !== stored.current) {
