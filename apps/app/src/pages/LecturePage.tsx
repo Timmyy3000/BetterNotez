@@ -69,10 +69,11 @@ function useLecturePdf(lectureId: string): {
     Promise.all([library.getPdf(lectureId), import("../pdf/pdfjs")])
       .then(async ([bytes, { getDocument }]) => {
         if (!live) return;
-        loading = getDocument({ data: bytes.slice() });
-        const doc = await loading.promise;
+        const task = getDocument({ data: bytes.slice() });
+        loading = task;
+        const doc = await task.promise;
         if (live) setState({ bytes, doc });
-        else void doc.destroy();
+        else void task.destroy();
       })
       .catch((error: unknown) => {
         if (live) setState({ error });
