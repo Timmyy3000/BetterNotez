@@ -2,7 +2,28 @@ import { Library } from "@betternotez/core";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { errorMessage } from "./lib/errors";
 import { createStorage } from "./storage";
-import { useAppStore } from "./store";
+import { notifyLibraryChanged, useAppStore } from "./store";
+
+const EXTERNAL_POLL_MS = 3000;
+
+/**
+ * Reloads library reads while the calling page is open, so changes made outside the app (for
+ * example by an AI through MCP) show up. Reloads on window focus and every few seconds while the
+ * page is visible.
+ */
+export function useLibraryRefresh(): void {
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") notifyLibraryChanged();
+    };
+    const timer = window.setInterval(refresh, EXTERNAL_POLL_MS);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+}
 
 let opened: Promise<Library> | undefined;
 
