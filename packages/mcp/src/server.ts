@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Library } from "@betternotez/core";
 import { createRegistry } from "./registry.js";
 import { registerAnnotationTools } from "./tools/annotations.js";
+import { registerDeletionTools } from "./tools/deletion.js";
 import { registerLectureTools } from "./tools/lectures.js";
 import { registerLibraryTools } from "./tools/library.js";
 import { registerPlannerTools } from "./tools/planner.js";
@@ -25,5 +26,6 @@ export function createServer(library: Library): McpServer {
   registerAnnotationTools(tools, library);
   registerTaskTools(tools, library);
   registerPlannerTools(tools, library);
+  registerDeletionTools(tools);
   return server;
 }
