@@ -49,6 +49,7 @@ export function TasksPage() {
   // Drag events can arrive before React re-renders, so the handlers read these refs, which update at once.
   const savedRef = useRef<readonly Task[]>([]);
   const plannedRef = useRef<Record<string, Planned>>({});
+  const placeAfterRef = useRef(false);
   const [filter, setFilter] = useState(ALL_SUBJECTS);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export function TasksPage() {
   }
 
   function handleDragStart({ active }: DragStartEvent) {
+    placeAfterRef.current = false;
     setActiveId(String(active.id));
   }
 
@@ -128,8 +130,9 @@ export function TasksPage() {
     const board = currentBoard();
     const taskId = String(active.id);
     const translated = active.rect.current.translated;
-    const pointerBelow = translated !== null && translated.top > over.rect.top + over.rect.height;
-    const drop = dropOver(board, taskId, String(over.id), pointerBelow);
+    placeAfterRef.current =
+      translated !== null && translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2;
+    const drop = dropOver(board, taskId, String(over.id), placeAfterRef.current);
     if (drop === undefined || drop.status === statusOf(board, taskId)) return;
     updatePlanned({ ...plannedRef.current, ...toPlanned(planDrop(board, taskId, drop)) });
   }
@@ -143,7 +146,7 @@ export function TasksPage() {
 
     const board = currentBoard();
     const taskId = String(active.id);
-    const drop = over === null ? undefined : dropOver(board, taskId, String(over.id));
+    const drop = over === null ? undefined : dropOver(board, taskId, String(over.id), placeAfterRef.current);
     const updates = drop === undefined ? [] : planDrop(board, taskId, drop);
     const writes = updates.filter((update) => differsFromSaved(savedRef.current, update));
     if (writes.length === 0) {

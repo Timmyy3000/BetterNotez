@@ -39,6 +39,7 @@ export function PlannerCardDialog({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!timesValid || saving) return;
     setSaving(true);
     try {
       if (card === undefined) {

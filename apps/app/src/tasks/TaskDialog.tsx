@@ -31,6 +31,7 @@ export function TaskDialog({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const trimmed = title.trim();
   const subjectLectures = lectures.filter((lecture) => lecture.subjectId === subjectId);
+  const linkedLectureId = subjectLectures.some((lecture) => lecture.id === lectureId) ? lectureId : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,7 +40,7 @@ export function TaskDialog({
       await library.updateTask(task.id, {
         title: trimmed,
         subjectId: subjectId === "" ? null : subjectId,
-        lectureId: lectureId === "" ? null : lectureId,
+        lectureId: linkedLectureId === "" ? null : linkedLectureId,
         due: due === "" ? null : due,
       });
       notifyLibraryChanged();
@@ -92,7 +93,6 @@ export function TaskDialog({
             value={subjectId}
             onChange={(event) => {
               setSubjectId(event.target.value);
-              setLectureId("");
             }}
           >
             <option value="">No subject</option>
@@ -108,7 +108,7 @@ export function TaskDialog({
           <span className="text-sm font-medium">Lecture</span>
           <select
             className={SELECT_CLASS}
-            value={lectureId}
+            value={linkedLectureId}
             disabled={subjectId === ""}
             onChange={(event) => setLectureId(event.target.value)}
           >
