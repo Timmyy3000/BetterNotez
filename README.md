@@ -30,16 +30,11 @@ It is local-first. There is no account, and your library is a folder of plain fi
 
 ## Connect an AI assistant
 
-The desktop app keeps your library in a folder called `BetterNotez Library` in your home folder. A small local server, the MCP server, reads and edits that folder for your assistant. The server runs from a copy of this repository, so it needs [Node.js](https://nodejs.org/) 22 or newer.
+The desktop app keeps your library in a folder called `BetterNotez Library` in your home folder. A small local server, the MCP server, reads and edits that folder for your assistant. The server is one file, and it runs with [Node.js](https://nodejs.org/) 22 or newer.
 
-```sh
-git clone https://github.com/Timmyy3000/BetterNotez.git
-cd BetterNotez
-npm install
-npm run build
-```
-
-Then connect your assistant to `packages/mcp/dist/index.js`, replacing the path with the full path to your checkout.
+1. Install [Node.js](https://nodejs.org/) 22 or newer.
+2. Download `betternotez-mcp.mjs` from the [latest release](https://github.com/Timmyy3000/BetterNotez/releases/latest) into a folder you will keep.
+3. Connect your assistant to that file, replacing `/absolute/path/to/betternotez-mcp.mjs` with its full path.
 
 **Claude Desktop.** Add this to `claude_desktop_config.json`, then restart Claude Desktop:
 
@@ -48,11 +43,7 @@ Then connect your assistant to `packages/mcp/dist/index.js`, replacing the path 
   "mcpServers": {
     "betternotez": {
       "command": "node",
-      "args": [
-        "/absolute/path/to/BetterNotez/packages/mcp/dist/index.js",
-        "--library",
-        "/absolute/path/to/BetterNotez Library"
-      ]
+      "args": ["/absolute/path/to/betternotez-mcp.mjs"]
     }
   }
 }
@@ -61,10 +52,14 @@ Then connect your assistant to `packages/mcp/dist/index.js`, replacing the path 
 **Claude Code.** Run this once in a terminal:
 
 ```sh
-claude mcp add betternotez -- node /absolute/path/to/BetterNotez/packages/mcp/dist/index.js --library "/absolute/path/to/BetterNotez Library"
+claude mcp add betternotez -- node /absolute/path/to/betternotez-mcp.mjs
 ```
 
-The desktop app's **About & AI** page shows both snippets with your library path already filled in, and a copy button for each.
+The server reads `BetterNotez Library` in your home folder, the same folder the app uses. To use another folder, add `"--library", "/path/to/folder"` to the arguments. The desktop app's **About & AI** page shows both snippets with your library path already filled in, and a copy button for each.
+
+### Running the server from source
+
+Contributors can run the server from a checkout instead. Clone this repository, run `npm install` and `npm run build`, then use `packages/mcp/dist/index.js` in place of the file above. See [packages/mcp](packages/mcp/README.md).
 
 Then ask your assistant, for example: "Let's talk about Lecture 1 in Digital Systems in BetterNotez." The assistant can find the lecture, read its PDF text, notepad, and annotations, and add or edit notes, text boxes, ink, tasks, and planner cards. Changes appear in the app right away.
 
@@ -120,7 +115,7 @@ The repository has three workspaces:
 - `packages/mcp`: the local MCP server for AI assistants (`@betternotez/mcp`).
 - `apps/app`: the web and desktop app (`@betternotez/app`).
 
-To release, push a tag such as `v0.2.0`. The release workflow builds installers for macOS (Apple silicon and Intel), Windows, and Linux, and attaches them to a draft GitHub Release. The web app is deployed to GitHub Pages from `main`.
+To release, push a tag such as `v0.2.0`. The release workflow builds installers for macOS (Apple silicon and Intel), Windows, and Linux, and attaches them to a draft GitHub Release. It also attaches the single-file MCP server, `betternotez-mcp.mjs`. The web app is deployed to GitHub Pages from `main`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request.
 
