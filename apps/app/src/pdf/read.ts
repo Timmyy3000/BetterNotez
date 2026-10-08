@@ -1,8 +1,5 @@
-import { GlobalWorkerOptions, getDocument, PasswordException, type PDFDocumentProxy } from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { getDocument, PasswordException, type PDFDocumentProxy } from "./pdfjs";
 import { UnreadablePdfError } from "./errors";
-
-GlobalWorkerOptions.workerSrc = workerUrl;
 
 export interface PdfContent {
   readonly pageCount: number;
