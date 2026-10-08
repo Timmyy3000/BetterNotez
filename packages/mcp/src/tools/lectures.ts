@@ -1,9 +1,38 @@
 import type { Library } from "@betternotez/core";
+import { basename, extname, isAbsolute } from "node:path";
 import { z } from "zod";
+import { extractPdfText, readPdfFile } from "../pdf.js";
 import type { ToolRegistry } from "../registry.js";
-import { calendarDate, lectureRef, pageRef } from "./shared.js";
+import { calendarDate, lectureRef, pageRef, subjectRef } from "./shared.js";
 
 export function registerLectureTools(tools: ToolRegistry, library: Library): void {
+  tools.tool(
+    "import_lecture",
+    "Import a lecture PDF from a file on the student's computer. Copies the PDF into the library, caches its text for reading and search, and returns the new lecture. The title defaults to the file name without its extension.",
+    {
+      subjectId: subjectRef,
+      pdfPath: z
+        .string()
+        .refine(isAbsolute, "must be an absolute path.")
+        .describe("Absolute path to the PDF file on the student's computer."),
+      title: z.string().min(1).optional(),
+      date: calendarDate.optional(),
+    },
+    async ({ subjectId, pdfPath, title, date }) => {
+      const bytes = await readPdfFile(pdfPath);
+      const pages = await extractPdfText(bytes);
+      const lecture = await library.importLecture(
+        subjectId,
+        title ?? basename(pdfPath, extname(pdfPath)),
+        bytes,
+        pages.length,
+        date,
+      );
+      await library.setPdfText(lecture.id, pages);
+      return lecture;
+    },
+  );
+
   tools.tool(
     "get_lecture",
     "Get a lecture with its notepad, annotations, and whether its PDF text is cached. Annotation ids here are what update_annotation takes.",
