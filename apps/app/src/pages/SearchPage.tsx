@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { EmptyState } from "../ui/empty-state";
+import { revealAt } from "../lib/motion";
 import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
 
@@ -45,7 +46,7 @@ export function SearchPage() {
   return (
     <>
       <PageHeader title="Search" />
-      <div className="flex items-center gap-4 border-b-2 border-foreground pb-2 focus-within:border-accent">
+      <div className="rise flex items-center gap-4 border-b-2 border-foreground pb-2 focus-within:border-accent" style={revealAt(2)}>
         <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" />
         <input
           type="search"

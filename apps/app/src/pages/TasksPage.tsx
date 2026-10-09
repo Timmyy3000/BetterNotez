@@ -25,6 +25,7 @@ import { errorMessage } from "../lib/errors";
 import { EmptyState } from "../ui/empty-state";
 import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
+import { revealAt } from "../lib/motion";
 import { notifyLibraryChanged } from "../store";
 import { dropOver, isOverdue, localDateKey, planDrop, statusOf, toBoard, type Board, type OrderUpdate } from "../tasks/board";
 import { SortableTaskCard, TaskCardFace, type TaskCardInfo } from "../tasks/TaskCard";
@@ -236,7 +237,7 @@ export function TasksPage() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid md:grid-cols-3">
+        <div className="rise grid md:grid-cols-3" style={revealAt(2)}>
           {TaskStatus.options.map((status) => (
             <BoardColumn
               key={status}

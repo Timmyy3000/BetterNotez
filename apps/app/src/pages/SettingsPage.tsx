@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import pkg from "../../package.json";
 import { cn } from "../lib/cn";
 import { romanNumeral } from "../lib/format";
+import { revealAt } from "../lib/motion";
 import { isDesktop } from "../lib/platform";
 import { libraryFolder } from "../storage";
 import { type ThemePreference, useThemeStore } from "../theme";
@@ -37,7 +38,7 @@ export function SettingsPage() {
     <>
       <PageHeader title="Settings" description="Change how BetterNotez looks, find your library, and connect Claude." />
 
-      <div className="max-w-2xl space-y-16">
+      <div className="rise max-w-2xl space-y-16" style={revealAt(2)}>
         <AppearanceSection />
         <LibrarySection desktop={desktop} folder={folder} />
         <AssistantSection desktop={desktop} folder={folder} />

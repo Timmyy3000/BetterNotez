@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useLibrary, useLibraryQuery, useLibraryRefresh } from "../library";
 import { errorMessage } from "../lib/errors";
+import { revealAt } from "../lib/motion";
 import { DEFAULT_SUBJECT_COLOR, subjectTone } from "../lib/subject-colors";
 import { PlannerCardDialog } from "../planner/PlannerCardDialog";
 import { PlannerGrid, type Placement, type PlannerBlock } from "../planner/PlannerGrid";
@@ -135,7 +136,7 @@ export function PlannerPage() {
                 </EmptyState>
               </div>
             )}
-            <div className="grain rounded-lg border border-border bg-surface px-6 pt-6 pb-4">
+            <div className="rise grain rounded-lg border border-border bg-surface px-6 pt-6 pb-4" style={revealAt(2)}>
               <PlannerGrid
                 days={showWeekend ? ALL_DAYS : WEEKDAYS}
                 blocks={blocks}

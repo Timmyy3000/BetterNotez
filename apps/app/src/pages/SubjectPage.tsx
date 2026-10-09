@@ -8,6 +8,7 @@ import { ImportDialog } from "../lectures/ImportDialog";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { countLabel, lectureMeta } from "../lib/format";
+import { revealAt } from "../lib/motion";
 import { subjectTone } from "../lib/subject-colors";
 import { sortLectures } from "../lib/lectures";
 import { selectPdfs } from "../pdf/import";
@@ -112,7 +113,7 @@ export function SubjectPage() {
         }
       />
 
-      <div>
+      <div className="rise" style={revealAt(2)}>
         {ordered.length === 0 ? (
           <EmptyState icon={FileText} title="No lectures yet">
             Drop lecture PDFs anywhere on this page, or click Import PDF.
