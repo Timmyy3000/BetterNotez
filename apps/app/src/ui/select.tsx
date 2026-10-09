@@ -31,8 +31,9 @@ export type SelectProps = SelectCommon & SelectName;
 const FIELD_TRIGGER =
   "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] hover:border-rule-strong focus:border-foreground focus-visible:outline-foreground data-[state=open]:border-foreground";
 
+/** Focus from the keyboard thickens the underline, rather than drawing a box around the page's header control. */
 const INLINE_TRIGGER =
-  "border-0 border-b border-rule-strong bg-transparent py-2 text-[17px] focus:border-foreground focus-visible:outline-foreground data-[state=open]:border-foreground";
+  "border-0 border-b border-rule-strong bg-transparent py-2 text-[17px] outline-none focus:border-foreground focus-visible:shadow-[inset_0_-1px_0_var(--foreground)] data-[state=open]:border-foreground";
 
 /**
  * A dropdown drawn in the app's own paper and ink. A native select opens its list in the operating system's colours,
@@ -87,7 +88,7 @@ function SelectControl({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={6}
-          className="raised-edge z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) animate-[dialog-in_120ms_ease-out] overflow-hidden rounded-xl border border-border bg-raised p-1.5 text-foreground shadow-(--lift)"
+          className="raised-edge z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin) animate-[dialog-in_120ms_ease-out] overflow-hidden rounded-xl border border-rule-strong bg-surface p-1.5 text-foreground shadow-(--lift)"
         >
           <SelectPrimitive.Viewport>
             {options.map((option) => (
