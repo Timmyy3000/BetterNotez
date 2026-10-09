@@ -19,6 +19,7 @@ import { PdfPages, type PdfPagesHandle } from "./PdfPages";
 import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
 import { usePendingText } from "./text-selection";
 import { useNotesWidth } from "./use-notes-width";
+import { notesPageFor } from "./page-notes";
 import { usePageNotes } from "./use-page-notes";
 import { useRefreshWhileVisible } from "./use-refresh";
 
@@ -52,6 +53,9 @@ export function LectureView({
   const [zoom, setZoom] = useState(1);
   const [page, setPage] = useState(startPage);
   const [notesOpen, setNotesOpen] = useState(() => searchParams.has("notes"));
+  // The page the notes field was focused on. While it has focus, the notes stay on that page, whatever the PDF shows.
+  const [focusedPage, setFocusedPage] = useState<number>();
+  const notesPage = notesPageFor(page, focusedPage);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pages = useRef<PdfPagesHandle>(null);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -273,7 +277,13 @@ export function LectureView({
                   onResizeEnd={notes.commit}
                 />
               )}
-              <Notepad id={notesId} page={page} notes={pageNotes} width={notes.width} />
+              <Notepad
+                id={notesId}
+                page={notesPage}
+                notes={pageNotes}
+                width={notes.width}
+                onFocusChange={(focused) => setFocusedPage(focused ? page : undefined)}
+              />
             </>
           )}
         </div>

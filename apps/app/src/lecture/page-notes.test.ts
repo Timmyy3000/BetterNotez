@@ -1,6 +1,14 @@
-import { Library, MemoryStorage } from "@betternotez/core";
+import { Library, MemoryStorage, UnreadableNotesError } from "@betternotez/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PageNoteBook, SAVE_DELAY_MS, type NoteStore } from "./page-notes";
+import {
+  flushAllNotes,
+  notesFor,
+  notesPageFor,
+  PageNoteBook,
+  RETRY_FIRST_MS,
+  SAVE_DELAY_MS,
+  type NoteStore,
+} from "./page-notes";
 
 const PDF = new TextEncoder().encode("%PDF-1.7\nslides\n%%EOF\n");
 
@@ -210,6 +218,187 @@ describe("PageNoteBook", () => {
     failing = false;
     await book.refresh();
     expect(book.getSnapshot()).toMatchObject({ ready: true, status: "saved" });
+  });
+
+  it("is loading until the notes are read, so it does not say Saved first", async () => {
+    const { library, lectureId } = await openMaterial();
+    const book = new PageNoteBook(storeOver(library), lectureId);
+
+    expect(book.getSnapshot()).toMatchObject({ ready: false, status: "loading" });
+
+    await book.refresh();
+    expect(book.getSnapshot()).toMatchObject({ ready: true, status: "saved" });
+  });
+
+  it("never saves a page of only spaces and line breaks, and counts it as no note", async () => {
+    const { library, lectureId } = await openMaterial();
+    const book = new PageNoteBook(storeOver(library), lectureId);
+    await book.refresh();
+
+    book.edit(2, "  \n\t ");
+    expect(book.hasUnsaved()).toBe(false);
+    expect(book.getSnapshot().status).toBe("saved");
+
+    await book.flush();
+    expect(await library.listPageNotes(lectureId)).toEqual([]);
+  });
+
+  it("retries a failed save with a growing wait, and stops once it lands", async () => {
+    const { library, lectureId } = await openMaterial();
+    let attempts = 0;
+    let failing = true;
+    const book = new PageNoteBook(
+      storeOver(library, {
+        setPageNote: (id, page, text) => {
+          attempts += 1;
+          return failing ? Promise.reject(new Error("disk full")) : library.setPageNote(id, page, text);
+        },
+      }),
+      lectureId,
+    );
+    await book.refresh();
+
+    book.edit(1, "Keep me");
+    await book.flush();
+    expect(attempts).toBe(1);
+    expect(book.getSnapshot().status).toBe("failed");
+
+    await vi.advanceTimersByTimeAsync(RETRY_FIRST_MS);
+    expect(attempts).toBe(2);
+    await vi.advanceTimersByTimeAsync(RETRY_FIRST_MS * 2);
+    expect(attempts).toBe(3);
+
+    failing = false;
+    await vi.advanceTimersByTimeAsync(RETRY_FIRST_MS * 4);
+    expect(attempts).toBe(4);
+    expect(book.getSnapshot().status).toBe("saved");
+    expect(await library.getPageNote(lectureId, 1)).toBe("Keep me");
+
+    await vi.advanceTimersByTimeAsync(RETRY_FIRST_MS * 100);
+    expect(attempts).toBe(4);
+  });
+
+  it("tries a failed save at once when asked to retry", async () => {
+    const { library, lectureId } = await openMaterial();
+    let attempts = 0;
+    let failing = true;
+    const book = new PageNoteBook(
+      storeOver(library, {
+        setPageNote: (id, page, text) => {
+          attempts += 1;
+          return failing ? Promise.reject(new Error("disk full")) : library.setPageNote(id, page, text);
+        },
+      }),
+      lectureId,
+    );
+    await book.refresh();
+    book.edit(1, "Retry me");
+    await book.flush();
+
+    failing = false;
+    await book.retry();
+
+    expect(attempts).toBe(2);
+    expect(book.getSnapshot().status).toBe("saved");
+    expect(await library.getPageNote(lectureId, 1)).toBe("Retry me");
+  });
+
+  it("keeps unsaved text in the material's book, so it is there when the material is opened again", async () => {
+    const { library, lectureId } = await openMaterial();
+    const store = storeOver(library, {
+      setPageNote: () => Promise.reject(new Error("disk full")),
+    });
+    const first = notesFor(store, lectureId);
+    await first.refresh();
+    first.edit(1, "Typed, not saved");
+    await first.flush();
+
+    const reopened = notesFor(store, lectureId);
+    expect(reopened).toBe(first);
+    expect(reopened.getSnapshot().texts.get(1)).toBe("Typed, not saved");
+    expect(reopened.getSnapshot().status).toBe("failed");
+  });
+
+  it("writes every material's unsaved text when flushed for leaving the app", async () => {
+    const { library, lectureId } = await openMaterial();
+    const book = notesFor(storeOver(library), lectureId);
+    await book.refresh();
+    book.edit(3, "Written on the way out");
+
+    await flushAllNotes();
+
+    expect(await library.getPageNote(lectureId, 3)).toBe("Written on the way out");
+    expect(book.hasUnsaved()).toBe(false);
+  });
+
+  it("reports a notes file that cannot be read, and never writes over it", async () => {
+    const { storage, library, lectureId, subjectId } = await openMaterial();
+    const notesPath = `subjects/${subjectId}/lectures/${lectureId}/notes.json`;
+    await storage.writeText(notesPath, "{ not json");
+    let attempts = 0;
+    const book = new PageNoteBook(
+      storeOver(library, {
+        setPageNote: (id, page, text) => {
+          attempts += 1;
+          return library.setPageNote(id, page, text);
+        },
+      }),
+      lectureId,
+    );
+
+    await book.refresh();
+    expect(book.getSnapshot()).toMatchObject({ ready: false, status: "unreadable" });
+
+    book.edit(1, "Typed into a file that cannot be read");
+    await book.flush();
+    await vi.advanceTimersByTimeAsync(RETRY_FIRST_MS * 100);
+
+    expect(book.getSnapshot()).toMatchObject({ ready: false, status: "unreadable" });
+    expect(attempts).toBe(1);
+    expect(await storage.readText(notesPath)).toBe("{ not json");
+  });
+
+  it("reports a notes file that a newer version wrote during the session, and stops retrying", async () => {
+    const { storage, library, lectureId, subjectId } = await openMaterial();
+    const notesPath = `subjects/${subjectId}/lectures/${lectureId}/notes.json`;
+    let attempts = 0;
+    const book = new PageNoteBook(
+      storeOver(library, {
+        setPageNote: (id, page, text) => {
+          attempts += 1;
+          return library.setPageNote(id, page, text);
+        },
+      }),
+      lectureId,
+    );
+    await book.refresh();
+    book.edit(1, "Typed before the file changed");
+
+    const newer = JSON.stringify({ version: 2, pages: {} });
+    await storage.writeText(notesPath, newer);
+    await book.flush();
+    await vi.advanceTimersByTimeAsync(RETRY_FIRST_MS * 100);
+
+    expect(book.getSnapshot().status).toBe("unreadable");
+    expect(attempts).toBe(1);
+    expect(await storage.readText(notesPath)).toBe(newer);
+  });
+
+  it("keeps the notes on the page where focus began while the view moves to another page", async () => {
+    const { library, lectureId } = await openMaterial();
+    const book = new PageNoteBook(storeOver(library), lectureId);
+    await book.refresh();
+
+    // The field gains focus on page 2. The PDF then scrolls to page 3, and typing carries on.
+    const focusedPage = 2;
+    const viewPage = 3;
+    book.edit(notesPageFor(viewPage, focusedPage), "Typed while scrolling");
+    book.edit(notesPageFor(viewPage, focusedPage), "Typed while scrolling, more");
+
+    expect(book.getSnapshot().texts.get(2)).toBe("Typed while scrolling, more");
+    expect(book.getSnapshot().texts.get(3)).toBeUndefined();
+    // Once focus leaves the field, the panel shows the page in view again.
+    expect(notesPageFor(viewPage, undefined)).toBe(3);
   });
 
   it("tells subscribers when the notes change", async () => {

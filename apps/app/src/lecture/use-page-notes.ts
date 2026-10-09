@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useLibrary } from "../library";
-import { PageNoteBook, type NoteStatus } from "./page-notes";
+import { type NoteStatus, notesFor } from "./page-notes";
 import { useRefreshWhileVisible } from "./use-refresh";
 
 export interface PageNotesView {
-  /** False until the notes have been read once. */
+  /** False until the notes have been read once, and while they cannot be read. The field is disabled then. */
   readonly ready: boolean;
   readonly status: NoteStatus;
   /** The note on a page, including typing that is not saved yet. */
@@ -12,15 +12,17 @@ export interface PageNotesView {
   /** The pages that have a note, for the marks in the PDF. */
   readonly noted: ReadonlySet<number>;
   readonly edit: (page: number, text: string) => void;
+  /** Tries a failed save again now. */
+  readonly retry: () => void;
 }
 
 /**
  * The notes of a material, one per page. They stay loaded while the material is open, so the panel and the page
- * marks can show any page at once. Turning to another page saves the text on the page being left.
+ * marks can show any page at once. Turning to another page saves the text on every page with unsaved text.
  */
 export function usePageNotes(lectureId: string, page: number): PageNotesView {
   const library = useLibrary();
-  const book = useMemo(() => new PageNoteBook(library, lectureId), [library, lectureId]);
+  const book = useMemo(() => notesFor(library, lectureId), [library, lectureId]);
   const snapshot = useSyncExternalStore(book.subscribe, book.getSnapshot);
 
   useRefreshWhileVisible(() => book.refresh());
@@ -38,5 +40,6 @@ export function usePageNotes(lectureId: string, page: number): PageNotesView {
     textOf: (number) => snapshot.texts.get(number) ?? "",
     noted,
     edit: (number, text) => book.edit(number, text),
+    retry: () => void book.retry(),
   };
 }
