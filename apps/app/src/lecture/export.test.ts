@@ -1,6 +1,6 @@
-import type { Annotation, Highlight } from "@betternotez/core";
+import type { Annotation, Highlight, TextBox } from "@betternotez/core";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import { degrees, PDFDocument, StandardFonts } from "pdf-lib";
+import { degrees, PDFDict, PDFDocument, PDFName, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { AnnotationId } from "@betternotez/core";
 import { exportAnnotatedPdf, paintOrder } from "./export";
@@ -21,7 +21,7 @@ async function openPdf(bytes: Uint8Array) {
   return pdfjs.getDocument({ data: bytes.slice(), disableFontFace: true }).promise;
 }
 
-function textBox(overrides: Partial<Extract<Annotation, { kind: "text" }>>): Annotation {
+function textBox(overrides: Partial<TextBox>): TextBox {
   return {
     id: AnnotationId.parse("01TEXTBOXEXPORT0000000000"),
     kind: "text",
@@ -204,5 +204,124 @@ describe("exportAnnotatedPdf", () => {
     const text = (await (await pdf.getPage(1)).getTextContent()).items.map((item) => ("str" in item ? item.str : "")).join("");
 
     expect(text).toContain("x ? y");
+  });
+
+  describe("text formatting", () => {
+    /** The base font names the page's resources declare, so a bold box shows up as Helvetica-Bold. */
+    async function baseFontsOn(bytes: Uint8Array, pageNumber: number): Promise<string[]> {
+      const document = await PDFDocument.load(bytes);
+      const resources = document.getPage(pageNumber - 1).node.Resources();
+      const fonts = resources?.lookup(PDFName.of("Font"), PDFDict);
+      return (fonts?.entries() ?? []).map(([, ref]) => {
+        const font = document.context.lookup(ref, PDFDict);
+        return String(font?.get(PDFName.of("BaseFont"))).replace(/^\//, "");
+      });
+    }
+
+    /** The first text item on a page that contains `needle`, with its font size and origin in page points. */
+    async function textOf(bytes: Uint8Array, pageNumber: number, needle: string) {
+      const pdf = await openPdf(bytes);
+      const page = await pdf.getPage(pageNumber);
+      const item = (await page.getTextContent()).items.find((entry) => "str" in entry && entry.str.includes(needle));
+      if (item === undefined || !("transform" in item)) throw new Error(`exported text "${needle}" not found`);
+      const [a = 0, b = 0, , , e = 0, f = 0] = item.transform;
+      return { size: Math.hypot(a, b), origin: [e, f] as const, page };
+    }
+
+    it("draws a box at the size it was set to", async () => {
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ fontSize: 24 })]);
+
+      expect((await textOf(exported, 2, "Hello")).size).toBeCloseTo(24, 3);
+    });
+
+    it("uses the 14 point size for a box that does not set one", async () => {
+      const { fontSize: _fontSize, ...withoutSize } = textBox({});
+      const exported = await exportAnnotatedPdf(await makePdf(3), [withoutSize as Annotation]);
+
+      expect((await textOf(exported, 2, "Hello")).size).toBeCloseTo(14, 3);
+    });
+
+    it("embeds the bold, italic, and bold italic faces of Helvetica", async () => {
+      const cases = [
+        [{ bold: true, italic: false }, "Helvetica-Bold"],
+        [{ bold: false, italic: true }, "Helvetica-Oblique"],
+        [{ bold: true, italic: true }, "Helvetica-BoldOblique"],
+      ] as const;
+      for (const [style, face] of cases) {
+        const exported = await exportAnnotatedPdf(await makePdf(3), [textBox(style)]);
+        expect(await baseFontsOn(exported, 2)).toContain(face);
+      }
+    });
+
+    it("draws upright Helvetica for a box with neither bold nor italic", async () => {
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ bold: false, italic: false })]);
+      const fonts = await baseFontsOn(exported, 2);
+
+      expect(fonts).not.toContain("Helvetica-Bold");
+      expect(fonts).not.toContain("Helvetica-Oblique");
+      expect(fonts).not.toContain("Helvetica-BoldOblique");
+    });
+
+    it("exports a box with no italic setting in italic, the face it has always been drawn in on screen", async () => {
+      const { italic: _italic, ...withoutItalic } = textBox({});
+      const exported = await exportAnnotatedPdf(await makePdf(3), [withoutItalic as Annotation]);
+
+      expect(await baseFontsOn(exported, 2)).toContain("Helvetica-Oblique");
+    });
+
+    it("draws the text in the box's colour", async () => {
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ color: "#a3321f" })]);
+      const page = await (await openPdf(exported)).getPage(2);
+      const operators = await page.getOperatorList();
+      const fill = operators.fnArray.reduce<number[]>((found, fn, index) => {
+        if (fn === pdfjs.OPS.setFillRGBColor) found.push(index);
+        return found;
+      }, []);
+      const last = fill.at(-1);
+
+      expect(last === undefined ? undefined : operators.argsArray[last]).toEqual(["#a3321f"]);
+    });
+
+    it("draws a line under each line of an underlined box, and none under a plain one", async () => {
+      const underlined = await exportAnnotatedPdf(await makePdf(3), [textBox({ underline: true, text: "One two" })]);
+      const plain = await exportAnnotatedPdf(await makePdf(3), [textBox({ text: "One two" })]);
+      const strokes = async (bytes: Uint8Array) =>
+        (await (await openPdf(bytes)).getPage(2)).getOperatorList().then((list) =>
+          list.fnArray.filter((fn) => fn === pdfjs.OPS.constructPath).length,
+        );
+
+      expect(await strokes(underlined)).toBeGreaterThan(await strokes(plain));
+    });
+
+    /** The bounding box of the last stroked path on a page, as [minX, minY, maxX, maxY] in page points. */
+    async function lastStrokeBox(bytes: Uint8Array, pageNumber: number): Promise<number[]> {
+      const page = await (await openPdf(bytes)).getPage(pageNumber);
+      const operators = await page.getOperatorList();
+      const at = operators.fnArray.lastIndexOf(pdfjs.OPS.constructPath);
+      const [, , box] = operators.argsArray[at] as [number, unknown, number[]];
+      return box;
+    }
+
+    it("places the underline under its text, running along the line from the left edge", async () => {
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ underline: true, text: "Hello" })]);
+      const { origin } = await textOf(exported, 2, "Hello");
+      const [minX = Number.NaN, minY = Number.NaN, maxX = Number.NaN, maxY = Number.NaN] = await lastStrokeBox(exported, 2);
+
+      expect(minX).toBeCloseTo(origin[0], 1);
+      expect(maxX).toBeGreaterThan(minX);
+      expect(minY).toBeLessThan(origin[1]);
+      expect(maxY - minY).toBeLessThan(1);
+    });
+
+    it("turns the underline with the text on a page rotated 90 degrees", async () => {
+      const exported = await exportAnnotatedPdf(await makePdf(3, 90), [textBox({ underline: true, text: "Hello" })]);
+      const { origin, size } = await textOf(exported, 2, "Hello");
+      const [minX = Number.NaN, minY = Number.NaN, maxX = Number.NaN, maxY = Number.NaN] = await lastStrokeBox(exported, 2);
+
+      // Rotated text runs up the page in user space, so the underline is a vertical stroke beside the baseline.
+      expect(maxX - minX).toBeLessThan(1);
+      expect(minX).toBeGreaterThan(origin[0]);
+      expect(maxY - minY).toBeGreaterThan(size);
+    });
   });
 });
