@@ -10,6 +10,7 @@ import { cn } from "../lib/cn";
 import { countLabel, lectureMeta } from "../lib/format";
 import { sortLectures } from "../lib/lectures";
 import { selectPdfs } from "../pdf/import";
+import { subjectTone } from "../lib/subject-colors";
 import { DeleteSubjectDialog } from "../subjects/DeleteSubjectDialog";
 import { SubjectDialog } from "../subjects/SubjectDialog";
 import { Button, iconButtonClass } from "../ui/button";
@@ -78,7 +79,7 @@ export function SubjectPage() {
       <header className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: current.color }} aria-hidden />
+            <span className="size-2.5 rounded-full" style={{ backgroundColor: subjectTone(current.color) }} aria-hidden />
             Subject
           </p>
           <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight">{current.name}</h1>
