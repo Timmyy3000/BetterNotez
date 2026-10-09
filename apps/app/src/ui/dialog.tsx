@@ -1,6 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 /** A modal that is mounted while it is needed. Closing it calls `onClose`, and the parent unmounts it. */
 export function ModalDialog({
@@ -14,6 +14,8 @@ export function ModalDialog({
   readonly onClose: () => void;
   readonly children: ReactNode;
 }) {
+  // Radix returns focus to what it saw at mount. An autofocused field has already taken focus by then, so the opener is kept here, from the first render.
+  const [opener] = useState(() => (document.activeElement instanceof HTMLElement ? document.activeElement : null));
   return (
     <DialogPrimitive.Root
       open
@@ -23,7 +25,13 @@ export function ModalDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 animate-[fade-in_150ms_ease-out] bg-overlay backdrop-blur-[2px]" />
-        <DialogPrimitive.Content className="raised-edge fixed top-1/2 left-1/2 z-50 w-[min(calc(100vw-2rem),32rem)] -translate-x-1/2 -translate-y-1/2 animate-[dialog-in_200ms_cubic-bezier(0.23,1,0.32,1)] rounded-xl border border-border bg-raised p-8 shadow-(--lift) outline-none">
+        <DialogPrimitive.Content
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (opener?.isConnected) opener.focus();
+          }}
+          className="raised-edge fixed top-1/2 left-1/2 z-50 w-[min(calc(100vw-2rem),32rem)] -translate-x-1/2 -translate-y-1/2 animate-[dialog-in_200ms_cubic-bezier(0.23,1,0.32,1)] rounded-xl border border-border bg-raised p-8 shadow-(--lift) outline-none"
+        >
           <div className="border-b border-border pr-10 pb-5">
             <DialogPrimitive.Title className="font-serif text-[30px] leading-tight">{title}</DialogPrimitive.Title>
             <DialogPrimitive.Description className="mt-2 text-sm text-muted-foreground">
