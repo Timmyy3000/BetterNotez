@@ -103,7 +103,7 @@ export function PdfPages({
   }
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="absolute inset-0 overflow-auto bg-muted">
+    <div ref={scrollRef} onScroll={handleScroll} className="desk absolute inset-0 overflow-auto">
       <div className="mx-auto flex w-max min-w-full flex-col items-center gap-4 px-6 pt-20 pb-24">
         {geometries?.map((geometry, index) => {
           const size = sizes[index];
@@ -144,7 +144,7 @@ const PageSlot = memo(function PageSlot({
     <section
       data-page-number={pageNumber}
       aria-label={`Page ${pageNumber}`}
-      className="relative shrink-0 bg-white shadow-sm ring-1 ring-black/5"
+      className="pdf-sheet relative shrink-0"
       style={{ width, height }}
     >
       <PdfCanvas doc={doc} pageNumber={pageNumber} width={width} height={height} scrollRef={scrollRef} />
