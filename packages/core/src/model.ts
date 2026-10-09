@@ -69,7 +69,30 @@ export const Ink = z.object({
 });
 export type Ink = z.infer<typeof Ink>;
 
-export const Annotation = z.discriminatedUnion("kind", [TextBox, Ink]);
+/** A box on a page, normalized to the page size so it keeps its place at any zoom. */
+export const PageRect = z.object({
+  x: unitInterval,
+  y: unitInterval,
+  width: unitInterval,
+  height: unitInterval,
+});
+export type PageRect = z.infer<typeof PageRect>;
+
+export const Highlight = z.object({
+  id: AnnotationId,
+  kind: z.literal("highlight"),
+  page: pageNumber,
+  author,
+  /** One box per line of the highlighted text. A box with no area would be stored and never seen, so it is refused. */
+  rects: z.array(PageRect.refine((rect) => rect.width > 0 && rect.height > 0, "A highlight box needs an area")).min(1),
+  /** The highlighted text, so an assistant can read what a highlight covers without the PDF. */
+  text: label,
+  color: hexColor,
+});
+export type Highlight = z.infer<typeof Highlight>;
+
+/** Files written before highlights existed hold only text boxes and strokes, and still parse. */
+export const Annotation = z.discriminatedUnion("kind", [TextBox, Ink, Highlight]);
 export type Annotation = z.infer<typeof Annotation>;
 export type AnnotationDraft = DistributiveOmit<z.input<typeof Annotation>, "id">;
 

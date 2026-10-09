@@ -1,6 +1,7 @@
-import type { Annotation, Ink, TextBox } from "@betternotez/core";
-import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import type { Annotation, Highlight, Ink, TextBox } from "@betternotez/core";
+import { BlendMode, degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { displaySize, displayToUser, normalizeRotation, type PageGeometry } from "./geometry";
+import { HIGHLIGHT_OPACITY } from "./highlight";
 import { outlinePath, strokeOutline } from "./ink";
 import { BASELINE_RATIO, LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
 
@@ -14,17 +15,28 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
   const font = await document.embedFont(StandardFonts.Helvetica);
   const pages = document.getPages();
 
-  for (const annotation of annotations) {
+  for (const annotation of paintOrder(annotations)) {
     const page = pages[annotation.page - 1];
     if (page === undefined) continue;
     const geometry = pageGeometry(page);
     if (annotation.kind === "text") {
       drawTextBox(page, geometry, annotation, font);
-    } else {
+    } else if (annotation.kind === "ink") {
       drawInk(page, geometry, annotation);
+    } else {
+      drawHighlight(page, geometry, annotation);
     }
   }
   return document.save();
+}
+
+/**
+ * The order the annotations are drawn in, which is the order the screen stacks them: highlights lie under
+ * the page's text, strokes lie over the highlights, and text boxes lie on top. Within a kind, the list's order holds.
+ */
+export function paintOrder(annotations: readonly Annotation[]): Annotation[] {
+  const layer = (annotation: Annotation): number => (annotation.kind === "highlight" ? 0 : annotation.kind === "ink" ? 1 : 2);
+  return [...annotations].sort((a, b) => layer(a) - layer(b));
 }
 
 function pageGeometry(page: PDFPage): PageGeometry {
@@ -65,7 +77,38 @@ function drawInk(page: PDFPage, geometry: PageGeometry, ink: Ink): void {
     y: 0,
     color: hexToRgb(ink.color),
     opacity: ink.opacity ?? 1,
+    // A translucent stroke is the highlighter's. It multiplies onto the page, as it does on screen.
+    blendMode: ink.opacity !== undefined ? BlendMode.Multiply : undefined,
   });
+}
+
+/**
+ * Each box is drawn in multiply mode, as on screen, so the words under it stay dark. Each box is
+ * turned into the bounding box of its corners in PDF space, which is exact for quarter turns.
+ */
+function drawHighlight(page: PDFPage, geometry: PageGeometry, highlight: Highlight): void {
+  const color = hexToRgb(highlight.color);
+  for (const { x, y, width, height } of highlight.rects) {
+    const corners = [
+      displayToUser(geometry, x, y),
+      displayToUser(geometry, x + width, y),
+      displayToUser(geometry, x, y + height),
+      displayToUser(geometry, x + width, y + height),
+    ];
+    const left = Math.min(...corners.map((corner) => corner.x));
+    const right = Math.max(...corners.map((corner) => corner.x));
+    const bottom = Math.min(...corners.map((corner) => corner.y));
+    const top = Math.max(...corners.map((corner) => corner.y));
+    page.drawRectangle({
+      x: left,
+      y: bottom,
+      width: right - left,
+      height: top - bottom,
+      color,
+      opacity: HIGHLIGHT_OPACITY,
+      blendMode: BlendMode.Multiply,
+    });
+  }
 }
 
 /** Greedy word wrap. A single word wider than the box is kept whole and overflows. */

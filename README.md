@@ -20,7 +20,7 @@ It is local-first. There is no account, and your library is a folder of plain fi
 ## Features
 
 - **Subjects and lectures.** Make a subject for each class and import lecture PDFs into it. Add a date to a lecture if you want to sort by it. Lectures without a date work too.
-- **Annotate pages.** Add text boxes and type into them, or draw freehand ink for diagrams with a mouse, touch, or stylus. Undo and redo cover your edits during a session.
+- **Annotate pages.** Add text boxes and type into them, or draw freehand ink for diagrams with a mouse, touch, or stylus. Select text to highlight it in a colour, then click a highlight to change or remove it. Undo and redo cover your edits during a session.
 - **A notepad per lecture.** Each lecture has its own notes, saved as you type.
 - **Search.** Find text in subject names, lecture titles, notepads, text boxes, and the PDF text itself.
 - **Export.** Save a lecture as a PDF with your annotations drawn on its pages. Any PDF viewer can open it.
@@ -61,7 +61,7 @@ The server reads `BetterNotez Library` in your home folder, the same folder the 
 
 Contributors can run the server from a checkout instead. Clone this repository, run `npm install` and `npm run build`, then use `packages/mcp/dist/index.js` in place of the file above. See [packages/mcp](packages/mcp/README.md).
 
-Then ask your assistant, for example: "What material do I have in BetterNotez this week?" The assistant can find your material, read its PDF text, notepad, and annotations, and add or edit notes, text boxes, ink, tasks, and planner cards. Changes appear in the app right away.
+Then ask your assistant, for example: "What material do I have in BetterNotez this week?" The assistant can find your material, read its PDF text, notepad, and annotations, and add or edit notes, text boxes, ink, highlights of exact text, tasks, and planner cards. Changes appear in the app right away.
 
 The web app cannot connect an assistant, because the MCP server reads the folder on your computer.
 
