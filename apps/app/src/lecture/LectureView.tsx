@@ -17,6 +17,7 @@ import { Notepad } from "./Notepad";
 import { NotesResizeHandle } from "./NotesResizeHandle";
 import { PdfPages, type PdfPagesHandle } from "./PdfPages";
 import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
+import { usePendingText } from "./text-selection";
 import { useNotesWidth } from "./use-notes-width";
 import { useRefreshWhileVisible } from "./use-refresh";
 
@@ -52,6 +53,7 @@ export function LectureView({
   const rowRef = useRef<HTMLDivElement>(null);
   const notesId = useId();
   const notes = useNotesWidth(rowRef);
+  const pendingText = usePendingText(tool === "select");
 
   const canUndo = useStore(store, (state) => state.history.past.length > 0);
   const canRedo = useStore(store, (state) => state.history.future.length > 0);
@@ -86,8 +88,8 @@ export function LectureView({
   );
 
   const editor = useMemo<EditorValue>(
-    () => ({ store, tool, color, size, selectedId, editing, scrollRef, select, beginEdit, endEdit }),
-    [store, tool, color, size, selectedId, editing, select, beginEdit, endEdit],
+    () => ({ store, tool, color, size, selectedId, editing, pendingText, scrollRef, select, beginEdit, endEdit }),
+    [store, tool, color, size, selectedId, editing, pendingText, select, beginEdit, endEdit],
   );
 
   function deleteSelected() {
@@ -119,6 +121,7 @@ export function LectureView({
       } else if (event.key === "Escape") {
         setSelectedId(undefined);
         setTool("select");
+        window.getSelection()?.removeAllRanges();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
