@@ -17,3 +17,8 @@ createRoot(container).render(
     <App />
   </StrictMode>,
 );
+
+// The last step of the load sequence ends about a second in. Pages opened later show their content at rest.
+window.setTimeout(() => {
+  document.documentElement.dataset.played = "";
+}, 1200);
