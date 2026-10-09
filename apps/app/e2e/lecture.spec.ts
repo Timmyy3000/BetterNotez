@@ -36,7 +36,9 @@ async function importLecture(page: Page, fileName: string, pageTexts: readonly s
     buffer: await makePdf(pageTexts),
   });
   await page.getByRole("button", { name: "Import 1 PDF" }).click();
-  await expect(page.getByRole("link", { name: fileName.replace(/\.pdf$/, ""), exact: true })).toBeVisible();
+  // The list shows the title with an en dash. The file name keeps its hyphen.
+  const shown = fileName.replace(/\.pdf$/, "").replace(" - ", " – ");
+  await expect(page.getByRole("link", { name: shown, exact: true })).toBeVisible();
 }
 
 async function openLecture(page: Page, title: string): Promise<void> {
