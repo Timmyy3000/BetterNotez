@@ -97,7 +97,7 @@ export function FormatBar({
           label={size.name}
           pressed={style.fontSize === size.value}
           onClick={() => onChange({ fontSize: size.value })}
-          className="font-serif text-[15px] leading-none"
+          className="font-sans text-[13px] font-medium leading-none"
         >
           {size.label}
         </FormatButton>
