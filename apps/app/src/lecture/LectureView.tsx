@@ -217,6 +217,7 @@ export function LectureView({
               scrollRef={scrollRef}
               startPage={startPage}
               settleRedraw={notes.dragging}
+              notedPages={pageNotes.noted}
               onPageChange={setPage}
             />
             <Toolbar

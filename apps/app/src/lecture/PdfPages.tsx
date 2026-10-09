@@ -36,6 +36,7 @@ export function PdfPages({
   scrollRef,
   startPage,
   settleRedraw,
+  notedPages,
   onPageChange,
 }: {
   readonly ref?: Ref<PdfPagesHandle>;
@@ -46,6 +47,8 @@ export function PdfPages({
   readonly startPage: number;
   /** True while the notes edge is held, so the pages redraw once it settles. Zoom and window resizes redraw at once. */
   readonly settleRedraw: boolean;
+  /** The pages that have a note. Each gets a small mark in its corner. */
+  readonly notedPages: ReadonlySet<number>;
   readonly onPageChange: (page: number) => void;
 }) {
   const [geometries, setGeometries] = useState<readonly PageGeometry[]>();
@@ -127,6 +130,7 @@ export function PdfPages({
               height={size.height}
               drawWidth={drawWidth}
               scrollRef={scrollRef}
+              noted={notedPages.has(index + 1)}
             />
           );
         })}
@@ -143,6 +147,7 @@ const PageSlot = memo(function PageSlot({
   height,
   drawWidth,
   scrollRef,
+  noted,
 }: {
   readonly doc: PDFDocumentProxy;
   readonly pageNumber: number;
@@ -151,6 +156,7 @@ const PageSlot = memo(function PageSlot({
   readonly height: number;
   readonly drawWidth: number;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
+  readonly noted: boolean;
 }) {
   // CSS pixels per PDF point. Annotation sizes are stored in points, so they scale with the page.
   const scale = width / displaySize(geometry).width;
@@ -166,6 +172,9 @@ const PageSlot = memo(function PageSlot({
       <PageOverlay pageNumber={pageNumber} width={width} height={height} scale={scale}>
         <PageText doc={doc} pageNumber={pageNumber} width={width} scale={scale} scrollRef={scrollRef} />
       </PageOverlay>
+      {noted && (
+        <span aria-hidden data-has-note className="pointer-events-none absolute top-3 right-3 size-2 rounded-full bg-accent" />
+      )}
     </section>
   );
 });
