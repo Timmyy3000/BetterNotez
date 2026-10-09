@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Flame, FolderOpen, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import { Copy, Flame, FolderOpen, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import pkg from "../../package.json";
@@ -14,10 +14,8 @@ import { Copyable } from "../ui/copyable";
 import { PageHeader } from "../ui/page-header";
 
 const RELEASES_URL = "https://github.com/Timmyy3000/BetterNotez/releases";
-const LATEST_RELEASE_URL = `${RELEASES_URL}/latest`;
+const SERVER_DOWNLOAD_URL = `${RELEASES_URL}/latest/download/betternotez-mcp.mjs`;
 const REPOSITORY_URL = "https://github.com/Timmyy3000/BetterNotez";
-const NODE_URL = "https://nodejs.org/";
-const SERVER_PLACEHOLDER = "/absolute/path/to/betternotez-mcp.mjs";
 const LIBRARY_PLACEHOLDER = "/absolute/path/to/BetterNotez Library";
 
 const THEME_OPTIONS: readonly { readonly value: ThemePreference; readonly label: string; readonly icon: LucideIcon }[] = [
@@ -37,7 +35,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Change how BetterNotez looks, find your library, and connect Claude." />
+      <PageHeader title="Settings" description="Change how BetterNotez looks, find your library, and connect your AI." />
 
       <div className="rise max-w-2xl space-y-16" style={revealAt(2)}>
         <AppearanceSection />
@@ -123,10 +121,10 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
 function AssistantSection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
   if (!desktop) {
     return (
-      <Section id="assistant-heading" title="Connect Claude" numeral={3}>
+      <Section id="assistant-heading" title="Connect your AI" numeral={3}>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
-          Connecting Claude needs the desktop app. Claude reads your library from a folder on your computer. The web app
-          keeps its library in this browser, where Claude cannot reach it.{" "}
+          Connecting your AI needs the desktop app. Your AI reads your library from a folder on your computer. The web app
+          keeps its library in this browser, where your AI cannot reach it.{" "}
           <a href={RELEASES_URL} className="text-accent underline underline-offset-2">
             Download the desktop app
           </a>
@@ -137,28 +135,18 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
   }
 
   const libraryPath = folder ?? LIBRARY_PLACEHOLDER;
-  const claudeDesktopConfig = JSON.stringify(
-    {
-      mcpServers: {
-        betternotez: { command: "node", args: [SERVER_PLACEHOLDER, "--library", libraryPath] },
-      },
-    },
-    null,
-    2,
-  );
-  const claudeCodeCommand = `claude mcp add betternotez -- node "${SERVER_PLACEHOLDER}" --library "${libraryPath}"`;
 
   return (
-    <Section id="assistant-heading" title="Connect Claude" numeral={3}>
+    <Section id="assistant-heading" title="Connect your AI" numeral={3}>
       <p className="text-[15px] leading-relaxed text-muted-foreground">
-        Claude can find a lecture by name, read its PDF text and your notes, and help you write notes or add text boxes
-        and drawings to a PDF. Try asking about one of your lectures, such as &quot;Let's talk about Lecture 1 in Digital
-        Systems.&quot; Setup takes three steps, and you do it once.
+        Claude or ChatGPT can find a lecture by name, read its PDF text and your notes, and help you write notes or add
+        text boxes and drawings to a PDF. Try asking about one of your lectures, such as &quot;Let's talk about Lecture 1
+        in Digital Systems.&quot;
       </p>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
-          <h3 className="font-serif text-2xl">What Claude can do</h3>
+          <h3 className="font-serif text-2xl">What your AI can do</h3>
           <ul className="mt-2 list-none space-y-1.5 text-sm text-muted-foreground">
             <li className={LIST_ITEM}>Find and read subjects, lectures, notes, text boxes, and PDF text</li>
             <li className={LIST_ITEM}>Create and edit subjects, lectures, notes, tasks, and timetable classes</li>
@@ -166,65 +154,98 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
           </ul>
         </div>
         <div>
-          <h3 className="font-serif text-2xl">What Claude can't do</h3>
+          <h3 className="font-serif text-2xl">What your AI can't do</h3>
           <ul className="mt-2 list-none space-y-1.5 text-sm text-muted-foreground">
             <li className={LIST_ITEM}>Delete anything. Deleting happens only in the app.</li>
-            <li className={LIST_ITEM}>Bring back a note's text after Claude replaces it. There is no trash or history.</li>
+            <li className={LIST_ITEM}>Bring back a note's text after it replaces it. There is no trash or history.</li>
           </ul>
         </div>
       </div>
       <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-        Text Claude reads, such as your notes and PDF text, goes to the AI service you use so it can answer you.
+        Text your AI reads, such as your notes and PDF text, goes to the AI service you use so it can answer you.
       </p>
 
       <ol className="mt-8 space-y-6">
         <Step number={1}>
-          <p>
-            Install{" "}
-            <a href={NODE_URL} className="text-accent underline underline-offset-2">
-              Node.js
-            </a>{" "}
-            22 or newer.
-          </p>
-          <p>
-            Download <code className="text-foreground">betternotez-mcp.mjs</code> from the{" "}
-            <a href={LATEST_RELEASE_URL} className="text-accent underline underline-offset-2">
-              latest release
-            </a>{" "}
-            into a folder you will keep. Don't move it later, or Claude will lose the connection. Then copy its full path.
-            On Windows, right-click the file and choose Copy as path. On a Mac, hold Option, right-click the file, and
-            choose Copy as Pathname.
-          </p>
+          <p>Copy the setup prompt for the app you use.</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <CopyPromptButton label="Claude setup prompt" value={claudeSetupPrompt(libraryPath)}>
+              Copy prompt for Claude
+            </CopyPromptButton>
+            <CopyPromptButton label="ChatGPT and Codex setup prompt" value={codexSetupPrompt(libraryPath)}>
+              Copy prompt for ChatGPT or Codex
+            </CopyPromptButton>
+          </div>
         </Step>
-
         <Step number={2}>
-          <p>
-            Add BetterNotez to Claude. In each snippet below, replace /absolute/path/to/betternotez-mcp.mjs with the path
-            you copied in step 1. On Windows, use forward slashes, such as C:/Users/you/Downloads/betternotez-mcp.mjs,
-            because backslashes break the JSON.
-          </p>
-          <h3 className="mt-4 font-serif text-2xl">Claude Desktop</h3>
-          <p className="mt-1 text-muted-foreground">
-            In Claude Desktop, open Settings, then Developer, then Edit Config. If the file is new or empty, paste the
-            whole snippet. If it already has settings, add the betternotez entry inside its mcpServers section and keep
-            the rest.
-          </p>
-          <Copyable label="Claude Desktop config" value={claudeDesktopConfig} />
-          <h3 className="mt-4 font-serif text-2xl">Claude Code (for terminal users)</h3>
-          <p className="mt-1 text-muted-foreground">
-            Open a terminal, paste this command, and press Enter. You only need to do this once.
-          </p>
-          <Copyable label="Claude Code command" value={claudeCodeCommand} />
+          <p>Paste it into a new chat and send it. Your AI sets everything up and tells you when it's done.</p>
         </Step>
-
         <Step number={3}>
           <p>
-            Quit Claude Desktop completely, then open it again. Or start a new Claude Code session. Then ask Claude,
-            &quot;List my BetterNotez subjects.&quot; If it lists your subjects, the connection works.
+            Quit the app completely, then open it again. Ask, &quot;List my BetterNotez subjects.&quot; If it lists your
+            subjects, the connection works.
           </p>
         </Step>
       </ol>
     </Section>
+  );
+}
+
+function CopyPromptButton({
+  label,
+  value,
+  children,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly children: ReactNode;
+}) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("The prompt could not be copied. Try again.");
+    }
+  }
+
+  return (
+    <Button variant="primary" onClick={() => void copy()}>
+      <Copy />
+      {children}
+    </Button>
+  );
+}
+
+/** Shared steps: get Node, download the server to a fixed folder, then the app-specific registration. */
+function setupPrompt(app: string, register: string, libraryPath: string): string {
+  return `Please connect BetterNotez to ${app} so you can read and help with my notes. I'm not technical, so do every step yourself on my computer and only ask me if you're truly stuck.
+
+1. Check that Node.js 22 or newer is installed (run \`node --version\`). If it isn't, install it for me (winget on Windows, Homebrew on Mac), or tell me exactly what to click.
+2. Download ${SERVER_DOWNLOAD_URL} into a folder that won't be moved:
+   - Windows: %LOCALAPPDATA%\\BetterNotez\\mcp\\
+   - Mac and Linux: ~/.betternotez/mcp/
+3. Register it as an MCP server named "betternotez" that runs:
+   node "<full path of the downloaded file>" --library "${libraryPath}"
+${register}
+4. Read the config back and check it's valid. Then tell me to quit ${app} completely, open it again, and ask "List my BetterNotez subjects".`;
+}
+
+function claudeSetupPrompt(libraryPath: string): string {
+  return setupPrompt(
+    "Claude",
+    `   Keep any settings that are already there.
+   - Claude Desktop: add it under "mcpServers" in claude_desktop_config.json (Windows: %APPDATA%\\Claude\\, Mac: ~/Library/Application Support/Claude/). Use forward slashes in paths so the JSON stays valid.
+   - Claude Code: run \`claude mcp add --scope user betternotez -- node "<file>" --library "${libraryPath}"\`.`,
+    libraryPath,
+  );
+}
+
+function codexSetupPrompt(libraryPath: string): string {
+  return setupPrompt(
+    "ChatGPT or Codex",
+    `   ChatGPT desktop and Codex share one config file. Add a [mcp_servers.betternotez] entry to ~/.codex/config.toml (Windows: %USERPROFILE%\\.codex\\config.toml, or under CODEX_HOME if that is set), keeping everything already there. Use single-quoted TOML strings for Windows paths. If the codex command is available, \`codex mcp add betternotez -- node "<file>" --library "${libraryPath}"\` does the same.`,
+    libraryPath,
   );
 }
 
