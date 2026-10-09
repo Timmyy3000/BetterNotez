@@ -80,7 +80,7 @@ export function Toolbar({
           aria-pressed={color === swatch.value}
           onClick={() => onColor(swatch.value)}
           className={cn(
-            "grid size-7 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "relative grid size-7 place-items-center rounded-full outline-none before:absolute before:-inset-1.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-accent",
             color === swatch.value && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
           )}
         >
@@ -98,7 +98,7 @@ export function Toolbar({
           aria-pressed={size === option.value}
           onClick={() => onSize(option.value)}
           className={cn(
-            "grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-accent",
+            "relative grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-muted focus-visible:ring-2 focus-visible:ring-accent",
             size === option.value && "bg-accent-soft text-accent",
           )}
         >
@@ -188,7 +188,7 @@ function IconToggle({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
+        "relative grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none before:absolute before:-inset-1 before:content-[''] hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
         active && "bg-accent-soft text-accent",
       )}
     >

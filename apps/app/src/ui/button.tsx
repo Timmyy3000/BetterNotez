@@ -23,7 +23,7 @@ export function buttonClass(variant: ButtonVariant = "secondary"): string {
 }
 
 export const iconButtonClass = cn(
-  "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 active:scale-[0.96] hover:bg-muted hover:text-foreground [&_svg]:size-4",
+  "relative grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 active:scale-[0.96] hover:bg-muted hover:text-foreground before:absolute before:-inset-1 before:content-[''] [&_svg]:size-4",
   focusRing,
 );
 

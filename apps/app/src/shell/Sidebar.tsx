@@ -69,7 +69,7 @@ export function Sidebar() {
 
 function navItemClass(active: boolean): string {
   return cn(
-    "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
+    "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
     focusRing,
     active
       ? "bg-surface text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"

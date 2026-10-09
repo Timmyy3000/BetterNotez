@@ -46,7 +46,7 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
           <button
             type="button"
             aria-label={`Edit ${task.title}`}
-            className={cn(iconButtonClass, "-mt-1 -mr-1 size-7")}
+            className={cn(iconButtonClass, "-mt-1 -mr-1")}
             onPointerDown={stop}
             onKeyDown={stop}
             onClick={(event) => {
