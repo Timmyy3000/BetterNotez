@@ -17,7 +17,7 @@ import { PageOverlay } from "./PageOverlay";
 /** Space above the first page, under the floating toolbar. */
 const PAGE_TOP = 80;
 const PAGE_GAP = 16;
-const GUTTER = 24;
+const GUTTER = 56;
 /** Caps the canvas size so zooming in on a large page does not exhaust memory. */
 const MAX_CANVAS_PIXELS = 16_000_000;
 
