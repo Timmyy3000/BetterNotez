@@ -1,4 +1,4 @@
-import type { Library } from "@betternotez/core";
+import { type Library, UnreadableNotesError } from "@betternotez/core";
 import { basename, extname, isAbsolute } from "node:path";
 import { z } from "zod";
 import { extractPdfText, readPdfFile } from "../pdf.js";
@@ -35,14 +35,19 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "get_lecture",
-    "Get one piece of material with its notes, annotations, and whether its PDF text is cached. Notes are kept per page, and each one names its page. Pages without a note are left out. Pass page to read only that page's note. Annotation ids here are what update_annotation takes.",
+    "Get one piece of material with its notes, annotations, and whether its PDF text is cached. Notes are kept per page, and each one names its page. Pages without a note are left out. Pass page to read only that page's note. If the notes file cannot be read, notes is null and warning says why; the rest is still returned. Annotation ids here are what update_annotation takes.",
     { lectureId: lectureRef, page: pageRef.optional() },
-    async ({ lectureId, page }) => ({
-      lecture: await library.getLecture(lectureId),
-      notes: await pageNotes(library, lectureId, page),
-      annotations: await library.listAnnotations(lectureId),
-      pdfTextCached: (await library.getPdfText(lectureId)) !== undefined,
-    }),
+    async ({ lectureId, page }) => {
+      const lecture = await library.getLecture(lectureId);
+      const annotations = await library.listAnnotations(lectureId);
+      const pdfTextCached = (await library.getPdfText(lectureId)) !== undefined;
+      try {
+        return { lecture, notes: await pageNotes(library, lectureId, page), annotations, pdfTextCached };
+      } catch (error) {
+        if (!(error instanceof UnreadableNotesError)) throw error;
+        return { lecture, notes: null, warning: error.message, annotations, pdfTextCached };
+      }
+    },
   );
 
   tools.tool(
@@ -87,7 +92,7 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "update_notes",
-    "Edit the note on one page of a piece of material. Use mode append (the default) to add to that page's note. Use replace only when the student asks to rewrite it, because replace removes what the page's note says now. Other pages are not changed.",
+    "Edit the note on one page of a piece of material. Use mode append (the default) to add a new line to that page's note; appending empty text changes nothing. Use replace only when the student asks to rewrite it, because replace removes what the page's note says now; replacing with empty text clears that page's note. Other pages are not changed. Returns the page's note after the edit as text, which is empty when the page has no note.",
     {
       lectureId: lectureRef,
       page: pageRef,
