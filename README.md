@@ -55,7 +55,7 @@ The desktop app keeps your library in a folder called `BetterNotez Library` in y
 claude mcp add betternotez -- node /absolute/path/to/betternotez-mcp.mjs
 ```
 
-The server reads `BetterNotez Library` in your home folder, the same folder the app uses. To use another folder, add `"--library", "/path/to/folder"` to the arguments. The desktop app's **About & AI** page shows both snippets with your library path already filled in, and a copy button for each.
+The server reads `BetterNotez Library` in your home folder, the same folder the app uses. To use another folder, add `"--library", "/path/to/folder"` to the arguments. The desktop app's **Settings** page shows both snippets with your library path already filled in, and a copy button for each.
 
 ### Running the server from source
 

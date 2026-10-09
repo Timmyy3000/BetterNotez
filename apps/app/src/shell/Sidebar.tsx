@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, Info, ListChecks, Plus, Search } from "lucide-react";
+import { BookOpen, CalendarDays, ListChecks, Plus, Search, Settings } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink } from "react-router";
 import { useLibraryQuery } from "../library";
@@ -55,9 +55,9 @@ export function Sidebar() {
       </section>
 
       <nav aria-label="Footer" className="flex flex-col gap-0.5">
-        <NavLink to="/about" className={({ isActive }) => navItemClass(isActive)}>
-          <Info />
-          About &amp; AI
+        <NavLink to="/settings" className={({ isActive }) => navItemClass(isActive)}>
+          <Settings />
+          Settings
         </NavLink>
       </nav>
 

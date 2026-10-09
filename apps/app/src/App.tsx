@@ -1,13 +1,13 @@
-import { createHashRouter, RouterProvider } from "react-router";
+import { createHashRouter, Navigate, RouterProvider } from "react-router";
 import { Toaster } from "sonner";
 import { LibraryProvider } from "./library";
 import { AppShell } from "./shell/AppShell";
-import { AboutPage } from "./pages/AboutPage";
 import { HomePage } from "./pages/HomePage";
 import { LecturePage } from "./pages/LecturePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PlannerPage } from "./pages/PlannerPage";
 import { SearchPage } from "./pages/SearchPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { SubjectPage } from "./pages/SubjectPage";
 import { TasksPage } from "./pages/TasksPage";
 import { useAppTheme } from "./theme";
@@ -23,7 +23,8 @@ const router = createHashRouter([
       { path: "planner", element: <PlannerPage /> },
       { path: "tasks", element: <TasksPage /> },
       { path: "search", element: <SearchPage /> },
-      { path: "about", element: <AboutPage /> },
+      { path: "settings", element: <SettingsPage /> },
+      { path: "about", element: <Navigate to="/settings" replace /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
