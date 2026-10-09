@@ -1,8 +1,9 @@
-import { NotFoundError, type Annotation, type Library } from "@betternotez/core";
+import { AnnotationId, newId, NotFoundError, type Annotation, type Library } from "@betternotez/core";
 import { toast } from "sonner";
 import { createStore } from "zustand/vanilla";
 import { errorMessage } from "../lib/errors";
 import type { EditSession } from "./editor";
+import type { TextPiece } from "./highlight";
 import {
   applyStep,
   EMPTY_HISTORY,
@@ -114,6 +115,26 @@ export function createAnnotationStore(library: Library, lectureId: string, annot
 }
 
 export type AnnotationStore = ReturnType<typeof createAnnotationStore>;
+
+/**
+ * Turns selected text into highlights, one for each page it crosses. They are one undo step, so a
+ * single undo takes back the whole selection.
+ */
+export function commitHighlights(store: AnnotationStore, pieces: readonly TextPiece[], color: string): void {
+  const step: Command[] = pieces.map((piece) => ({
+    type: "put",
+    next: {
+      id: AnnotationId.parse(newId()),
+      kind: "highlight",
+      page: piece.page,
+      author: "user",
+      rects: [...piece.rects],
+      text: piece.text,
+      color,
+    },
+  }));
+  if (step.length > 0) store.getState().apply(step, { record: true });
+}
 
 /**
  * Ends a text edit. An empty box is removed, and undo brings back what it said before. A new box

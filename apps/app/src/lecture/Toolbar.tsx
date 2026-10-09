@@ -69,15 +69,12 @@ export function Toolbar({
       <Divider />
 
       {INK_COLORS.map((swatch) => (
-        <button
+        <ColorSwatch
           key={swatch.value}
-          type="button"
-          aria-label={`Color ${swatch.name}`}
-          aria-pressed={color === swatch.value}
-          title={swatch.name}
+          label={`Color ${swatch.name}`}
+          value={swatch.value}
+          pressed={color === swatch.value}
           onClick={() => onColor(swatch.value)}
-          className="relative mx-1 size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--foreground)_35%,transparent)] transition-transform duration-150 ease-out before:absolute before:-inset-[11px] before:content-[''] active:scale-[0.96] aria-pressed:shadow-[0_0_0_2px_var(--raised),0_0_0_3.5px_var(--foreground)]"
-          style={{ backgroundColor: swatch.value }}
         />
       ))}
 
@@ -107,10 +104,35 @@ export function Toolbar({
       <IconToggle label="Redo" disabled={!canRedo} onClick={onRedo}>
         <Redo2 />
       </IconToggle>
-      <IconToggle label="Delete text box" disabled={!canDelete} onClick={onDelete}>
+      <IconToggle label="Delete selected" disabled={!canDelete} onClick={onDelete}>
         <Trash2 />
       </IconToggle>
     </div>
+  );
+}
+
+/** One of the palette's colours, as a round chip. The chip rings itself when it is the current colour. */
+export function ColorSwatch({
+  label,
+  value,
+  pressed,
+  onClick,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly pressed: boolean;
+  readonly onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={pressed}
+      title={label}
+      onClick={onClick}
+      className="relative mx-1 size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--foreground)_35%,transparent)] transition-transform duration-150 ease-out before:absolute before:-inset-[11px] before:content-[''] active:scale-[0.96] aria-pressed:shadow-[0_0_0_2px_var(--raised),0_0_0_3.5px_var(--foreground)]"
+      style={{ backgroundColor: value }}
+    />
   );
 }
 
@@ -160,7 +182,7 @@ export function ViewControls({
   );
 }
 
-function IconToggle({
+export function IconToggle({
   label,
   active = false,
   disabled = false,
@@ -191,6 +213,6 @@ function IconToggle({
   );
 }
 
-function Divider() {
+export function Divider() {
   return <span aria-hidden className="mx-1.5 h-[22px] w-px shrink-0 bg-border" />;
 }
