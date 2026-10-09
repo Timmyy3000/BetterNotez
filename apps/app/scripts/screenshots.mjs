@@ -353,7 +353,7 @@ async function importLecture(page, subjectName, lecture) {
     mimeType: "application/pdf",
     buffer: await makeLecturePdf(lecture),
   });
-  await page.getByLabel("Material date").fill(lecture.date);
+  await page.getByLabel("Date (optional)").fill(lecture.date);
   await page.getByRole("button", { name: "Import 1 PDF", exact: true }).click();
   await page.getByRole("link", { name: shownTitle(lecture.title), exact: true }).waitFor();
 }

@@ -48,7 +48,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
     buffer: await makePdf(["Boolean algebra basics", "Karnaugh maps reduce expressions"]),
   });
   await expect(page.getByRole("dialog").getByText("Lecture 1 - Logic gates.pdf")).toBeVisible();
-  await page.getByLabel("Material date").fill("2026-10-12");
+  await page.getByLabel("Date (optional)").fill("2026-10-12");
   await page.getByRole("button", { name: "Import 1 PDF" }).click();
 
   const lectureLink = page.getByRole("link", { name: "Lecture 1 – Logic gates", exact: true });

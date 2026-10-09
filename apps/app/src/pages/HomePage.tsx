@@ -44,7 +44,7 @@ export function HomePage() {
             </Button>
           }
         >
-          Start with one subject, then add its material PDFs.
+          Start with one subject, then add its PDFs.
         </EmptyState>
         {creating && <SubjectDialog onClose={() => setCreating(false)} />}
       </>
