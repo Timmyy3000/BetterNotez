@@ -77,7 +77,7 @@ Coordinates on a page are normalized from 0 to 1, with the origin at the top-lef
 | `update_notes` | Set `text` with `mode` `append` (default) or `replace`. |
 | `add_text_box` | Add a text box to `page` at `x`, `y`, with `text` and optional size and color. |
 | `add_ink` | Add a freehand stroke from `points` (`[x, y]` or `[x, y, pressure]`). |
-| `add_highlight` | Highlight `text` on `page`, found exactly as it reads on the page. Takes optional `occurrence` when the text appears more than once, and `color`. |
+| `add_highlight` | Highlight `text` on `page`, found exactly as it reads on the page. Takes optional `occurrence` when the text appears more than once, and `color`: `yellow` (the default), `green`, `pink`, `blue`, or `orange`. |
 | `update_annotation` | Change a text box or stroke by `annotationId`, sending only the fields that apply to it. Highlights are changed in the app. |
 | `list_tasks` | List tasks in board order, optionally for one `status`. |
 | `create_task` | Create a task with `title`, optional `status`, `subjectId`, `lectureId`, and `due`. |
