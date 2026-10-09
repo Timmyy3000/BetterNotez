@@ -108,7 +108,7 @@ export function NotesResizeHandle({
         onDoubleClick={() => change(NOTES_DEFAULT_WIDTH)}
         className="group absolute inset-y-0 -left-1 z-10 w-2 touch-none cursor-col-resize select-none outline-none"
       >
-        <span aria-hidden className={cn("absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent", fade, reveal)} />
+        <span aria-hidden className={cn("absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent/60", fade, reveal)} />
         <span
           aria-hidden
           className={cn(
