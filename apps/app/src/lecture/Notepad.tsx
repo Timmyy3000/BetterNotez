@@ -108,7 +108,7 @@ export function Notepad({ lectureId }: { readonly lectureId: string }) {
         disabled={text === undefined}
         value={text ?? ""}
         onChange={handleChange}
-        className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base text-foreground placeholder:text-faint disabled:opacity-60"
+        className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base leading-[28px] text-foreground placeholder:text-faint disabled:opacity-60"
       />
     </aside>
   );
