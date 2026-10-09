@@ -1,8 +1,9 @@
 import type { TextBoxStyle } from "@betternotez/core";
 import { Bold, Italic, Underline } from "lucide-react";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "../lib/cn";
-import type { TextStylePatch } from "./editor";
+import { useEditor, type TextStylePatch } from "./editor";
+import { placeBar, type Frame } from "./format-placement";
 import { INK_COLORS } from "./inks";
 
 /** Font sizes in points. M is the size a new box is made at. */
@@ -13,16 +14,7 @@ export const FONT_SIZES = [
   { label: "XL", name: "Extra large text", value: 24 },
 ] as const;
 
-const GAP_PX = 8;
 const MODIFIER = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl+";
-
-/** A box's place on its page, in CSS pixels from the page's top-left corner. */
-export interface Frame {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
 
 /**
  * The format bar for a text box that is selected or being typed in. It is the box's own style, so it does not
@@ -43,19 +35,41 @@ export function FormatBar({
   /** Returns focus to the box, so a keyboard user can get back into the text. */
   readonly onEscape: () => void;
 }) {
+  const { scrollRef } = useEditor();
   const bar = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState({ left: 0, above: true });
+  // Relative to the box, which is the bar's containing block.
+  const [place, setPlace] = useState({ left: 0, top: 0 });
+  // A scroll moves the page under the toolbar, so the bar is placed again after each one.
+  const [, setScrolls] = useState(0);
 
-  // Measured before paint, so the bar never shows in the wrong place. Its width is only known once it is drawn.
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (scroller === null) return;
+    const placeAgain = () => setScrolls((count) => count + 1);
+    scroller.addEventListener("scroll", placeAgain, { passive: true });
+    return () => scroller.removeEventListener("scroll", placeAgain);
+  }, [scrollRef]);
+
+  // Measured before paint, so the bar never shows in the wrong place. Its size is only known once it is drawn.
   useLayoutEffect(() => {
     const element = bar.current;
-    if (element === null) return;
-    const { offsetWidth: barWidth, offsetHeight: barHeight } = element;
-    const pageLeft = clamp(frame.left + frame.width / 2 - barWidth / 2, 0, Math.max(0, pageWidth - barWidth));
-    // Above the box unless that would push the bar over the top of the page, where the floating toolbar sits.
-    const above = frame.top - GAP_PX - barHeight >= 0;
-    const left = pageLeft - frame.left;
-    setPlace((previous) => (previous.left === left && previous.above === above ? previous : { left, above }));
+    const scroller = scrollRef.current;
+    if (element === null || scroller === null || element.parentElement === null) return;
+    // The box's border edge is the frame's origin, so the visible page is found by the offset between the two.
+    const boxRect = element.parentElement.getBoundingClientRect();
+    const viewRect = scroller.getBoundingClientRect();
+    const placed = placeBar({
+      box: frame,
+      bar: { width: element.offsetWidth, height: element.offsetHeight },
+      page: { width: pageWidth },
+      view: {
+        left: frame.left + viewRect.left - boxRect.left,
+        top: frame.top + viewRect.top - boxRect.top,
+        width: scroller.clientWidth,
+      },
+    });
+    const next = { left: placed.left - frame.left, top: placed.top - frame.top };
+    setPlace((previous) => (previous.left === next.left && previous.top === next.top ? previous : next));
   });
 
   return (
@@ -64,10 +78,7 @@ export function FormatBar({
       role="group"
       aria-label="Format text box"
       className="raised-edge absolute z-10 flex w-max animate-[fade-in_140ms_ease-out] cursor-default items-center gap-0.5 rounded-md border border-border bg-raised p-1 shadow-(--lift)"
-      style={{
-        left: place.left,
-        ...(place.above ? { bottom: `calc(100% + ${GAP_PX}px)` } : { top: `calc(100% + ${GAP_PX}px)` }),
-      }}
+      style={{ left: place.left, top: place.top }}
       // Presses on the bar belong to the bar, so they must not start a move or select the box underneath.
       onPointerDown={(event) => event.stopPropagation()}
       // A press must not move focus, so an edit in progress keeps its cursor after a click on the bar.
@@ -139,6 +150,10 @@ export function FormatBar({
   );
 }
 
+function Divider() {
+  return <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />;
+}
+
 function FormatButton({
   label,
   title,
@@ -170,12 +185,4 @@ function FormatButton({
       {children}
     </button>
   );
-}
-
-function Divider() {
-  return <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />;
-}
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(high, Math.max(low, value));
 }
