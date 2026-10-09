@@ -13,7 +13,15 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   failed: "Couldn't save",
 };
 
-export function Notepad({ lectureId }: { readonly lectureId: string }) {
+export function Notepad({
+  id,
+  lectureId,
+  width,
+}: {
+  readonly id: string;
+  readonly lectureId: string;
+  readonly width: number;
+}) {
   const library = useLibrary();
   const [text, setText] = useState<string>();
   const [status, setStatus] = useState<SaveStatus>("saved");
@@ -94,7 +102,12 @@ export function Notepad({ lectureId }: { readonly lectureId: string }) {
   }
 
   return (
-    <aside aria-label="Notes" className="grain flex w-[340px] shrink-0 flex-col border-l border-border bg-surface">
+    <aside
+      id={id}
+      aria-label="Notes"
+      style={{ width }}
+      className="grain flex shrink-0 flex-col border-l border-border bg-surface"
+    >
       <div className="flex h-[84px] shrink-0 items-end justify-between pt-0 pr-6 pb-1.5 pl-[66px]">
         <h2 className="font-serif text-[32px] leading-none">Notes</h2>
         <span role="status" className="flex items-center gap-1.5 text-[13px] text-faint">

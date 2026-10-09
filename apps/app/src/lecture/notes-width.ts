@@ -1,0 +1,52 @@
+/** The notes panel's width in CSS pixels. It is remembered across lectures. */
+export const NOTES_WIDTH_STORAGE_KEY = "betternotez.notesWidth";
+export const NOTES_DEFAULT_WIDTH = 340;
+export const NOTES_MIN_WIDTH = 280;
+/** Notes take at most this share of the lecture area, which is the window less the rail. */
+const NOTES_MAX_SHARE = 0.6;
+/** The PDF keeps at least this much width, however wide the notes are. The floating annotation toolbar is about 613px wide, so the PDF is never narrower than it. */
+export const PDF_MIN_WIDTH = 620;
+/** How far an arrow key moves the notes edge. */
+export const NOTES_KEY_STEP = 16;
+
+export interface NotesWidthBounds {
+  readonly min: number;
+  readonly max: number;
+}
+
+/**
+ * The narrowest and widest the notes can be in a lecture area of this width. Undefined when the area cannot fit the
+ * narrowest notes beside the PDF, which leaves nothing to resize.
+ */
+export function notesWidthBounds(areaWidth: number): NotesWidthBounds | undefined {
+  if (areaWidth < NOTES_MIN_WIDTH + PDF_MIN_WIDTH) return undefined;
+  const max = Math.floor(Math.min(areaWidth * NOTES_MAX_SHARE, areaWidth - PDF_MIN_WIDTH));
+  return { min: NOTES_MIN_WIDTH, max };
+}
+
+export function clampNotesWidth(width: number, bounds: NotesWidthBounds): number {
+  return Math.round(Math.min(bounds.max, Math.max(bounds.min, width)));
+}
+
+/** A missing, malformed, or non-positive value means no stored width. */
+export function parseNotesWidth(stored: string | null): number | undefined {
+  if (stored === null) return undefined;
+  const width = Number(stored);
+  return Number.isFinite(width) && width > 0 ? width : undefined;
+}
+
+export function readNotesWidth(): number | undefined {
+  try {
+    return parseNotesWidth(localStorage.getItem(NOTES_WIDTH_STORAGE_KEY));
+  } catch {
+    return undefined;
+  }
+}
+
+export function writeNotesWidth(width: number): void {
+  try {
+    localStorage.setItem(NOTES_WIDTH_STORAGE_KEY, String(width));
+  } catch {
+    // Storage can be blocked. The width then lasts only until the page reloads.
+  }
+}
