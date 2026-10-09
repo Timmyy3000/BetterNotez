@@ -7,7 +7,7 @@ export const HIGHLIGHT_COLORS = [
   { name: "yellow", label: "Yellow", value: "#ffd21f" },
   { name: "green", label: "Green", value: "#5ccf6e" },
   { name: "pink", label: "Pink", value: "#ff5fa0" },
-  { name: "blue", label: "Blue", value: "#3fd0ea" },
+  { name: "blue", label: "Blue", value: "#5aa8ff" },
   { name: "orange", label: "Orange", value: "#ff7433" },
 ] as const;
 
