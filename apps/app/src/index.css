@@ -312,6 +312,29 @@
     display: contents;
   }
 
+  /* pdf.js's end marker: it covers the layer below the text while a press is held, so a drag past the last line keeps selecting. */
+  .textLayer .endOfContent {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
+
+  .textLayer.selecting .endOfContent {
+    top: 0;
+  }
+
+  /* A selected run of a PDF is a neutral wash of the page's ink, which no highlight colour is, so a selection never reads as a marker. */
+  .textLayer ::selection {
+    background: color-mix(in srgb, var(--sheet-ink) 18%, transparent);
+  }
+
+  .textLayer br::selection {
+    background: transparent;
+  }
+
   /* Ruled notes: 28px lines under 28px of text, with one vermilion margin. Local attachment keeps the rules with the text as it scrolls. */
   .ruled-paper {
     background-image:

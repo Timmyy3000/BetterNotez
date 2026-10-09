@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 import type { TextPiece } from "./highlight";
-import { sameTextPieces } from "./text-selection";
+import { isBreakBetween, sameTextPieces } from "./text-selection";
+
+/** A run 18 points tall on screen, starting at the given edge and top. */
+function run(left: number, top: number, width: number) {
+  return { left, top, right: left + width, height: 18 };
+}
+
+describe("isBreakBetween", () => {
+  it("breaks where the next run starts a new line of the page", () => {
+    expect(isBreakBetween(run(100, 200, 80), run(100, 220, 80))).toBe(true);
+  });
+
+  it("breaks where a clear gap separates two runs on one line, as a word space does", () => {
+    // A 5 point gap is a little under a third of an em at 18 points, which is what a word space is.
+    expect(isBreakBetween(run(100, 200, 80), run(185, 200, 40))).toBe(true);
+  });
+
+  it("does not break between runs that touch, so one word stays one word", () => {
+    expect(isBreakBetween(run(100, 200, 80), run(180, 200, 40))).toBe(false);
+    // A gap well under a tenth of the font height is spacing between letters, not a word.
+    expect(isBreakBetween(run(100, 200, 80), run(180.5, 200, 40))).toBe(false);
+  });
+});
 
 const piece: TextPiece = {
   page: 1,

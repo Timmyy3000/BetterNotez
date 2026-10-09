@@ -36,6 +36,12 @@ export function PageText({
     const container = holder.current;
     if (!near || container === null) return;
     let live = true;
+    // Listeners for the pointer over the layer. They are removed with the layer, so a page out of view holds none.
+    const listeners = new AbortController();
+    // A press on the layer marks it as selecting. pdf.js's viewer then lets a drag past the text keep its selection.
+    container.addEventListener("pointerdown", () => container.classList.add("selecting"), { signal: listeners.signal });
+    document.addEventListener("pointerup", () => container.classList.remove("selecting"), { signal: listeners.signal });
+    document.addEventListener("pointercancel", () => container.classList.remove("selecting"), { signal: listeners.signal });
 
     void doc
       .getPage(pageNumber)
@@ -51,6 +57,10 @@ export function PageText({
           if (live && layout.current?.layer === layer) {
             layout.current.ready = true;
             container.dataset.laidOut = "true";
+            // The end marker covers the layer's space below the text while a selection is made, as pdf.js does.
+            const end = document.createElement("div");
+            end.className = "endOfContent";
+            container.append(end);
           }
         });
       })
@@ -61,6 +71,8 @@ export function PageText({
 
     return () => {
       live = false;
+      listeners.abort();
+      container.classList.remove("selecting");
       layout.current?.layer.cancel();
       layout.current = undefined;
       delete container.dataset.laidOut;
