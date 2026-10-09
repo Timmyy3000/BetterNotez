@@ -40,7 +40,7 @@
 :root {
   color-scheme: dark;
 
-  /* Iron-gall ink on warm paper. Never black, never grey-blue. */
+  /* Warm is the base set: the default, and the one the other dark set overrides. Iron-gall ink on brown paper. Never black. */
   --desk: #100d0b;
   --paper: #171310;
   --background: #171310;
@@ -92,8 +92,41 @@
 
   --speck-light: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .96  0 0 0 0 .88  0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --speck-dark: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3  0 0 0 0 .22  0 0 0 0 .14  0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --speck-neutral: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --grain: var(--speck-light);
 }
+
+/* Dark, neutral: the same layout, fonts, grain, and vermilion, on charcoal with at most a whisper of warmth. The accent, the highlight, the PDF sheet, and the subject inks are shared with warm. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --desk: #0e0e0e;
+  --paper: #161616;
+  --background: #161616;
+  --sidebar: #0e0e0e;
+  --surface: #1d1d1d;
+  --raised: #292929;
+  --muted: #242424;
+  --foreground: #f1f0ee;
+  --muted-foreground: #bdbcb9;
+  --faint: #9a9996;
+  --border: #363636;
+  --rule: #363636;
+  --rule-strong: #7b7a77;
+  --control-border: #7e7d79;
+  --accent-foreground: #161616;
+  --highlight-foreground: #161616;
+  --danger-foreground: #161616;
+  --overlay: rgb(8 8 8 / 0.6);
+  --lift: 0 24px 36px -28px rgb(0 0 0 / 0.85);
+  --lamp: rgb(255 255 255 / 0.04);
+  --glow: rgb(255 255 255 / 0.03);
+  --edge-1: #3a3a3a;
+  --edge-2: #323232;
+  --edge-3: #2b2b2b;
+  --ruled: #3a3a3a;
+  --grain: var(--speck-neutral);
+}
+
 
 [data-theme="light"] {
   color-scheme: light;
@@ -258,12 +291,12 @@
   background-image: var(--grain);
 }
 
-[data-theme="dark"] .raised-edge {
+:root:not([data-theme="light"]) .raised-edge {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), var(--lift);
 }
 
 /* Dims the rendered page to cut glare and warms it a little, so a real PDF sits on the desk. Its ink overlay is not a canvas, so it keeps its colour. */
-[data-theme="dark"] section[data-page-number] canvas {
+:root:not([data-theme="light"]) section[data-page-number] canvas {
   filter: brightness(0.9) sepia(0.08);
 }
 

@@ -25,10 +25,12 @@ function contrast(first: string, second: string): number {
   return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05);
 }
 
-// Dark is the default, so it is the root set. Light overrides it in [data-theme="light"].
+// Warm is the root set. Neutral dark and light each override the root set in their own rule.
+const BASE = tokensIn(":root");
 const THEMES = {
-  dark: tokensIn(":root"),
-  light: { ...tokensIn(":root"), ...tokensIn('[data-theme="light"]') },
+  warm: BASE,
+  dark: { ...BASE, ...tokensIn('[data-theme="dark"]') },
+  light: { ...BASE, ...tokensIn('[data-theme="light"]') },
 } as const;
 
 /** Text and the surface it sits on. Each must reach WCAG AA, 4.5:1. */
