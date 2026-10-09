@@ -90,8 +90,9 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
           )}
           {lectureTitle !== undefined && <span className="min-w-0 truncate">{lectureTitle}</span>}
           {task.due !== undefined && (
-            <span className={cn("inline-flex items-center gap-1.5 tabular-nums", overdue && "font-semibold text-danger")}>
+            <span className={cn("inline-flex items-center gap-1.5 tabular-nums", overdue && "font-semibold text-foreground")}>
               <CalendarDays className="size-3.5" />
+              {overdue && <span className="sr-only">Overdue, </span>}
               {formatLectureDate(task.due)}
             </span>
           )}

@@ -104,7 +104,7 @@ export function HomePage() {
                     to="/tasks"
                     className="grid grid-cols-[178px_minmax(0,1fr)_200px] items-baseline gap-5 py-3 transition-colors hover:text-accent"
                   >
-                    <span className={cn("text-sm tabular-nums", overdue ? "font-semibold text-danger" : "text-muted-foreground")}>
+                    <span className={cn("text-sm tabular-nums", overdue ? "font-semibold text-foreground" : "text-muted-foreground")}>
                       {when}
                     </span>
                     <span className="min-w-0 font-serif text-2xl leading-tight">{task.title}</span>
