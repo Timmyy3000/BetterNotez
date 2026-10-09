@@ -200,6 +200,15 @@ export function LectureView({
               onPage={(next) => pages.current?.goToPage(next)}
               onZoom={(next) => setZoom(Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next)) * 100) / 100)}
             />
+            {pendingText?.complete === false && (
+              // Shown rather than stored: a highlight of the pages between is not whole until they are laid out again.
+              <p
+                role="status"
+                className="raised-edge absolute top-[72px] left-1/2 z-20 -translate-x-1/2 rounded-md border border-border bg-raised px-3 py-1.5 text-[13px] whitespace-nowrap text-muted-foreground shadow-(--lift)"
+              >
+                Scroll so the whole selection is loaded, then try again
+              </p>
+            )}
           </div>
           {notesOpen && (
             <>

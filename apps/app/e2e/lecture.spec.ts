@@ -559,6 +559,51 @@ test("selected text becomes a highlight that survives a reload, and can be recol
   await expect(highlights).toHaveCount(1);
 });
 
+test("a selection across two pages highlights each page, and one undo takes both back", async ({ page }) => {
+  await createSubject(page, "Karnaugh");
+  await importLecture(page, "Two pages.pdf", ["Karnaugh maps group adjacent cells", "Timing diagrams show signal changes"]);
+  await openLecture(page, "Two pages");
+  await page.locator('[data-page-number="2"] .textLayer span').first().waitFor({ state: "attached" });
+
+  await selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="2"] .textLayer span');
+  await expect(page.getByRole("toolbar", { name: "Highlight color" })).toBeVisible();
+  await page.getByRole("button", { name: "Highlight in Green" }).click();
+
+  await expect(page.locator('[data-page-number="1"] [data-kind="highlight"]')).toHaveCount(1);
+  await expect(page.locator('[data-page-number="2"] [data-kind="highlight"]')).toHaveCount(1);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+test("a selection that reaches a page whose text is not laid out is refused, and stores nothing", async ({ page }) => {
+  await createSubject(page, "Long reading");
+  await importLecture(page, "Three pages.pdf", ["First page text", "Second page text", "Third page text"]);
+  await openLecture(page, "Three pages");
+  await page.locator('[data-page-number="1"] .textLayer span').first().waitFor({ state: "attached" });
+
+  // Page 3 lies beyond the viewport's margin, so its text is not laid out and the selection cannot include it.
+  await selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="3"] .textLayer');
+  await expect(page.getByText("Scroll so the whole selection is loaded, then try again")).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Highlight color" })).toHaveCount(0);
+  await expect(page.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+/** Selects from the start of the first run to the end of the second, as a drag across pages would. */
+async function selectAcrossPages(page: Page, from: string, to: string): Promise<void> {
+  await page.evaluate(
+    ({ fromSelector, toSelector }) => {
+      const start = document.querySelector(fromSelector)?.firstChild;
+      if (!(start instanceof Text)) throw new Error("no text at the start of the selection");
+      const end = document.querySelector(toSelector);
+      if (end === null) throw new Error("no place at the end of the selection");
+      const endNode = end.firstChild instanceof Text ? end.firstChild : end;
+      const endOffset = endNode instanceof Text ? endNode.length : 0;
+      window.getSelection()?.setBaseAndExtent(start, 0, endNode, endOffset);
+    },
+    { fromSelector: from, toSelector: to },
+  );
+}
+
 /** Where the characters from `from` to `to` of the page's first text run sit on screen, for a mouse drag over them. */
 async function runCharacters(page: Page, from: number, to: number): Promise<{ startX: number; endX: number; y: number }> {
   return page.evaluate(

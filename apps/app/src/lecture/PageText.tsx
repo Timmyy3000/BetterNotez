@@ -48,7 +48,10 @@ export function PageText({
         });
         layout.current = { page, layer, ready: false };
         return layer.render().then(() => {
-          if (live && layout.current?.layer === layer) layout.current.ready = true;
+          if (live && layout.current?.layer === layer) {
+            layout.current.ready = true;
+            container.dataset.laidOut = "true";
+          }
         });
       })
       .catch((error: unknown) => {
@@ -60,6 +63,7 @@ export function PageText({
       live = false;
       layout.current?.layer.cancel();
       layout.current = undefined;
+      delete container.dataset.laidOut;
       // The spans belong to pdf.js, not React, so they are removed here rather than by a re-render.
       container.replaceChildren();
     };
