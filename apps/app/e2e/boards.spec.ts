@@ -220,7 +220,8 @@ test("tasks: filter by subject and show overdue dates in red", async ({ page }) 
   await editTask.getByLabel("Subject").selectOption("Chemistry");
   await editTask.getByLabel("Due date").fill("2000-01-01");
   await editTask.getByRole("button", { name: "Save changes" }).click();
-  await expect(todo.getByText("Jan 1, 2000")).toHaveCSS("color", "rgb(248, 113, 113)");
+  // Overdue uses the vermilion accent (`--danger` in index.css), the mockup's red.
+  await expect(todo.getByText("Jan 1, 2000")).toHaveCSS("color", "rgb(240, 120, 90)");
 
   const filter = page.getByRole("combobox", { name: "Filter by subject" });
   await filter.selectOption("Chemistry");
