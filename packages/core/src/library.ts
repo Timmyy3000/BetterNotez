@@ -8,6 +8,8 @@ import {
   type Ink,
   Lecture,
   LibraryFile,
+  PageNotes,
+  PageNumber,
   PlannerCard,
   Subject,
   Task,
@@ -89,14 +91,25 @@ export interface SearchHit {
   readonly subjectId: SubjectId;
   readonly lectureId?: LectureId;
   readonly annotationId?: AnnotationId;
-  /** 1-based page number, for annotation and pdf hits. */
+  /** 1-based page number, for notes, annotation, and pdf hits. */
   readonly page?: number;
   readonly snippet: string;
+}
+
+/** The note on one page. Lists hold only pages with text. */
+export interface PageNote {
+  readonly page: number;
+  readonly text: string;
 }
 
 interface LocatedLecture {
   readonly lecture: Lecture;
   readonly dir: string;
+}
+
+interface NotePage {
+  readonly dir: string;
+  readonly page: number;
 }
 
 /**
@@ -120,13 +133,14 @@ function hasKnownKind(value: unknown): boolean {
  *   library.json
  *   planner.json, tasks.json
  *   subjects/<subjectId>/subject.json
- *   subjects/<subjectId>/lectures/<lectureId>/{lecture.json, lecture.pdf, annotations.json, notes.md, text.json}
+ *   subjects/<subjectId>/lectures/<lectureId>/{lecture.json, lecture.pdf, annotations.json, notes.json, text.json}
  *
  * Every write parses the full record before storing it, and every read parses the stored JSON.
  */
 export class Library {
   private readonly storage: Storage;
   private readonly clock: () => Date;
+  private noteWrites: Promise<unknown> = Promise.resolve();
 
   constructor(storage: Storage, options: LibraryOptions = {}) {
     this.storage = storage;
@@ -331,20 +345,30 @@ export class Library {
     await this.writeStored(dir, remaining);
   }
 
-  async getNotes(lectureId: string): Promise<string> {
+  /** Every non-empty page note of a material, in page order. */
+  async listPageNotes(lectureId: string): Promise<PageNote[]> {
     const { dir } = await this.locateLecture(lectureId);
-    return (await this.storage.readText(`${dir}/notes.md`)) ?? "";
+    return this.readPageNotes(dir);
   }
 
-  async setNotes(lectureId: string, markdown: string): Promise<void> {
-    const { dir } = await this.locateLecture(lectureId);
-    await this.storage.writeText(`${dir}/notes.md`, markdown);
+  /** The note on one page, or "" when the page has none. */
+  async getPageNote(lectureId: string, page: number): Promise<string> {
+    const target = await this.locatePage(lectureId, page);
+    return (await this.readPageNotes(target.dir)).find((note) => note.page === target.page)?.text ?? "";
   }
 
-  async appendNotes(lectureId: string, markdown: string): Promise<void> {
-    const current = await this.getNotes(lectureId);
-    const separator = current === "" || current.endsWith("\n") ? "" : "\n";
-    await this.setNotes(lectureId, `${current}${separator}${markdown}`);
+  /** Sets the note on one page. An empty note removes it. The notes on other pages stay as they are. */
+  async setPageNote(lectureId: string, page: number, markdown: string): Promise<void> {
+    const target = await this.locatePage(lectureId, page);
+    await this.editPageNote(target, () => markdown);
+  }
+
+  async appendPageNote(lectureId: string, page: number, markdown: string): Promise<void> {
+    const target = await this.locatePage(lectureId, page);
+    await this.editPageNote(target, (current) => {
+      const separator = current === "" || current.endsWith("\n") ? "" : "\n";
+      return `${current}${separator}${markdown}`;
+    });
   }
 
   async getPdfText(lectureId: string): Promise<string[] | undefined> {
@@ -480,7 +504,7 @@ export class Library {
     return rankLectures(query, subjects, lectures);
   }
 
-  /** Case-insensitive substring search over subject names, lecture titles, notes, text boxes, and PDF text. */
+  /** Case-insensitive substring search over subject names, material titles, page notes, text boxes, and PDF text. */
   async search(query: string, options: SearchOptions = {}): Promise<SearchHit[]> {
     const needle = query.trim().toLowerCase();
     if (needle === "") {
@@ -516,10 +540,11 @@ export class Library {
       hits.push({ kind: "lecture", ...where, snippet: titleSnippet });
     }
 
-    const notes = await this.storage.readText(`${dir}/notes.md`);
-    const notesSnippet = notes === undefined ? undefined : matchSnippet(notes, needle);
-    if (notesSnippet !== undefined) {
-      hits.push({ kind: "notes", ...where, snippet: notesSnippet });
+    for (const note of await this.readPageNotes(dir)) {
+      const snippet = matchSnippet(note.text, needle);
+      if (snippet !== undefined) {
+        hits.push({ kind: "notes", ...where, page: note.page, snippet });
+      }
     }
 
     for (const annotation of await this.readAnnotations(dir)) {
@@ -632,6 +657,47 @@ export class Library {
     );
   }
 
+  /**
+   * Notes are in notes.json. A material saved before per-page notes has a single notes.md, and its text is page 1.
+   * That file is read only while notes.json does not exist. It is never written or removed, so older builds still find it.
+   */
+  private async readPageNotes(dir: string): Promise<PageNote[]> {
+    const stored = await this.readJson(`${dir}/notes.json`, PageNotes);
+    if (stored !== undefined) {
+      return Object.entries(stored.pages)
+        .map(([page, text]) => ({ page: Number(page), text }))
+        .filter((note) => note.text !== "")
+        .sort(byPage);
+    }
+    const legacy = await this.storage.readText(`${dir}/notes.md`);
+    return legacy === undefined || legacy === "" ? [] : [{ page: 1, text: legacy }];
+  }
+
+  private async locatePage(lectureId: string, page: number): Promise<NotePage> {
+    const { lecture, dir } = await this.locateLecture(lectureId);
+    const target = PageNumber.parse(page);
+    assertPageInRange(target, lecture.pageCount);
+    return { dir, page: target };
+  }
+
+  /**
+   * Rewrites one page's note from its current text. Writes run one at a time: each reads all of notes.json
+   * and writes it back, so two overlapping edits to different pages would otherwise drop one of them.
+   */
+  private editPageNote(target: NotePage, change: (current: string) => string): Promise<void> {
+    const run = this.noteWrites.then(async () => {
+      const notes = await this.readPageNotes(target.dir);
+      const current = notes.find((note) => note.page === target.page)?.text ?? "";
+      const others = notes.filter((note) => note.page !== target.page);
+      const text = change(current);
+      const next = text === "" ? others : [...others, { page: target.page, text }];
+      const pages = Object.fromEntries(next.sort(byPage).map((note) => [String(note.page), note.text]));
+      await this.writeJson(`${target.dir}/notes.json`, PageNotes.parse({ version: 1, pages }));
+    });
+    this.noteWrites = run.catch(() => undefined);
+    return run;
+  }
+
   private async readPdfText(dir: string): Promise<string[] | undefined> {
     return this.readJson(`${dir}/text.json`, PDF_TEXT);
   }
@@ -674,6 +740,10 @@ function lookupId<S extends z.ZodType<string>>(schema: S, value: string, entity:
 
 function byId(a: { readonly id: string }, b: { readonly id: string }): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+function byPage(a: { readonly page: number }, b: { readonly page: number }): number {
+  return a.page - b.page;
 }
 
 function isPdf(bytes: Uint8Array): boolean {
