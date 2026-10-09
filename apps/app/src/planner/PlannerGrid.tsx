@@ -247,7 +247,7 @@ function BlockView({
         if (event.key === "Enter") onOpen(block.id);
       }}
       className={cn(
-        "absolute overflow-hidden rounded-sm border-l-[3px] px-2.5 py-2 text-xs leading-snug shadow-[0_1px_0_var(--rule)] outline-none transition-shadow duration-200 cursor-grab hover:shadow-[0_8px_16px_-10px_rgb(0_0_0_/_0.6)] active:cursor-grabbing",
+        "absolute overflow-hidden rounded-sm border-l-[3px] px-2.5 py-2 text-xs leading-snug shadow-[0_1px_0_var(--rule)] transition-shadow duration-200 cursor-grab hover:shadow-[0_8px_16px_-10px_rgb(0_0_0_/_0.6)] active:cursor-grabbing",
         isDragging && "shadow-[0_14px_24px_-12px_rgb(0_0_0_/_0.7)]",
       )}
       style={{
