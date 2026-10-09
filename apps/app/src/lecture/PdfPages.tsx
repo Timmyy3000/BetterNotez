@@ -11,7 +11,14 @@ import {
   type RefObject,
   type UIEvent,
 } from "react";
-import { displaySize, normalizeRotation, pageAtOffset, pageTops, scrollTopForPage, type PageGeometry } from "./geometry";
+import {
+  displaySize,
+  normalizeRotation,
+  pageAfterScroll,
+  pageTops,
+  scrollTopForPage,
+  type PageGeometry,
+} from "./geometry";
 import { PageOverlay } from "./PageOverlay";
 import { PageText } from "./PageText";
 import { useNearViewport } from "./use-near-viewport";
@@ -20,6 +27,8 @@ import { useNearViewport } from "./use-near-viewport";
 const PAGE_TOP = 80;
 const PAGE_GAP = 16;
 const GUTTER = 56;
+/** The reading line must pass a page edge by this much, in CSS pixels, before the page in view changes. */
+const PAGE_SWITCH_BAND = 24;
 /** Caps the canvas size so zooming in on a large page does not exhaust memory. */
 const MAX_CANVAS_PIXELS = 16_000_000;
 /** While the notes edge is held, a page is redrawn once its width has held this long. Until then it is stretched. */
@@ -36,6 +45,7 @@ export function PdfPages({
   scrollRef,
   startPage,
   settleRedraw,
+  notedPages,
   onPageChange,
 }: {
   readonly ref?: Ref<PdfPagesHandle>;
@@ -46,6 +56,8 @@ export function PdfPages({
   readonly startPage: number;
   /** True while the notes edge is held, so the pages redraw once it settles. Zoom and window resizes redraw at once. */
   readonly settleRedraw: boolean;
+  /** The pages that have a note. Each gets a small mark in its corner. */
+  readonly notedPages: ReadonlySet<number>;
   readonly onPageChange: (page: number) => void;
 }) {
   const [geometries, setGeometries] = useState<readonly PageGeometry[]>();
@@ -106,7 +118,8 @@ export function PdfPages({
 
   function handleScroll(event: UIEvent<HTMLDivElement>) {
     const element = event.currentTarget;
-    const page = pageAtOffset(tops, element.scrollTop + element.clientHeight * 0.35) + 1;
+    const probe = element.scrollTop + element.clientHeight * 0.35;
+    const page = pageAfterScroll(tops, anchor.current, probe, PAGE_SWITCH_BAND);
     anchor.current = page;
     onPageChange(page);
   }
@@ -127,6 +140,7 @@ export function PdfPages({
               height={size.height}
               drawWidth={drawWidth}
               scrollRef={scrollRef}
+              noted={notedPages.has(index + 1)}
             />
           );
         })}
@@ -143,6 +157,7 @@ const PageSlot = memo(function PageSlot({
   height,
   drawWidth,
   scrollRef,
+  noted,
 }: {
   readonly doc: PDFDocumentProxy;
   readonly pageNumber: number;
@@ -151,13 +166,14 @@ const PageSlot = memo(function PageSlot({
   readonly height: number;
   readonly drawWidth: number;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
+  readonly noted: boolean;
 }) {
   // CSS pixels per PDF point. Annotation sizes are stored in points, so they scale with the page.
   const scale = width / displaySize(geometry).width;
   return (
     <section
       data-page-number={pageNumber}
-      aria-label={`Page ${pageNumber}`}
+      aria-label={noted ? `Page ${pageNumber}, has a note` : `Page ${pageNumber}`}
       tabIndex={-1}
       className="pdf-sheet relative shrink-0"
       style={{ width, height }}
@@ -166,6 +182,15 @@ const PageSlot = memo(function PageSlot({
       <PageOverlay pageNumber={pageNumber} width={width} height={height} scale={scale}>
         <PageText doc={doc} pageNumber={pageNumber} width={width} scale={scale} scrollRef={scrollRef} />
       </PageOverlay>
+      {noted && (
+        // In the margin beside the sheet, so no slide content is covered. It is a quiet mark, not a selection.
+        <span
+          aria-hidden
+          title="Has a note"
+          data-has-note
+          className="absolute top-3 -right-5 size-1.5 rounded-full bg-foreground/40"
+        />
+      )}
     </section>
   );
 });

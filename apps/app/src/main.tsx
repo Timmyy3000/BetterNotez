@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { guardNotesOnExit } from "./lecture/notes-exit";
 import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import "@fontsource-variable/instrument-sans";
@@ -11,6 +12,8 @@ const container = document.getElementById("root");
 if (container === null) {
   throw new Error("Missing #root element");
 }
+
+guardNotesOnExit();
 
 createRoot(container).render(
   <StrictMode>

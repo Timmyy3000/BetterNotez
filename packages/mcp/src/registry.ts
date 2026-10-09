@@ -16,7 +16,7 @@ export interface ToolRegistry {
 
 /**
  * Runs tool calls one at a time. The library is plain files, so two overlapping calls that
- * both read and rewrite annotations.json, tasks.json, or notes.md would drop one of the writes.
+ * both read and rewrite annotations.json, tasks.json, or notes.json would drop one of the writes.
  */
 export function createRegistry(server: McpServer): ToolRegistry {
   let queue: Promise<unknown> = Promise.resolve();

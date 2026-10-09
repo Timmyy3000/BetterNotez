@@ -136,9 +136,18 @@ function toRows(hits: readonly SearchHit[], subjects: readonly Subject[], lectur
       hit,
       title: lecture?.title ?? subjectName,
       detail: [subjectName, page].filter(Boolean).join(" · "),
-      to: `/lecture/${hit.lectureId}${hit.page === undefined ? "" : `?page=${hit.page}`}`,
+      to: lectureLink(hit),
     };
   });
+}
+
+/** Opens the material on the hit's page. A note hit also opens the notes panel, so the note it found is on screen. */
+function lectureLink(hit: SearchHit): string {
+  const params = new URLSearchParams();
+  if (hit.page !== undefined) params.set("page", String(hit.page));
+  if (hit.kind === "notes") params.set("notes", "1");
+  const query = params.toString();
+  return `/lecture/${hit.lectureId}${query === "" ? "" : `?${query}`}`;
 }
 
 /** Marks each case-insensitive occurrence of the query. Odd split positions hold the matches. */
