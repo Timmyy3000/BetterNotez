@@ -65,6 +65,11 @@ export function LectureView({
   useRefreshWhileVisible(() => store.getState().sync());
 
   const select = useCallback((id: string | undefined) => setSelectedId(id), []);
+  // A selection belongs to the tool that made it, so a different tool leaves nothing selected.
+  const chooseTool = useCallback((next: Tool) => {
+    setTool(next);
+    setSelectedId(undefined);
+  }, []);
 
   const endEdit = useCallback(
     (id: string) => {
@@ -176,7 +181,7 @@ export function LectureView({
             />
             <Toolbar
               tool={tool}
-              onTool={setTool}
+              onTool={chooseTool}
               color={activeColor}
               onColor={tool === "highlighter" ? setMarkColor : setColor}
               size={size}
