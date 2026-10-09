@@ -91,7 +91,7 @@
   --subject-umber: #a67c5c;
 
   --speck-light: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .96  0 0 0 0 .88  0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --speck-dark: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3  0 0 0 0 .22  0 0 0 0 .14  0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --speck-grey: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --speck-neutral: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --grain: var(--speck-light);
 }
@@ -130,40 +130,43 @@
 
 [data-theme="light"] {
   color-scheme: light;
-  --desk: #ece4d2;
-  --paper: #f7f2e7;
-  --background: #f7f2e7;
-  --sidebar: #ece4d2;
-  --surface: #fbf7ee;
-  --raised: #fffdf8;
-  --muted: #efe7d6;
-  --foreground: #241e19;
-  --muted-foreground: #5a4f43;
-  --faint: #6b5f51;
-  --border: #ddd3be;
-  --rule: #ddd3be;
-  --rule-strong: #877b69;
-  --ruled: #ddd3be;
-  --control-border: #7d7161;
+  /* Pure white paper and neutral greys only. No cream, beige, sepia, or warm cast. Vermilion is the accent. */
+  --desk: #f5f5f5;
+  --paper: #ffffff;
+  --background: #ffffff;
+  --sidebar: #f5f5f5;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --muted: #f0f0f0;
+  --foreground: #1a1a1a;
+  --muted-foreground: #555555;
+  --faint: #6b6b6b;
+  --border: #e3e3e3;
+  --rule: #e3e3e3;
+  --rule-strong: #8c8c8c;
+  --control-border: #7a7a7a;
   --accent: #b5382a;
-  --accent-foreground: #fffdf8;
+  --accent-foreground: #ffffff;
   --accent-soft: rgb(181 56 42 / 0.1);
   --margin: rgb(181 56 42 / 0.42);
   --highlight: #f4d35e;
-  --highlight-foreground: #241e19;
+  --highlight-foreground: #1a1a1a;
   --danger: #b5382a;
   --danger-solid: #b5382a;
-  --danger-foreground: #fffdf8;
-  --overlay: rgb(74 52 24 / 0.25);
-  --lift: 0 24px 36px -28px rgb(74 52 24 / 0.4);
-  --lamp: rgb(255 255 255 / 0.55);
-  --glow: rgb(255 255 255 / 0.7);
+  --danger-foreground: #ffffff;
+  --overlay: rgb(0 0 0 / 0.25);
+  --lift: 0 24px 36px -28px rgb(0 0 0 / 0.3);
+  --lamp: rgb(0 0 0 / 0.02);
+  --glow: rgb(0 0 0 / 0.02);
 
-  --sheet: #fdfbf6;
-  --sheet-rule: #d6cab2;
-  --edge-1: #e4dbc7;
-  --edge-2: #d9cdb5;
-  --edge-3: #cdbfa3;
+  --sheet: #ffffff;
+  --sheet-ink: #1a1a1a;
+  --sheet-2: #555555;
+  --sheet-rule: #e0e0e0;
+  --edge-1: #e6e6e6;
+  --edge-2: #dadada;
+  --edge-3: #cecece;
+  --ruled: #e4e4e4;
 
   --subject-rose: #a8364f;
   --subject-orange: #b4582c;
@@ -171,10 +174,10 @@
   --subject-green: #3d6a4b;
   --subject-teal: #2f6f69;
   --subject-blue: #2b4b78;
-  --subject-graphite: #5b5448;
+  --subject-graphite: #5c5c5c;
   --subject-umber: #7a5230;
 
-  --grain: var(--speck-dark);
+  --grain: var(--speck-grey);
 }
 
 @layer base {
