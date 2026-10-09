@@ -1,4 +1,4 @@
-import type { Annotation } from "@betternotez/core";
+import type { Annotation, Highlight } from "@betternotez/core";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { degrees, PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
@@ -36,6 +36,38 @@ function textBox(overrides: Partial<Extract<Annotation, { kind: "text" }>>): Ann
     color: "#dc2626",
     ...overrides,
   };
+}
+
+type OperatorList = { fnArray: number[]; argsArray: unknown[] };
+
+/**
+ * The first filled path on a page as x, y, width, height in PDF points. pdf-lib places each box
+ * with a translation inside its own save and restore pair, and pdf.js reports the path's extents
+ * in that local space, so the box is the translation plus the extents.
+ */
+function filledBox(list: OperatorList): number[] | undefined {
+  let x = 0;
+  let y = 0;
+  for (let index = 0; index < list.fnArray.length; index += 1) {
+    const fn = list.fnArray[index];
+    if (fn === pdfjs.OPS.save) {
+      x = 0;
+      y = 0;
+    } else if (fn === pdfjs.OPS.transform) {
+      const [, , , , dx = 0, dy = 0] = list.argsArray[index] as number[];
+      x += dx;
+      y += dy;
+    } else if (fn === pdfjs.OPS.constructPath) {
+      const [, , [left = 0, bottom = 0, right = 0, top = 0] = []] = list.argsArray[index] as [unknown, unknown, number[]];
+      return [x + left, y + bottom, right - left, top - bottom].map((value) => Math.round(value * 1000) / 1000);
+    }
+  }
+  return undefined;
+}
+
+/** The blend modes and opacities of every graphics state the page sets, as pdf.js reports them. */
+function graphicsStates(list: OperatorList): unknown[] {
+  return list.fnArray.flatMap((fn, index) => (fn === pdfjs.OPS.setGState ? [list.argsArray[index]] : []));
 }
 
 describe("exportAnnotatedPdf", () => {
@@ -97,6 +129,45 @@ describe("exportAnnotatedPdf", () => {
 
     expect(pageThree.fnArray).toContain(pdfjs.OPS.constructPath);
     expect(pageOne.fnArray).not.toContain(pdfjs.OPS.constructPath);
+  });
+
+  it("draws a highlight as a multiply rectangle over its words, on its page only", async () => {
+    // The box covers the page 2 line, which is drawn at y 300 of a 400-point page.
+    const highlightBox: Highlight = {
+      id: AnnotationId.parse("01HIGHLIGHTEXPORT0000000"),
+      kind: "highlight",
+      page: 2,
+      author: "user",
+      rects: [{ x: 0.2, y: 0.2, width: 0.4, height: 0.07 }],
+      text: "Original page 2",
+      color: "#a8701b",
+    };
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [highlightBox]));
+    const pageTwo = await (await pdf.getPage(2)).getOperatorList();
+    const pageOne = await (await pdf.getPage(1)).getOperatorList();
+
+    expect(JSON.stringify(graphicsStates(pageTwo))).toContain("multiply");
+    expect(JSON.stringify(graphicsStates(pageTwo))).toContain('"ca",0.35');
+    expect(graphicsStates(pageOne)).toEqual([]);
+    // The box runs from x 60 to 180 and from y 292 to 320 in PDF points, measured from the page's lower left.
+    expect(filledBox(pageTwo)).toEqual([60, 292, 120, 28]);
+  });
+
+  it("finds the box on a page rotated 90 degrees clockwise", async () => {
+    const highlightBox: Highlight = {
+      id: AnnotationId.parse("01HIGHLIGHTROTATED00000000"),
+      kind: "highlight",
+      page: 1,
+      author: "user",
+      rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.1 }],
+      text: "Original page 1",
+      color: "#2b4b78",
+    };
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(1, 90), [highlightBox]));
+
+    // On the reader's 400 by 300 page the box spans x 40 to 160 and y 60 to 90. Unrotated, that is
+    // x 60 to 90 and y 40 to 160.
+    expect(filledBox(await (await pdf.getPage(1)).getOperatorList())).toEqual([60, 40, 30, 120]);
   });
 
   it("writes characters Helvetica cannot draw as question marks instead of failing", async () => {

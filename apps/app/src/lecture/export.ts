@@ -1,6 +1,7 @@
-import type { Annotation, Ink, TextBox } from "@betternotez/core";
-import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import type { Annotation, Highlight, Ink, TextBox } from "@betternotez/core";
+import { BlendMode, degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { displaySize, displayToUser, normalizeRotation, type PageGeometry } from "./geometry";
+import { HIGHLIGHT_OPACITY } from "./highlight";
 import { outlinePath, strokeOutline } from "./ink";
 import { BASELINE_RATIO, LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
 
@@ -20,8 +21,10 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
     const geometry = pageGeometry(page);
     if (annotation.kind === "text") {
       drawTextBox(page, geometry, annotation, font);
-    } else {
+    } else if (annotation.kind === "ink") {
       drawInk(page, geometry, annotation);
+    } else {
+      drawHighlight(page, geometry, annotation);
     }
   }
   return document.save();
@@ -66,6 +69,35 @@ function drawInk(page: PDFPage, geometry: PageGeometry, ink: Ink): void {
     color: hexToRgb(ink.color),
     opacity: ink.opacity ?? 1,
   });
+}
+
+/**
+ * Each box is drawn in multiply mode, as on screen, so the words under it stay dark. Each box is
+ * turned into the bounding box of its corners in PDF space, which is exact for quarter turns.
+ */
+function drawHighlight(page: PDFPage, geometry: PageGeometry, highlight: Highlight): void {
+  const color = hexToRgb(highlight.color);
+  for (const { x, y, width, height } of highlight.rects) {
+    const corners = [
+      displayToUser(geometry, x, y),
+      displayToUser(geometry, x + width, y),
+      displayToUser(geometry, x, y + height),
+      displayToUser(geometry, x + width, y + height),
+    ];
+    const left = Math.min(...corners.map((corner) => corner.x));
+    const right = Math.max(...corners.map((corner) => corner.x));
+    const bottom = Math.min(...corners.map((corner) => corner.y));
+    const top = Math.max(...corners.map((corner) => corner.y));
+    page.drawRectangle({
+      x: left,
+      y: bottom,
+      width: right - left,
+      height: top - bottom,
+      color,
+      opacity: HIGHLIGHT_OPACITY,
+      blendMode: BlendMode.Multiply,
+    });
+  }
 }
 
 /** Greedy word wrap. A single word wider than the box is kept whole and overflows. */
