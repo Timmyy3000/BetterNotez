@@ -1,10 +1,12 @@
 import type { Lecture, SearchHit, Subject } from "@betternotez/core";
-import { Search, SearchX } from "lucide-react";
+import { Search, SearchX, X } from "lucide-react";
+import { useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { EmptyState } from "../ui/empty-state";
 import { revealAt } from "../lib/motion";
+import { iconButtonClass } from "../ui/button";
 import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
 
@@ -29,6 +31,7 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const query = params.get("q") ?? "";
   const needle = query.trim();
+  const field = useRef<HTMLInputElement>(null);
 
   const results = useLibraryQuery(
     async (library) => {
@@ -49,14 +52,28 @@ export function SearchPage() {
       <div className="rise flex items-center gap-4 border-b-2 border-foreground pb-2 focus-within:border-accent" style={revealAt(2)}>
         <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" />
         <input
+          ref={field}
           type="search"
           aria-label="Search"
           autoFocus
-          className="min-w-0 flex-1 bg-transparent py-2 font-serif text-3xl outline-none placeholder:text-faint placeholder:italic"
+          className="min-w-0 flex-1 bg-transparent py-2 font-serif text-3xl outline-none placeholder:text-faint placeholder:italic [&::-webkit-search-cancel-button]:appearance-none"
           placeholder="Search subjects, lectures, notes, text boxes, or PDF text"
           value={query}
           onChange={(event) => setParams({ q: event.target.value }, { replace: true })}
         />
+        {query !== "" && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            className={iconButtonClass}
+            onClick={() => {
+              setParams({ q: "" }, { replace: true });
+              field.current?.focus();
+            }}
+          >
+            <X />
+          </button>
+        )}
       </div>
 
       <div className="mt-10 space-y-12">
@@ -128,7 +145,7 @@ function Highlight({ text, query }: { readonly text: string; readonly query: str
   const parts = text.split(new RegExp(`(${escapeRegExp(query)})`, "i"));
   return parts.map((part, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded-[2px] bg-highlight px-0.5 text-highlight-foreground">
+      <mark key={index} className="rounded-[2px] bg-[color-mix(in_srgb,var(--accent)_22%,transparent)] px-0.5 text-foreground">
         {part}
       </mark>
     ) : (

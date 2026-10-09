@@ -54,7 +54,6 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["accent-foreground", "accent"],
   ["background", "foreground"],
   ["danger-foreground", "danger-solid"],
-  ["highlight-foreground", "highlight"],
   ["pen", "sheet"],
   ["sheet-ink", "sheet"],
 ];
