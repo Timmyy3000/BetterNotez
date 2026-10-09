@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chooseMatch, findTextMatches } from "./text-match.js";
-import type { Glyph } from "./text-layout.js";
+import type { Glyph } from "./glyphs.js";
 
 /** Glyphs laid out one after another on one line, each a tenth of the page wide. */
 function line(text: string, top = 0.1): Glyph[] {
