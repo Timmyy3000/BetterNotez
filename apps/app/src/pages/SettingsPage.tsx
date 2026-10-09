@@ -51,7 +51,7 @@ function AppearanceSection() {
   return (
     <Section id="appearance-heading" title="Appearance">
       <p className="mt-1 text-sm text-muted-foreground">Dark is the default. System matches your computer's setting.</p>
-      <div role="group" aria-label="Theme" className="mt-4 inline-flex rounded-xl border border-border bg-muted p-1">
+      <div role="group" aria-label="Theme" className="mt-4 inline-flex rounded-xl border border-control bg-muted p-1">
         {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
           const selected = preference === value;
           return (

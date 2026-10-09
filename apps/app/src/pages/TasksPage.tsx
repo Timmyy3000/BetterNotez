@@ -198,7 +198,7 @@ export function TasksPage() {
             aria-label="Filter by subject"
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
+            className="h-9 rounded-lg border border-control bg-surface px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
           >
             <option value={ALL_SUBJECTS}>All subjects</option>
             <option value={NO_SUBJECT}>No subject</option>
@@ -285,7 +285,7 @@ function BoardColumn({
           {tasks.map((task) => (
             <SortableTaskCard key={task.id} info={infoFor(task)} onEdit={() => onOpen(task.id)} />
           ))}
-          {tasks.length === 0 && <div className="flex-1 rounded-xl border border-dashed border-border" />}
+          {tasks.length === 0 && <div className="flex-1 rounded-xl border border-dashed border-control" />}
         </div>
       </SortableContext>
     </section>
