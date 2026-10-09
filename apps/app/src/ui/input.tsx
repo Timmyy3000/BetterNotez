@@ -1,12 +1,15 @@
 import type { ComponentProps } from "react";
 import { cn } from "../lib/cn";
 
-/** A boxed field. Its border meets the 3:1 contrast needed for a control. Focus comes from the shared outline. */
+/**
+ * A boxed field. Its border meets the 3:1 contrast needed for a control. Focus is ink, not the accent,
+ * because the accent red means an error or an overdue date, and a focus ring must not read as one.
+ */
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] transition-colors placeholder:text-faint focus:border-accent",
+        "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] transition-colors placeholder:text-faint focus:border-foreground focus-visible:outline-foreground",
         className,
       )}
       {...props}
