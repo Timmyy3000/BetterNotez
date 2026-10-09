@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Bot, FolderOpen, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import { Bot, FolderOpen, Info, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import pkg from "../../package.json";
@@ -34,12 +34,14 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Appearance, your library, and the AI assistant." />
+      <PageHeader title="Settings" description="Change how BetterNotez looks, find your library, and connect Claude." />
 
-      <AppearanceSection />
-      <AssistantSection desktop={desktop} folder={folder} />
-      <LibrarySection desktop={desktop} folder={folder} />
-      <AboutSection />
+      <div className="mt-10 max-w-2xl space-y-12">
+        <AppearanceSection />
+        <LibrarySection desktop={desktop} folder={folder} />
+        <AssistantSection desktop={desktop} folder={folder} />
+        <AboutSection />
+      </div>
     </>
   );
 }
@@ -49,8 +51,10 @@ function AppearanceSection() {
   const setPreference = useThemeStore((state) => state.setPreference);
 
   return (
-    <Section id="appearance-heading" title="Appearance">
-      <p className="mt-1 text-sm text-muted-foreground">Dark is the default. System matches your computer's setting.</p>
+    <Section id="appearance-heading" title="Appearance" icon={Sun}>
+      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+        Choose how BetterNotez looks. System follows your computer's light or dark setting.
+      </p>
       <div role="group" aria-label="Theme" className="mt-4 inline-flex rounded-xl border border-control bg-muted p-1">
         {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
           const selected = preference === value;
@@ -81,7 +85,7 @@ function AppearanceSection() {
 function AssistantSection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
   if (!desktop) {
     return (
-      <Section id="assistant-heading" title="Connect an AI assistant" icon={Bot}>
+      <Section id="assistant-heading" title="Connect Claude" icon={Bot}>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           Connecting an AI assistant needs the desktop app. The assistant reads the library folder on your computer, and
           the web app keeps its library in this browser.{" "}
@@ -107,7 +111,7 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
   const claudeCodeCommand = `claude mcp add betternotez -- node ${SERVER_PLACEHOLDER} --library "${libraryPath}"`;
 
   return (
-    <Section id="assistant-heading" title="Connect an AI assistant" icon={Bot}>
+    <Section id="assistant-heading" title="Connect Claude" icon={Bot}>
       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
         An AI assistant such as Claude can read your library and make changes for you. It connects through MCP, a
         standard way for AI apps to use tools on your computer. BetterNotez includes that tool. Setup takes three steps.
@@ -168,7 +172,7 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
 function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
   if (!desktop) {
     return (
-      <Section id="library-heading" title="Your library">
+      <Section id="library-heading" title="Your library" icon={FolderOpen}>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           This web app keeps your library in this browser. Clearing site data removes it, and other browsers cannot see
           it. To keep a copy of one lecture, use Export PDF in its viewer. For a library you can back up as a folder, use
@@ -179,7 +183,7 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
   }
 
   return (
-    <Section id="library-heading" title="Your library">
+    <Section id="library-heading" title="Your library" icon={FolderOpen}>
       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
         Your library is one folder on this computer. Lectures, notes, annotations, and tasks are plain files, so you can
         open, copy, or back up the folder without BetterNotez.
@@ -201,9 +205,9 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
 
 function AboutSection() {
   return (
-    <Section id="about-heading" title="About">
+    <Section id="about-heading" title="About" icon={Info}>
       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-        BetterNotez {pkg.version} is free and open source, licensed under AGPL-3.0.
+        Version {pkg.version}. BetterNotez is free and open source under the AGPL-3.0 license.
       </p>
       <a href={REPOSITORY_URL} className="mt-3 inline-block text-sm text-accent underline underline-offset-2">
         View the code on GitHub
@@ -224,7 +228,7 @@ function Section({
   readonly children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className="mt-10 max-w-2xl border-t border-border pt-8">
+    <section aria-labelledby={id}>
       <h2 id={id} className="flex items-center gap-2 text-lg font-semibold">
         {Icon !== undefined && <Icon className="size-5 text-accent" />}
         {title}
