@@ -429,7 +429,8 @@ async function addTask(page, task) {
 }
 
 async function editTask(page, task) {
-  await page.getByRole("region", { name: "To do" }).getByText(task.title, { exact: true }).click();
+  const column = page.getByRole("region", { name: task.column ?? "To do" });
+  await column.getByText(task.title, { exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Edit task" });
   if (task.subject !== undefined) await dialog.getByLabel("Subject").selectOption(task.subject);
   if (task.due !== undefined) await dialog.getByLabel("Due date").fill(task.due);
@@ -439,21 +440,29 @@ async function editTask(page, task) {
 
 async function moveTask(page, task) {
   if (COLUMNS.indexOf(task.column) <= 0) return;
-  // A mouse drag, as the e2e suite does it. Keyboard pick-up right after a dialog closes was not reliable.
+  // A mouse drag, as the e2e suite does it. A drop occasionally misses, so each attempt measures again and retries.
   const card = page.locator('[aria-roledescription="sortable"]').filter({ hasText: task.title }).first();
   const target = page.getByRole("region", { name: task.column });
-  const from = await boxOf(card);
-  const to = await boxOf(target);
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
-  await page.mouse.up();
-  await target.getByText(task.title, { exact: true }).waitFor();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const from = await boxOf(card);
+    const to = await boxOf(target);
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+    try {
+      await target.getByText(task.title, { exact: true }).waitFor({ timeout: 3000 });
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+  }
 }
 
 async function arrangeTask(page, task) {
-  if (task.subject !== undefined || task.due !== undefined) await editTask(page, task);
+  // Move first, then edit the card where it now sits. Editing first left the next drag without a target.
   await moveTask(page, task);
+  if (task.subject !== undefined || task.due !== undefined) await editTask(page, task);
 }
 
 async function seed(page, routes) {
