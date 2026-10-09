@@ -69,6 +69,7 @@ export function LectureView({
   const chooseTool = useCallback((next: Tool) => {
     setTool(next);
     setSelectedId(undefined);
+    window.getSelection()?.removeAllRanges();
   }, []);
 
   const endEdit = useCallback(
