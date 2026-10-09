@@ -65,8 +65,8 @@ export function ImportDialog({
 
   return (
     <ModalDialog
-      title="Import material PDFs"
-      description="Each PDF is added as material, titled after its file name."
+      title="Import PDFs"
+      description="Each PDF is added to this subject, titled after its file name."
       onClose={onClose}
     >
       <div
@@ -124,7 +124,7 @@ export function ImportDialog({
       )}
 
       <label className="mt-5 block space-y-2">
-        <span className="text-sm font-medium">Material date (optional)</span>
+        <span className="text-sm font-medium">Date (optional)</span>
         <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
       </label>
 

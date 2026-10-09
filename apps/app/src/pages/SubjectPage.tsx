@@ -116,7 +116,7 @@ export function SubjectPage() {
       <div className="rise" style={revealAt(2)}>
         {ordered.length === 0 ? (
           <EmptyState icon={FileText} title="No material yet">
-            Drop material PDFs anywhere on this page, or click Import PDF.
+            Drop PDFs anywhere on this page, or click Import PDF.
           </EmptyState>
         ) : (
           <ol className="border-b border-border">
