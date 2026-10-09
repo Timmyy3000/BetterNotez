@@ -150,7 +150,7 @@ describe("Lecture 1 in Digital Systems", () => {
         height: 0.08,
         text: "Check the truth table",
         fontSize: 14,
-        color: "#000000",
+        color: "#241e19",
       },
       {
         id: expect.any(String),
@@ -161,7 +161,7 @@ describe("Lecture 1 in Digital Systems", () => {
           [0.1, 0.5, 0.5],
           [0.2, 0.6, 0.9],
         ],
-        color: "#000000",
+        color: "#241e19",
         size: 2,
       },
     ]);
@@ -681,6 +681,42 @@ describe("formatting a text box", () => {
 
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain("fontSize");
+  });
+
+  it("accepts only the four font sizes the app offers, for a new box and for an edit", async () => {
+    const { lecture } = await seedLecture();
+    const box = await library.addAnnotation(lecture.id, {
+      kind: "text",
+      author: "user",
+      page: 1,
+      x: 0.5,
+      y: 0.5,
+      width: 0.2,
+      height: 0.1,
+      text: "Sized",
+      fontSize: 14,
+      color: "#111111",
+    });
+
+    for (const fontSize of [1e9, 0.0001, 13]) {
+      const added = await call("add_text_box", { lectureId: lecture.id, page: 1, x: 0.1, y: 0.1, text: "Off", fontSize });
+      expect(added.isError).toBe(true);
+      expect(textOf(added)).toContain("fontSize");
+
+      const edited = await call("update_annotation", {
+        lectureId: lecture.id,
+        annotationId: box.id,
+        patch: { fontSize },
+      });
+      expect(edited.isError).toBe(true);
+    }
+
+    const resized = await callJson<{ fontSize: number }>("update_annotation", {
+      lectureId: lecture.id,
+      annotationId: box.id,
+      patch: { fontSize: 24 },
+    });
+    expect(resized.fontSize).toBe(24);
   });
 
   it("tells the assistant that text is italic unless it says otherwise", async () => {

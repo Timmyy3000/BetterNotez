@@ -20,10 +20,14 @@ import {
   unitCoordinate,
 } from "./shared.js";
 
+/** The palette's Black, the ink an assistant's text and strokes get when none is given. */
+const DEFAULT_INK = "#241e19";
 const TEXT_BOX_ONLY: readonly string[] = ["x", "y", "width", "height", "text", "fontSize", "bold", "italic", "underline"];
 const INK_ONLY: readonly string[] = ["points", "size"];
 
-const fontSize = z.number().positive().describe("Font size in points. The app's sizes are 11, 14, 18, and 24.");
+const fontSize = z
+  .union([z.literal(11), z.literal(14), z.literal(18), z.literal(24)])
+  .describe("Font size in points. The app's sizes are 11, 14, 18, and 24.");
 
 const annotationPatch = z
   .object({
@@ -61,7 +65,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       bold: z.boolean().optional().describe("Bold text. Off when omitted."),
       italic: z.boolean().optional().describe("Italic text. On when omitted. Send false for upright text."),
       underline: z.boolean().optional().describe("Underline the text. Off when omitted."),
-      color: hexColor.default("#000000"),
+      color: hexColor.default(DEFAULT_INK),
     },
     ({ lectureId, ...box }) => library.addAnnotation(lectureId, { ...box, kind: "text", author: "ai" }),
   );
@@ -73,7 +77,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       lectureId: lectureRef,
       page: pageRef,
       points: z.array(inkPoint).min(1),
-      color: hexColor.default("#000000"),
+      color: hexColor.default(DEFAULT_INK),
       size: z.number().positive().default(2).describe("Stroke width."),
     },
     ({ lectureId, page, points, color, size }) =>
