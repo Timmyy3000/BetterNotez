@@ -8,7 +8,7 @@ import { calendarDate, lectureRef, pageRef, subjectRef } from "./shared.js";
 export function registerLectureTools(tools: ToolRegistry, library: Library): void {
   tools.tool(
     "import_lecture",
-    "Import a lecture PDF from a file on the student's computer. Copies the PDF into the library, caches its text for reading and search, and returns the new lecture. The title defaults to the file name without its extension.",
+    "Import a PDF as material from a file on the student's computer. Copies the PDF into the library, caches its text for reading and search, and returns the new material. The title defaults to the file name without its extension.",
     {
       subjectId: subjectRef,
       pdfPath: z
@@ -35,7 +35,7 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "get_lecture",
-    "Get a lecture with its notepad, annotations, and whether its PDF text is cached. Annotation ids here are what update_annotation takes.",
+    "Get one piece of material with its notepad, annotations, and whether its PDF text is cached. Annotation ids here are what update_annotation takes.",
     { lectureId: lectureRef },
     async ({ lectureId }) => ({
       lecture: await library.getLecture(lectureId),
@@ -47,7 +47,7 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "get_lecture_text",
-    "Read the PDF text of a lecture, one entry per page. Pass fromPage and toPage to read part of a long lecture.",
+    "Read the PDF text of a piece of material, one entry per page. Pass fromPage and toPage to read part of a long PDF.",
     {
       lectureId: lectureRef,
       fromPage: pageRef.optional(),
@@ -58,7 +58,7 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
       const pages = await library.getPdfText(lectureId);
       if (pages === undefined) {
         throw new Error(
-          "The PDF text for this lecture is not cached yet. Ask the student to open the lecture once in BetterNotez so its text is saved.",
+          "The PDF text for this material is not cached yet. Ask the student to open the material once in BetterNotez so its text is saved.",
         );
       }
       const last = toPage ?? lecture.pageCount;
@@ -76,7 +76,7 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "update_lecture",
-    "Rename a lecture or set its date. Pass date as null to clear it.",
+    "Rename a piece of material or set its date. Pass date as null to clear it.",
     {
       lectureId: lectureRef,
       title: z.string().min(1).optional(),
@@ -87,7 +87,7 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "update_notes",
-    "Edit the notepad of a lecture. Use mode append (the default) to add to the notes. Use replace only when the student asks to rewrite them, because replace removes the existing text.",
+    "Edit the notepad of a piece of material. Use mode append (the default) to add to the notes. Use replace only when the student asks to rewrite them, because replace removes the existing text.",
     {
       lectureId: lectureRef,
       text: z.string().describe("Markdown text to write."),

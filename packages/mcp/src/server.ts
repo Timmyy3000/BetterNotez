@@ -9,8 +9,8 @@ import { registerPlannerTools } from "./tools/planner.js";
 import { registerTaskTools } from "./tools/tasks.js";
 
 const INSTRUCTIONS = [
-  "BetterNotez holds a student's subjects, lecture PDFs, notepads, annotations, tasks, and weekly planner.",
-  "When the student names a lecture, call find_lecture first.",
+  "BetterNotez holds a student's subjects, material (a PDF such as lecture slides or a reading), notepads, annotations, tasks, and weekly planner.",
+  "When the student names a piece of material, call find_lecture first.",
   "AI can create and edit everything but cannot delete. Ask the student to delete anything in the app.",
   "Positions on a page are normalized from 0 to 1, with the origin at the top-left corner.",
 ].join("\n");
