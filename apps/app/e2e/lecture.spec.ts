@@ -116,6 +116,8 @@ test("text box, pen stroke, notes, and export survive a reload, and undo works",
   await page.keyboard.press("Control+z");
   await expect(page.locator('[data-page-number="2"] [data-kind="ink"]')).toHaveCount(1);
 
+  // Notes belong to a page. The pen work above left the view on page 2, so this note goes on page 1, which a reload opens.
+  await page.getByRole("button", { name: "Previous page" }).click();
   await page.getByRole("button", { name: "Notes" }).click();
   await page.getByRole("textbox", { name: "Material notes" }).fill("Remember the truth table");
   await expect(page.getByRole("status")).toHaveText("Saved");
