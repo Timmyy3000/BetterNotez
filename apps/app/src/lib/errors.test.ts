@@ -4,7 +4,7 @@ import { errorMessage } from "./errors";
 
 describe("errorMessage", () => {
   it("hides the internal ID of a missing item", () => {
-    expect(errorMessage(new NotFoundError("Subject", "subject-42"))).toBe("That item no longer exists.");
+    expect(errorMessage(new NotFoundError("Subject", "subject-42"))).toBe("That item is no longer in your library.");
   });
 
   it("passes other error messages through", () => {
