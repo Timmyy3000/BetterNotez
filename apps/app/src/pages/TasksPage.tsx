@@ -85,12 +85,13 @@ export function TasksPage() {
   }, [tasks.data]);
 
   // A ledger link opens its task. The parameter is cleared so a reload does not reopen the editor.
+  const requestedTask = searchParams.get("task");
   useEffect(() => {
-    const requested = searchParams.get("task");
+    const requested = requestedTask;
     if (requested === null || tasks.data === undefined) return;
     if (tasks.data.some((task) => task.id === requested)) setEditingId(requested);
     setSearchParams({}, { replace: true });
-  }, [tasks.data]);
+  }, [tasks.data, requestedTask]);
 
   if (tasks.error !== undefined) return <QueryError error={tasks.error} />;
   if (subjects.error !== undefined) return <QueryError error={subjects.error} />;

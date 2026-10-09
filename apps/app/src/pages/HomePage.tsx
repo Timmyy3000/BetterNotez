@@ -102,14 +102,17 @@ export function HomePage() {
                 <li key={task.id} className="border-t border-border">
                   <Link
                     to={`/tasks?task=${task.id}`}
-                    className="grid grid-cols-[178px_minmax(0,1fr)_200px] items-baseline gap-5 py-3 transition-colors hover:text-accent"
+                    className={cn(
+                      "grid grid-cols-1 gap-1 py-3 transition-colors hover:text-accent sm:items-baseline sm:gap-5",
+                      subject === undefined ? "sm:grid-cols-[178px_minmax(0,1fr)]" : "sm:grid-cols-[178px_minmax(0,1fr)_200px]",
+                    )}
                   >
                     <span className={cn("text-sm tabular-nums", overdue ? "font-semibold text-foreground" : "text-muted-foreground")}>
                       {when}
                     </span>
                     <span className="min-w-0 font-serif text-2xl leading-tight">{task.title}</span>
                     {subject !== undefined && (
-                      <span className="flex min-w-0 items-center justify-end gap-2.5 text-sm text-muted-foreground">
+                      <span className="flex min-w-0 items-center gap-2.5 text-sm sm:justify-end text-muted-foreground">
                         <span className="ink-dot" style={{ backgroundColor: subjectTone(subject.color) }} />
                         <span className="truncate">{subject.name}</span>
                       </span>
