@@ -84,7 +84,7 @@ export function Toolbar({
           aria-pressed={color === swatch.value}
           title={swatch.name}
           onClick={() => onColor(swatch.value)}
-          className="relative mx-1 size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0_/_0.18)] transition-transform duration-150 ease-out before:absolute before:-inset-2 before:content-[''] active:scale-[0.88] aria-pressed:shadow-[0_0_0_2px_var(--raised),0_0_0_3.5px_var(--foreground)]"
+          className="relative mx-1 size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--foreground)_35%,transparent)] transition-transform duration-150 ease-out before:absolute before:-inset-[11px] before:content-[''] active:scale-[0.96] aria-pressed:shadow-[0_0_0_2px_var(--raised),0_0_0_3.5px_var(--foreground)]"
           style={{ backgroundColor: swatch.value }}
         />
       ))}
@@ -190,7 +190,7 @@ function IconToggle({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "relative grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-[transform,background-color,color] duration-150 ease-out before:absolute before:-inset-1 before:content-[''] hover:bg-foreground/5 hover:text-foreground active:scale-[0.93] disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
+        "relative grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-[transform,background-color,color] duration-150 ease-out before:absolute before:-inset-1 before:content-[''] hover:bg-foreground/5 hover:text-foreground active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
         active && "bg-foreground text-background hover:bg-foreground hover:text-background",
       )}
     >
