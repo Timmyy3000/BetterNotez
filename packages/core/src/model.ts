@@ -51,10 +51,37 @@ export const TextBox = z.object({
   width: unitInterval,
   height: unitInterval,
   text: z.string(),
-  fontSize: z.number().positive(),
+  /** Points. Omitted for the default size, see TEXT_BOX_DEFAULTS. */
+  fontSize: z.number().positive().optional(),
   color: hexColor,
+  /** Each style flag is left out until it is set, so a file written before it existed keeps its look. */
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+  underline: z.boolean().optional(),
 });
 export type TextBox = z.infer<typeof TextBox>;
+
+/** How a text box is drawn when its style fields are left out. Italic is the look text boxes have always had. */
+export const TEXT_BOX_DEFAULTS = { fontSize: 14, bold: false, italic: true, underline: false } as const;
+
+export interface TextBoxStyle {
+  readonly fontSize: number;
+  readonly bold: boolean;
+  readonly italic: boolean;
+  readonly underline: boolean;
+  readonly color: string;
+}
+
+/** The style a text box is drawn with, with the defaults filled in for each field it leaves out. */
+export function textBoxStyle(box: Pick<TextBox, "fontSize" | "bold" | "italic" | "underline" | "color">): TextBoxStyle {
+  return {
+    fontSize: box.fontSize ?? TEXT_BOX_DEFAULTS.fontSize,
+    bold: box.bold ?? TEXT_BOX_DEFAULTS.bold,
+    italic: box.italic ?? TEXT_BOX_DEFAULTS.italic,
+    underline: box.underline ?? TEXT_BOX_DEFAULTS.underline,
+    color: box.color,
+  };
+}
 
 export const Ink = z.object({
   id: AnnotationId,
