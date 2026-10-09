@@ -3,19 +3,11 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 import type { Tool } from "./editor";
+import { INK_COLORS } from "./inks";
 
 export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 4;
 export const ZOOM_STEP = 1.25;
-
-/** The pen inks of the mockup. Each stroke stores its hex, so a stroke keeps its colour in both themes. */
-export const INK_COLORS = [
-  { name: "Black", value: "#241e19" },
-  { name: "Red", value: "#b5382a" },
-  { name: "Green", value: "#3d6a4b" },
-  { name: "Blue", value: "#2b4b78" },
-  { name: "Ochre", value: "#a8701b" },
-] as const;
 
 /** The ink a new stroke or text box starts with: the pen blue of the mockup. */
 export const DEFAULT_INK = "#2b4b78";
