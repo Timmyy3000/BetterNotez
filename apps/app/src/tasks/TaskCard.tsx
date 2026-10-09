@@ -5,6 +5,7 @@ import { CalendarDays, Pencil } from "lucide-react";
 import type { PointerEvent, KeyboardEvent } from "react";
 import { cn } from "../lib/cn";
 import { formatLectureDate } from "../lib/format";
+import { subjectTone } from "../lib/subject-colors";
 import { focusRing, iconButtonClass } from "../ui/button";
 import { cardClass } from "../ui/card";
 
@@ -62,7 +63,7 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
           {subject !== undefined && (
             <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5">
-              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: subject.color }} aria-hidden />
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: subjectTone(subject.color) }} aria-hidden />
               <span className="truncate">{subject.name}</span>
             </span>
           )}

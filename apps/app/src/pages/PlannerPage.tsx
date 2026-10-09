@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useLibrary, useLibraryQuery, useLibraryRefresh } from "../library";
 import { errorMessage } from "../lib/errors";
-import { DEFAULT_SUBJECT_COLOR } from "../lib/subject-colors";
+import { DEFAULT_SUBJECT_COLOR, subjectTone } from "../lib/subject-colors";
 import { PlannerCardDialog } from "../planner/PlannerCardDialog";
 import { PlannerGrid, type Placement, type PlannerBlock } from "../planner/PlannerGrid";
 import { gridRange, toMinutes, toTime } from "../planner/time";
@@ -59,7 +59,7 @@ export function PlannerPage() {
       id: card.id,
       ...(overrides[card.id] ?? { day: card.day, start: toMinutes(card.start), end: toMinutes(card.end) }),
       name: subject?.name ?? "Deleted subject",
-      color: subject?.color ?? DEFAULT_SUBJECT_COLOR,
+      color: subjectTone(subject?.color ?? DEFAULT_SUBJECT_COLOR),
       location: card.location,
     };
   });

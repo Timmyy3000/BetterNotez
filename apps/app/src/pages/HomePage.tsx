@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { countLabel } from "../lib/format";
+import { subjectTone } from "../lib/subject-colors";
 import { SubjectDialog } from "../subjects/SubjectDialog";
 import { Button, focusRing } from "../ui/button";
 import { cardClass } from "../ui/card";
@@ -54,7 +55,7 @@ export function HomePage() {
           return (
             <li key={subject.id}>
               <Link to={`/subjects/${subject.id}`} className={cn(cardClass, "block p-5", focusRing)}>
-                <span className="block h-1.5 w-10 rounded-full" style={{ backgroundColor: subject.color }} />
+                <span className="block h-1.5 w-10 rounded-full" style={{ backgroundColor: subjectTone(subject.color) }} />
                 <span className="mt-6 block truncate text-base font-semibold">{subject.name}</span>
                 <span className="mt-1 block text-sm text-muted-foreground">{countLabel(count, "lecture")}</span>
               </Link>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
+import { subjectTone } from "../lib/subject-colors";
 import { SubjectDialog } from "../subjects/SubjectDialog";
 import { focusRing } from "../ui/button";
 import { IconButton } from "../ui/tooltip";
@@ -46,7 +47,7 @@ export function Sidebar() {
           {subjects.data?.map((subject) => (
             <li key={subject.id}>
               <NavLink to={`/subjects/${subject.id}`} className={({ isActive }) => navItemClass(isActive)}>
-                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: subject.color }} />
+                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: subjectTone(subject.color) }} />
                 <span className="truncate">{subject.name}</span>
               </NavLink>
             </li>
