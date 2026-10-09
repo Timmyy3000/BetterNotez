@@ -41,14 +41,22 @@ export function DeleteSubjectDialog({
   return (
     <ModalDialog
       title={`Delete ${subject.name}?`}
-      description="There is no trash, so this cannot be undone."
+      description="This can't be undone."
       onClose={onClose}
     >
-      <p className="text-sm">This removes:</p>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-        <li>{countLabel(lectureCount, "lecture")}, with their PDFs, annotations, and notes</li>
-        <li>{countLabel(cardCount, "timetable class", "timetable classes")}</li>
-      </ul>
+      {lectureCount === 0 && cardCount === 0 ? (
+        <p className="text-sm">This removes the subject.</p>
+      ) : (
+        <>
+          <p className="text-sm">This removes:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            {lectureCount > 0 && (
+              <li>{countLabel(lectureCount, "lecture")}, with their PDFs, annotations, and notes</li>
+            )}
+            {cardCount > 0 && <li>{countLabel(cardCount, "timetable class", "timetable classes")}</li>}
+          </ul>
+        </>
+      )}
       <p className="mt-3 text-sm text-muted-foreground">Tasks linked to this subject stay, but lose the link.</p>
       <DialogActions>
         <Button onClick={onClose} disabled={deleting}>
