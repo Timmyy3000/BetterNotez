@@ -20,6 +20,8 @@ const PAGE_GAP = 16;
 const GUTTER = 56;
 /** Caps the canvas size so zooming in on a large page does not exhaust memory. */
 const MAX_CANVAS_PIXELS = 16_000_000;
+/** A page is redrawn once its size has held this long. Until then it is stretched, which keeps a drag responsive. */
+const REDRAW_SETTLE_MS = 150;
 
 export interface PdfPagesHandle {
   readonly goToPage: (page: number) => void;
@@ -170,6 +172,9 @@ function PdfCanvas({
   const holder = useRef<HTMLDivElement>(null);
   const near = useNearViewport(holder, scrollRef);
   const canvas = useRef<HTMLCanvasElement>(null);
+  // The canvas is sized by its section, so it stretches to each new width at once. Only the drawing waits.
+  const drawWidth = useSettled(width, REDRAW_SETTLE_MS);
+  const drawHeight = useSettled(height, REDRAW_SETTLE_MS);
 
   useEffect(() => {
     const element = canvas.current;
@@ -184,8 +189,11 @@ function PdfCanvas({
         const context = element.getContext("2d");
         if (context === null) return;
         const base = page.getViewport({ scale: 1 });
-        const cssScale = width / base.width;
-        const resolution = Math.min(window.devicePixelRatio || 1, Math.sqrt(MAX_CANVAS_PIXELS / (width * height)));
+        const cssScale = drawWidth / base.width;
+        const resolution = Math.min(
+          window.devicePixelRatio || 1,
+          Math.sqrt(MAX_CANVAS_PIXELS / (drawWidth * drawHeight)),
+        );
         const viewport = page.getViewport({ scale: cssScale * resolution });
         element.width = Math.floor(viewport.width);
         element.height = Math.floor(viewport.height);
@@ -203,13 +211,24 @@ function PdfCanvas({
       live = false;
       task?.cancel();
     };
-  }, [near, doc, pageNumber, width, height]);
+  }, [near, doc, pageNumber, drawWidth, drawHeight]);
 
   return (
     <div ref={holder} className="absolute inset-0">
       {near && <canvas ref={canvas} className="absolute inset-0 size-full" aria-hidden />}
     </div>
   );
+}
+
+/** The value once it has held still for `delay` milliseconds. The first value is returned at once. */
+function useSettled(value: number, delay: number): number {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    if (value === settled) return;
+    const timer = window.setTimeout(() => setSettled(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, settled, delay]);
+  return settled;
 }
 
 function useNearViewport(target: RefObject<HTMLElement | null>, root: RefObject<HTMLElement | null>): boolean {
