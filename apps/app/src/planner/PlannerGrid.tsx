@@ -85,8 +85,8 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
           <div
             key={day}
             className={cn(
-              "mb-2 rounded-lg py-1 text-center text-[13px] font-medium text-muted-foreground",
-              day === todayIndex && "bg-accent-soft text-accent",
+              "mb-2 border-b border-rule-strong pb-1.5 text-center font-serif text-xl text-muted-foreground italic",
+              day === todayIndex && "border-accent text-accent",
             )}
           >
             {DAY_NAMES[day]?.slice(0, 3)}
@@ -176,7 +176,7 @@ function DayColumn({
       className="relative border-l border-border/70"
       style={{
         height,
-        backgroundImage: "linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
+        backgroundImage: "linear-gradient(to bottom, var(--ruled) 1px, transparent 1px)",
         backgroundSize: `100% ${HOUR_PX}px`,
         touchAction: "none",
       }}
@@ -247,8 +247,8 @@ function BlockView({
         if (event.key === "Enter") onOpen(block.id);
       }}
       className={cn(
-        "absolute overflow-hidden rounded-lg border-l-[3px] px-2 py-1.5 text-xs leading-snug shadow-sm outline-none transition-shadow cursor-grab hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing",
-        isDragging && "shadow-lg",
+        "absolute overflow-hidden rounded-sm border-l-[3px] px-2.5 py-2 text-xs leading-snug shadow-[0_1px_0_var(--rule)] outline-none transition-shadow duration-200 cursor-grab hover:shadow-[0_8px_16px_-10px_rgb(0_0_0_/_0.6)] active:cursor-grabbing",
+        isDragging && "shadow-[0_14px_24px_-12px_rgb(0_0_0_/_0.7)]",
       )}
       style={{
         top,
@@ -261,7 +261,7 @@ function BlockView({
       }}
     >
       <div className="@container h-full min-w-0">
-        <p className="truncate text-[13px] font-semibold">{block.name}</p>
+        <p className="truncate text-[13px] font-medium">{block.name}</p>
         {height >= 44 && <p className="truncate text-muted-foreground">{time}</p>}
         {height >= 62 && block.location !== undefined && (
           <p className="hidden truncate text-muted-foreground @[7rem]:block">{block.location}</p>
