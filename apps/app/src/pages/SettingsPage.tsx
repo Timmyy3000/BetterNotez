@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Copy, Flame, FolderOpen, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -41,7 +43,7 @@ export function SettingsPage() {
         <AppearanceSection />
         <LibrarySection desktop={desktop} folder={folder} />
         <AssistantSection desktop={desktop} folder={folder} />
-        <AboutSection />
+        <AboutSection desktop={desktop} />
       </div>
     </>
   );
@@ -250,12 +252,13 @@ function codexSetupPrompt(libraryPath: string): string {
   );
 }
 
-function AboutSection() {
+function AboutSection({ desktop }: { readonly desktop: boolean }) {
   return (
     <Section id="about-heading" title="About" numeral={4}>
       <p className="text-[15px] leading-relaxed text-muted-foreground">
         Version {pkg.version}. BetterNotez is free and open source under the AGPL-3.0 license.
       </p>
+      {desktop && <UpdateControls />}
       <a href={REPOSITORY_URL} className="mt-3 inline-block text-sm text-accent underline underline-offset-4">
         View the code on GitHub
       </a>
@@ -264,6 +267,71 @@ function AboutSection() {
 }
 
 /** A numbered part of the page, set like a chapter: a roman numeral in the margin, then the title over a rule. */
+type UpdateState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "checking" }
+  | { readonly kind: "current" }
+  | { readonly kind: "available"; readonly update: Update }
+  | { readonly kind: "installing"; readonly percent: number | undefined };
+
+function UpdateControls() {
+  const [state, setState] = useState<UpdateState>({ kind: "idle" });
+
+  async function checkForUpdate() {
+    setState({ kind: "checking" });
+    try {
+      const update = await check();
+      setState(update ? { kind: "available", update } : { kind: "current" });
+    } catch {
+      setState({ kind: "idle" });
+      toast.error("Couldn't check for updates. Check your internet connection and try again.");
+    }
+  }
+
+  async function install(update: Update) {
+    let total = 0;
+    let received = 0;
+    setState({ kind: "installing", percent: undefined });
+    try {
+      await update.downloadAndInstall((event) => {
+        if (event.event === "Started") total = event.data.contentLength ?? 0;
+        if (event.event === "Progress") {
+          received += event.data.chunkLength;
+          setState({ kind: "installing", percent: total ? Math.round((received / total) * 100) : undefined });
+        }
+      });
+      await relaunch();
+    } catch {
+      setState({ kind: "available", update });
+      toast.error("The update couldn't be installed. Try again, or download it from GitHub.");
+    }
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+      {state.kind === "available" ? (
+        <>
+          <span>Version {state.update.version} is available.</span>
+          <Button variant="primary" onClick={() => void install(state.update)}>
+            Update and restart
+          </Button>
+        </>
+      ) : state.kind === "installing" ? (
+        <span aria-live="polite">
+          Updating{state.percent === undefined ? "…" : ` ${state.percent}%`}. BetterNotez will restart when it's done.
+        </span>
+      ) : (
+        <>
+          <Button disabled={state.kind === "checking"} onClick={() => void checkForUpdate()}>
+            {state.kind === "checking" ? "Checking…" : "Check for updates"}
+          </Button>
+          {state.kind === "current" && <span aria-live="polite">You have the latest version.</span>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function Section({
   id,
   title,
