@@ -445,6 +445,31 @@ describe("page notes", () => {
     expect(textOf(read)).toBe("Page 4 is outside this lecture's 3 pages.");
   });
 
+  it("returns the rest of the material with a warning when its notes file cannot be read", async () => {
+    const { subject, lecture } = await seedLecture();
+    const notesPath = join(root, "subjects", subject.id, "lectures", lecture.id, "notes.json");
+    await writeFile(notesPath, "{ not json");
+
+    expect(await callJson("get_lecture", { lectureId: lecture.id })).toMatchObject({
+      lecture: { id: lecture.id },
+      notes: null,
+      warning: expect.stringContaining("can't be read"),
+    });
+    const write = await call("update_notes", { lectureId: lecture.id, page: 1, text: "Not saved" });
+    expect(write.isError).toBe(true);
+    expect(await readFile(notesPath, "utf8")).toBe("{ not json");
+  });
+
+  it("refuses to read a notes file from a newer version, and leaves it as it is", async () => {
+    const { subject, lecture } = await seedLecture();
+    const notesPath = join(root, "subjects", subject.id, "lectures", lecture.id, "notes.json");
+    const newer = JSON.stringify({ version: 2, pages: { "1": "From the future" } });
+    await writeFile(notesPath, newer);
+
+    expect(await callJson("get_lecture", { lectureId: lecture.id, page: 1 })).toMatchObject({ notes: null });
+    expect(await readFile(notesPath, "utf8")).toBe(newer);
+  });
+
   it("reads a note saved before per-page notes as page 1, and leaves that file as it was", async () => {
     const { subject, lecture } = await seedLecture();
     const legacyPath = join(root, "subjects", subject.id, "lectures", lecture.id, "notes.md");
