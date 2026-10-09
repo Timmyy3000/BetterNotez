@@ -70,6 +70,11 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
+/* Dims the rendered page to cut glare. The ink overlay is not a canvas, so it keeps its colour. */
+[data-theme="dark"] section[data-page-number] canvas {
+  filter: brightness(0.9);
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
