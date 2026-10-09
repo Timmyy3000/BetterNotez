@@ -39,7 +39,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await expect(page.getByRole("heading", { name: "Welcome to BetterNotez" })).toBeVisible();
 
   await createSubject(page, "Digital Systems");
-  await expect(page.getByText("No lectures yet")).toBeVisible();
+  await expect(page.getByText("No material yet")).toBeVisible();
 
   await page.getByRole("button", { name: "Import PDF" }).click();
   await page.locator('input[type="file"]').setInputFiles({
@@ -48,7 +48,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
     buffer: await makePdf(["Boolean algebra basics", "Karnaugh maps reduce expressions"]),
   });
   await expect(page.getByRole("dialog").getByText("Lecture 1 - Logic gates.pdf")).toBeVisible();
-  await page.getByLabel("Lecture date").fill("2026-10-12");
+  await page.getByLabel("Material date").fill("2026-10-12");
   await page.getByRole("button", { name: "Import 1 PDF" }).click();
 
   const lectureLink = page.getByRole("link", { name: "Lecture 1 – Logic gates", exact: true });
@@ -72,12 +72,12 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
 
   await page.getByRole("complementary").getByRole("link", { name: "Digital Systems" }).click();
   await page.getByRole("button", { name: "Actions for Lecture 1 - Logic gates" }).click();
-  await page.getByRole("menuitem", { name: "Delete lecture" }).click();
+  await page.getByRole("menuitem", { name: "Delete material" }).click();
   const deleteLecture = page.getByRole("dialog", { name: "Delete Lecture 1 - Logic gates?" });
   await expect(deleteLecture).toBeVisible();
-  await deleteLecture.getByRole("button", { name: "Delete lecture" }).click();
+  await deleteLecture.getByRole("button", { name: "Delete material" }).click();
   await expect(lectureLink).toHaveCount(0);
-  await expect(page.getByText("No lectures yet")).toBeVisible();
+  await expect(page.getByText("No material yet")).toBeVisible();
 
   await page.getByRole("button", { name: "Subject actions" }).click();
   await page.getByRole("menuitem", { name: "Delete subject" }).click();
@@ -151,7 +151,7 @@ test("explains why a file cannot be imported and keeps the subject usable", asyn
 
   await page.getByRole("button", { name: "Remove broken.pdf" }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByText("No lectures yet")).toBeVisible();
+  await expect(page.getByText("No material yet")).toBeVisible();
 });
 
 test("names a password-protected PDF instead of failing silently", async ({ page }) => {
@@ -167,5 +167,5 @@ test("names a password-protected PDF instead of failing silently", async ({ page
 
   await expect(page.getByText('"locked.pdf" is password-protected')).toBeVisible();
   await expect(page.getByRole("button", { name: "Import 1 PDF" })).toBeVisible();
-  await expect(page.getByText("No lectures yet")).toBeVisible();
+  await expect(page.getByText("No material yet")).toBeVisible();
 });

@@ -77,7 +77,7 @@ export function TaskDialog({
   }
 
   return (
-    <ModalDialog title="Edit task" description="Link it to a subject, a lecture, or a due date." onClose={onClose}>
+    <ModalDialog title="Edit task" description="Link it to a subject, material, or a due date." onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <label className="block space-y-2">
           <span className="text-sm font-medium">Title</span>
@@ -95,9 +95,9 @@ export function TaskDialog({
         />
 
         <SelectField
-          label="Lecture"
+          label="Material"
           options={[
-            { value: "", label: "No lecture" },
+            { value: "", label: "No material" },
             ...subjectLectures.map((lecture) => ({ value: lecture.id, label: lecture.title })),
           ]}
           value={linkedLectureId}

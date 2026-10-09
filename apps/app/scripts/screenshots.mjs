@@ -353,7 +353,7 @@ async function importLecture(page, subjectName, lecture) {
     mimeType: "application/pdf",
     buffer: await makeLecturePdf(lecture),
   });
-  await page.getByLabel("Lecture date").fill(lecture.date);
+  await page.getByLabel("Material date").fill(lecture.date);
   await page.getByRole("button", { name: "Import 1 PDF", exact: true }).click();
   await page.getByRole("link", { name: shownTitle(lecture.title), exact: true }).waitFor();
 }
@@ -402,14 +402,14 @@ async function ensureNotesOpen(page) {
 
 async function writeNotes(page, text) {
   await ensureNotesOpen(page);
-  await page.getByRole("textbox", { name: "Lecture notes" }).fill(text);
+  await page.getByRole("textbox", { name: "Material notes" }).fill(text);
   await page.getByRole("status").filter({ hasText: "Saved" }).waitFor();
 }
 
 async function openNotes(page) {
   await ensureNotesOpen(page);
   await page.waitForFunction(() => {
-    const field = document.querySelector('textarea[aria-label="Lecture notes"]');
+    const field = document.querySelector('textarea[aria-label="Material notes"]');
     return field instanceof HTMLTextAreaElement && !field.disabled;
   });
 }

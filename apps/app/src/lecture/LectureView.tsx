@@ -218,5 +218,5 @@ function parsePage(value: string | null, pageCount: number): number {
 }
 
 function fileName(title: string): string {
-  return title.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Lecture";
+  return title.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Material";
 }

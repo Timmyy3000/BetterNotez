@@ -44,7 +44,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
       title={subject === undefined ? "New subject" : "Rename subject"}
       description={
         subject === undefined
-          ? "A subject groups the lecture PDFs for one course."
+          ? "A subject groups the material PDFs for one course."
           : "Change the name or the color."
       }
       onClose={onClose}
