@@ -90,7 +90,7 @@ export function LibraryProvider({ children }: { readonly children: ReactNode }) 
     return (
       <div className="grid h-dvh place-items-center p-8 text-center">
         <div>
-          <h1 className="text-lg font-semibold">BetterNotez could not open your library</h1>
+          <h1 className="font-serif text-[32px] leading-tight">BetterNotez could not open your library</h1>
           <p className="mt-2 text-sm text-muted-foreground">{errorMessage(state.error)}</p>
         </div>
       </div>

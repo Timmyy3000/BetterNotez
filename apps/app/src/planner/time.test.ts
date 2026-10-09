@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   gridRange,
+  keyStep,
   layoutOverlaps,
   minutesToPx,
   newBlock,
@@ -141,5 +142,40 @@ describe("layoutOverlaps", () => {
       [540, 2, 3],
       [780, 0, 1],
     ]);
+  });
+});
+
+describe("keyStep", () => {
+  const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+  const WEEKDAYS = [0, 1, 2, 3, 4];
+  const nine = { day: 1, start: 9 * 60, end: 10 * 60 };
+
+  it("moves a block down by a 15 minute slot", () => {
+    expect(keyStep(nine, "ArrowDown", false, ALL_DAYS, DAY)).toEqual({ day: 1, start: 555, end: 615 });
+  });
+
+  it("moves a block up by a 15 minute slot", () => {
+    expect(keyStep(nine, "ArrowUp", false, ALL_DAYS, DAY)).toEqual({ day: 1, start: 525, end: 585 });
+  });
+
+  it("moves a block to the next visible day and keeps its time", () => {
+    expect(keyStep(nine, "ArrowRight", false, ALL_DAYS, DAY)).toEqual({ day: 2, start: 540, end: 600 });
+    expect(keyStep(nine, "ArrowLeft", false, ALL_DAYS, DAY)).toEqual({ day: 0, start: 540, end: 600 });
+  });
+
+  it("stays on the last visible day when the weekend is hidden", () => {
+    const friday = { day: 4, start: 540, end: 600 };
+    expect(keyStep(friday, "ArrowRight", false, WEEKDAYS, DAY)).toEqual(friday);
+  });
+
+  it("does not move past the top of the grid", () => {
+    const first = { day: 0, start: 7 * 60, end: 8 * 60 };
+    expect(keyStep(first, "ArrowUp", false, ALL_DAYS, DAY)).toEqual(first);
+  });
+
+  it("resizes the end by a slot with Shift, and keeps at least one slot", () => {
+    expect(keyStep(nine, "ArrowDown", true, ALL_DAYS, DAY)).toEqual({ day: 1, start: 540, end: 615 });
+    const shortest = { day: 1, start: 540, end: 555 };
+    expect(keyStep(shortest, "ArrowUp", true, ALL_DAYS, DAY)).toEqual(shortest);
   });
 });

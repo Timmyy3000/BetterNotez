@@ -11,13 +11,13 @@ import {
   type RefObject,
   type UIEvent,
 } from "react";
-import { displaySize, normalizeRotation, pageAtOffset, pageTops, type PageGeometry } from "./geometry";
+import { displaySize, normalizeRotation, pageAtOffset, pageTops, scrollTopForPage, type PageGeometry } from "./geometry";
 import { PageOverlay } from "./PageOverlay";
 
 /** Space above the first page, under the floating toolbar. */
 const PAGE_TOP = 80;
 const PAGE_GAP = 16;
-const GUTTER = 24;
+const GUTTER = 56;
 /** Caps the canvas size so zooming in on a large page does not exhaust memory. */
 const MAX_CANVAS_PIXELS = 16_000_000;
 
@@ -81,7 +81,7 @@ export function PdfPages({
     const top = tops[page - 1];
     if (element === null || top === undefined) return;
     anchor.current = page;
-    element.scrollTop = top - PAGE_GAP;
+    element.scrollTop = scrollTopForPage(page, top, PAGE_GAP);
     onPageChange(page);
   }
 
@@ -91,7 +91,7 @@ export function PdfPages({
     const top = tops[anchor.current - 1];
     const element = scrollRef.current;
     if (element !== null && top !== undefined) {
-      element.scrollTop = top - PAGE_GAP;
+      element.scrollTop = scrollTopForPage(anchor.current, top, PAGE_GAP);
     }
   }, [tops, scrollRef]);
 
@@ -103,7 +103,7 @@ export function PdfPages({
   }
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="absolute inset-0 overflow-auto bg-muted">
+    <div ref={scrollRef} onScroll={handleScroll} className="desk absolute inset-0 overflow-auto">
       <div className="mx-auto flex w-max min-w-full flex-col items-center gap-4 px-6 pt-20 pb-24">
         {geometries?.map((geometry, index) => {
           const size = sizes[index];
@@ -144,7 +144,7 @@ const PageSlot = memo(function PageSlot({
     <section
       data-page-number={pageNumber}
       aria-label={`Page ${pageNumber}`}
-      className="relative shrink-0 bg-white shadow-sm ring-1 ring-black/5"
+      className="pdf-sheet relative shrink-0"
       style={{ width, height }}
     >
       <PdfCanvas doc={doc} pageNumber={pageNumber} width={width} height={height} scrollRef={scrollRef} />

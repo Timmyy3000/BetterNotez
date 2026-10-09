@@ -8,14 +8,17 @@ export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 4;
 export const ZOOM_STEP = 1.25;
 
+/** The pen inks of the mockup. Each stroke stores its hex, so a stroke keeps its colour in both themes. */
 export const INK_COLORS = [
-  { name: "Black", value: "#1c1917" },
-  { name: "Red", value: "#dc2626" },
-  { name: "Orange", value: "#ea580c" },
-  { name: "Green", value: "#16a34a" },
-  { name: "Blue", value: "#2563eb" },
-  { name: "Purple", value: "#7c3aed" },
+  { name: "Black", value: "#241e19" },
+  { name: "Red", value: "#b5382a" },
+  { name: "Green", value: "#3d6a4b" },
+  { name: "Blue", value: "#2b4b78" },
+  { name: "Ochre", value: "#a8701b" },
 ] as const;
+
+/** The ink a new stroke or text box starts with: the pen blue of the mockup. */
+export const DEFAULT_INK = "#2b4b78";
 
 export const PEN_SIZES = [
   { name: "Thin", value: 1.5 },
@@ -31,6 +34,7 @@ const TOOLS: readonly { readonly tool: Tool; readonly label: string; readonly ic
   { tool: "eraser", label: "Eraser", icon: Eraser },
 ];
 
+/** The floating tool palette above the page. It is one raised strip, with pressed tools filled in ink. */
 export function Toolbar({
   tool,
   onTool,
@@ -62,7 +66,7 @@ export function Toolbar({
     <div
       role="toolbar"
       aria-label="Annotate"
-      className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border raised-edge bg-raised/95 p-1.5 shadow-lg backdrop-blur"
+      className="raised-edge absolute top-[18px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-md border border-border bg-raised p-[5px] shadow-(--lift)"
     >
       {TOOLS.map(({ tool: value, label, icon: Icon }) => (
         <IconToggle key={value} label={label} active={tool === value} onClick={() => onTool(value)}>
@@ -78,14 +82,11 @@ export function Toolbar({
           type="button"
           aria-label={`Color ${swatch.name}`}
           aria-pressed={color === swatch.value}
+          title={swatch.name}
           onClick={() => onColor(swatch.value)}
-          className={cn(
-            "relative grid size-7 place-items-center rounded-full outline-none before:absolute before:-inset-1.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-accent",
-            color === swatch.value && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
-          )}
-        >
-          <span className="size-4 rounded-full border-2 border-foreground/40" style={{ backgroundColor: swatch.value }} />
-        </button>
+          className="relative mx-1 size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--foreground)_35%,transparent)] transition-transform duration-150 ease-out before:absolute before:-inset-[11px] before:content-[''] active:scale-[0.96] aria-pressed:shadow-[0_0_0_2px_var(--raised),0_0_0_3.5px_var(--foreground)]"
+          style={{ backgroundColor: swatch.value }}
+        />
       ))}
 
       <Divider />
@@ -98,8 +99,8 @@ export function Toolbar({
           aria-pressed={size === option.value}
           onClick={() => onSize(option.value)}
           className={cn(
-            "relative grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-muted focus-visible:ring-2 focus-visible:ring-accent",
-            size === option.value && "bg-accent-soft text-accent",
+            "relative grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-[background-color,color] duration-150 ease-out before:absolute before:-inset-1 before:content-[''] hover:bg-foreground/5 hover:text-foreground [&_svg]:size-4",
+            size === option.value && "bg-foreground text-background hover:bg-foreground hover:text-background",
           )}
         >
           <span className="rounded-full bg-current" style={{ width: 4 + option.value * 2, height: 4 + option.value * 2 }} />
@@ -121,6 +122,7 @@ export function Toolbar({
   );
 }
 
+/** The page navigator and zoom, in the desk margin below the page. The page count keeps its "Page N of M" wording. */
 export function ViewControls({
   page,
   pageCount,
@@ -136,11 +138,11 @@ export function ViewControls({
 }) {
   const percent = Math.round(zoom * 100);
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border raised-edge bg-raised/95 p-1.5 text-sm shadow-lg backdrop-blur">
+    <div className="raised-edge absolute bottom-5 left-5 z-20 flex items-center gap-0.5 rounded-md border border-border bg-raised p-[5px] text-sm shadow-(--lift)">
       <IconToggle label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)}>
         <ChevronUp />
       </IconToggle>
-      <span className="min-w-24 text-center tabular-nums" aria-live="polite">
+      <span className="min-w-24 px-1 text-center text-[14px] text-muted-foreground tabular-nums" aria-live="polite">
         Page {page} of {pageCount}
       </span>
       <IconToggle label="Next page" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
@@ -155,7 +157,7 @@ export function ViewControls({
       <button
         type="button"
         onClick={() => onZoom(1)}
-        className="h-8 min-w-16 rounded-lg px-2 text-center text-muted-foreground tabular-nums transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+        className="h-9 min-w-16 rounded-md px-2 text-center text-[14px] text-muted-foreground tabular-nums transition-colors duration-150 hover:bg-foreground/5 hover:text-foreground"
       >
         {zoom === 1 ? "Fit width" : `${percent}%`}
       </button>
@@ -188,8 +190,8 @@ function IconToggle({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "relative grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none before:absolute before:-inset-1 before:content-[''] hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
-        active && "bg-accent-soft text-accent",
+        "relative grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-[transform,background-color,color] duration-150 ease-out before:absolute before:-inset-1 before:content-[''] hover:bg-foreground/5 hover:text-foreground active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
+        active && "bg-foreground text-background hover:bg-foreground hover:text-background",
       )}
     >
       {children}
@@ -198,5 +200,5 @@ function IconToggle({
 }
 
 function Divider() {
-  return <span aria-hidden className="mx-1 h-6 w-px bg-border" />;
+  return <span aria-hidden className="mx-1.5 h-[22px] w-px shrink-0 bg-border" />;
 }

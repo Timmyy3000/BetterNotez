@@ -8,11 +8,13 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { cn } from "../lib/cn";
 import {
   DAY_NAMES,
   HOUR_PX,
+  isArrowKey,
+  keyStep,
   laneStyle,
   layoutOverlaps,
   minutesToPx,
@@ -21,6 +23,7 @@ import {
   placeStart,
   pxToMinutes,
   toTime,
+  type ArrowKey,
   type Span,
 } from "./time";
 
@@ -54,9 +57,29 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   // A pointer drag ends with a click on the block it started from. Opening the editor there would be wrong.
   const justDragged = useRef(false);
+  const grid = useRef<HTMLDivElement>(null);
+  // A block moved to another day is remounted in that column, so focus is put back on it after the render.
+  const refocus = useRef<string | null>(null);
   const height = minutesToPx(range.end, range.start);
   const hours = Array.from({ length: (range.end - range.start) / 60 + 1 }, (_, index) => range.start + index * 60);
   const todayIndex = (new Date().getDay() + 6) % 7;
+
+  useEffect(() => {
+    const id = refocus.current;
+    if (id === null) return;
+    refocus.current = null;
+    const moved = [...(grid.current?.querySelectorAll<HTMLElement>("[data-block-id]") ?? [])].find(
+      (element) => element.dataset.blockId === id,
+    );
+    moved?.focus();
+  });
+
+  function nudge(block: PlannerBlock, key: ArrowKey, shift: boolean) {
+    const next = keyStep(block, key, shift, days, range);
+    if (next.day === block.day && next.start === block.start && next.end === block.end) return;
+    refocus.current = block.id;
+    onChange(block.id, next, true);
+  }
 
   function handleDragEnd({ active, over, delta }: DragEndEvent) {
     justDragged.current = true;
@@ -77,6 +100,7 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div
+        ref={grid}
         className="grid"
         style={{ gridTemplateColumns: `3.5rem ${days.map((day) => (day >= WEEKEND_FIRST_DAY ? "0.6fr" : "1fr")).join(" ")}` }}
       >
@@ -85,8 +109,8 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
           <div
             key={day}
             className={cn(
-              "mb-2 rounded-lg py-1 text-center text-[13px] font-medium text-muted-foreground",
-              day === todayIndex && "bg-accent-soft text-accent",
+              "mb-2 border-b border-rule-strong pb-1.5 text-center font-serif text-xl text-muted-foreground italic",
+              day === todayIndex && "border-accent text-accent",
             )}
           >
             {DAY_NAMES[day]?.slice(0, 3)}
@@ -117,6 +141,7 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
               if (!justDragged.current) onOpen(id);
             }}
             onChange={onChange}
+            onNudge={nudge}
           />
         ))}
       </div>
@@ -132,6 +157,7 @@ function DayColumn({
   onCreate,
   onOpen,
   onChange,
+  onNudge,
 }: {
   readonly day: number;
   readonly height: number;
@@ -140,6 +166,7 @@ function DayColumn({
   readonly onCreate: (placement: Placement) => void;
   readonly onOpen: (id: string) => void;
   readonly onChange: PlannerGridProps["onChange"];
+  readonly onNudge: (block: PlannerBlock, key: ArrowKey, shift: boolean) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: `day-${day}`, data: { day } });
   const [draft, setDraft] = useState<{ anchor: number; current: number } | null>(null);
@@ -176,7 +203,7 @@ function DayColumn({
       className="relative border-l border-border/70"
       style={{
         height,
-        backgroundImage: "linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
+        backgroundImage: "linear-gradient(to bottom, var(--ruled) 1px, transparent 1px)",
         backgroundSize: `100% ${HOUR_PX}px`,
         touchAction: "none",
       }}
@@ -204,6 +231,7 @@ function DayColumn({
           range={range}
           onOpen={onOpen}
           onChange={onChange}
+          onNudge={onNudge}
         />
       ))}
     </div>
@@ -220,6 +248,7 @@ function BlockView({
   range,
   onOpen,
   onChange,
+  onNudge,
 }: {
   readonly block: PlannerBlock;
   readonly lane: number;
@@ -227,6 +256,7 @@ function BlockView({
   readonly range: Span;
   readonly onOpen: (id: string) => void;
   readonly onChange: PlannerGridProps["onChange"];
+  readonly onNudge: (block: PlannerBlock, key: ArrowKey, shift: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: block.id });
   const top = minutesToPx(block.start, range.start);
@@ -238,17 +268,24 @@ function BlockView({
     <div
       ref={setNodeRef}
       data-block
+      data-block-id={block.id}
       {...attributes}
       {...listeners}
       aria-label={label.join(", ")}
       title={label.join("\n")}
       onClick={() => onOpen(block.id)}
       onKeyDown={(event) => {
-        if (event.key === "Enter") onOpen(block.id);
+        if (event.key === "Enter") {
+          onOpen(block.id);
+        } else if (isArrowKey(event.key)) {
+          // Arrow keys move a focused block, the keyboard form of a drag. Shift changes its end time.
+          event.preventDefault();
+          onNudge(block, event.key, event.shiftKey);
+        }
       }}
       className={cn(
-        "absolute overflow-hidden rounded-lg border-l-[3px] px-2 py-1.5 text-xs leading-snug shadow-sm outline-none transition-shadow cursor-grab hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing",
-        isDragging && "shadow-lg",
+        "absolute overflow-hidden rounded-sm border-l-[3px] bg-raised px-2.5 py-2 text-xs leading-snug ring-1 ring-inset ring-rule shadow-[0_1px_0_var(--rule)] transition-shadow duration-200 cursor-grab hover:shadow-[0_8px_16px_-10px_rgb(0_0_0_/_0.6)] active:cursor-grabbing",
+        isDragging && "shadow-[0_14px_24px_-12px_rgb(0_0_0_/_0.7)]",
       )}
       style={{
         top,
@@ -256,12 +293,11 @@ function BlockView({
         ...laneStyle(lane, lanes),
         zIndex: isDragging ? DRAGGING_Z : lane,
         borderColor: block.color,
-        backgroundColor: `color-mix(in srgb, ${block.color} 16%, var(--surface))`,
         transform: CSS.Translate.toString(transform),
       }}
     >
       <div className="@container h-full min-w-0">
-        <p className="truncate text-[13px] font-semibold">{block.name}</p>
+        <p className="truncate text-[13px] font-medium">{block.name}</p>
         {height >= 44 && <p className="truncate text-muted-foreground">{time}</p>}
         {height >= 62 && block.location !== undefined && (
           <p className="hidden truncate text-muted-foreground @[7rem]:block">{block.location}</p>
@@ -293,7 +329,7 @@ function ResizeHandle({
   return (
     <div
       aria-hidden
-      className="group absolute inset-x-0 bottom-0 flex h-2 cursor-ns-resize items-center justify-center"
+      className="group absolute inset-x-0 bottom-0 flex h-3 cursor-ns-resize items-center justify-center"
       onPointerDown={(event) => {
         event.stopPropagation();
         event.currentTarget.setPointerCapture(event.pointerId);

@@ -1,21 +1,28 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { create } from "zustand";
 
-export type ThemePreference = "system" | "light" | "dark";
-export type ResolvedTheme = "light" | "dark";
+/** What the person chose. System follows the operating system between light and dark. */
+export type ThemePreference = "system" | "light" | "dark" | "warm";
+/** What is on screen. Warm is only ever chosen explicitly, never by the operating system. */
+export type ResolvedTheme = "light" | "dark" | "warm";
 
 /** The inline script in index.html reads this key before first paint. Keep the two in step. */
 export const THEME_STORAGE_KEY = "betternotez.theme";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-/** A missing or unknown value means dark, the look the app is designed around. */
+/** A missing or unknown value means warm, the look the app is designed around. */
 export function parsePreference(stored: string | null): ThemePreference {
-  return stored === "system" || stored === "light" || stored === "dark" ? stored : "dark";
+  return stored === "system" || stored === "light" || stored === "dark" || stored === "warm" ? stored : "warm";
 }
 
 export function resolveTheme(preference: ThemePreference, systemPrefersDark: boolean): ResolvedTheme {
   if (preference === "system") return systemPrefersDark ? "dark" : "light";
   return preference;
+}
+
+/** Sonner only knows light and dark, so both dark appearances use its dark styling. */
+export function toasterTheme(theme: ResolvedTheme): "light" | "dark" {
+  return theme === "light" ? "light" : "dark";
 }
 
 interface ThemeState {

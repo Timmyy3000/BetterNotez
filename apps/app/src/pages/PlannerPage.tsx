@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useLibrary, useLibraryQuery, useLibraryRefresh } from "../library";
 import { errorMessage } from "../lib/errors";
-import { DEFAULT_SUBJECT_COLOR } from "../lib/subject-colors";
+import { revealAt } from "../lib/motion";
+import { DEFAULT_SUBJECT_COLOR, subjectTone } from "../lib/subject-colors";
 import { PlannerCardDialog } from "../planner/PlannerCardDialog";
 import { PlannerGrid, type Placement, type PlannerBlock } from "../planner/PlannerGrid";
 import { gridRange, toMinutes, toTime } from "../planner/time";
@@ -59,7 +60,7 @@ export function PlannerPage() {
       id: card.id,
       ...(overrides[card.id] ?? { day: card.day, start: toMinutes(card.start), end: toMinutes(card.end) }),
       name: subject?.name ?? "Deleted subject",
-      color: subject?.color ?? DEFAULT_SUBJECT_COLOR,
+      color: subjectTone(subject?.color ?? DEFAULT_SUBJECT_COLOR),
       location: card.location,
     };
   });
@@ -135,14 +136,16 @@ export function PlannerPage() {
                 </EmptyState>
               </div>
             )}
-            <PlannerGrid
-              days={showWeekend ? ALL_DAYS : WEEKDAYS}
-              blocks={blocks}
-              range={gridRange(blocks)}
-              onCreate={(slot) => setDialog({ kind: "new", slot })}
-              onOpen={(id) => setDialog({ kind: "edit", id })}
-              onChange={handleChange}
-            />
+            <div className="rise grain rounded-lg border border-border bg-surface px-6 pt-6 pb-4" style={revealAt(2)}>
+              <PlannerGrid
+                days={showWeekend ? ALL_DAYS : WEEKDAYS}
+                blocks={blocks}
+                range={gridRange(blocks)}
+                onCreate={(slot) => setDialog({ kind: "new", slot })}
+                onOpen={(id) => setDialog({ kind: "edit", id })}
+                onChange={handleChange}
+              />
+            </div>
           </>
         )}
       </div>

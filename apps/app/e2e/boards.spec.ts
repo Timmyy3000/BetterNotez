@@ -83,6 +83,41 @@ test("planner: add classes, drag one to another day, and keep the timetable afte
   expect(pageErrors).toEqual([]);
 });
 
+test("home: a due row opens its task", async ({ page }) => {
+  // The Due ledger shows only once a subject exists.
+  await createSubject(page, "Due subject");
+  await page.getByRole("complementary").getByRole("link", { name: "Tasks" }).click();
+  const todoInput = page.getByRole("textbox", { name: "Add a task to To do" });
+  await todoInput.fill("Ledger task");
+  await todoInput.press("Enter");
+  await page.getByText("Ledger task", { exact: true }).click();
+  const editTask = page.getByRole("dialog", { name: "Edit task" });
+  await editTask.getByLabel("Due date").fill("2026-10-12");
+  await editTask.getByRole("button", { name: "Save changes" }).click();
+  await expect(editTask).toHaveCount(0);
+
+  await page.goto("/");
+  await page.getByRole("link", { name: /Ledger task/ }).click();
+  await expect(page.getByRole("dialog", { name: "Edit task" })).toBeVisible();
+  await expect(page).toHaveURL(/\/tasks$/);
+});
+
+test("planner: arrow keys move and resize a focused class", async ({ page }) => {
+  await createSubject(page, "Keyboard class");
+  await page.getByRole("complementary").getByRole("link", { name: "Planner" }).click();
+  await addTuesdayClass(page, "Keyboard class", "09:00", "10:00");
+
+  const block = page.locator("[data-block-id]").first();
+  await block.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(block).toHaveAttribute("aria-label", /09:15–10:15/);
+  await page.keyboard.press("Shift+ArrowDown");
+  await expect(block).toHaveAttribute("aria-label", /09:15–10:30/);
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("group", { name: "Monday" }).locator("[data-block-id]")).toHaveCount(1);
+  await expect(block).toBeFocused();
+});
+
 /** Adds a class on Tuesday through the dialog. */
 async function addTuesdayClass(page: Page, subject: string, start: string, end: string, location?: string): Promise<void> {
   await page.getByRole("button", { name: /^Add (your first )?class$/ }).first().click();
@@ -196,7 +231,7 @@ test("tasks: move a card with the keyboard", async ({ page }) => {
   // The keyboard sensor picks the card up asynchronously. Arrow keys sent before that are lost.
   await expect(card).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("status")).toContainText("was moved over droppable area");
+  await expect(page.getByRole("status")).toContainText("Keyboard task was moved over Doing.");
   await page.keyboard.press("Space");
 
   await expect(doing.getByText("Keyboard task", { exact: true })).toBeVisible();
@@ -204,7 +239,29 @@ test("tasks: move a card with the keyboard", async ({ page }) => {
   await expect(doing.getByText("Keyboard task", { exact: true })).toBeVisible();
 });
 
-test("tasks: filter by subject and show overdue dates in red", async ({ page }) => {
+test("tasks: Enter opens a card, and Space picks it up", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("complementary").getByRole("link", { name: "Tasks" }).click();
+
+  const todoInput = page.getByRole("textbox", { name: "Add a task to To do" });
+  await todoInput.fill("Enter task");
+  await todoInput.press("Enter");
+
+  const card = page.locator('[aria-roledescription="sortable"]').filter({ hasText: "Enter task" });
+  await card.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Edit task" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(card).toBeFocused();
+
+  await page.keyboard.press("Space");
+  await expect(card).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("tasks: filter by subject and mark overdue dates", async ({ page }) => {
   await createSubject(page, "Chemistry");
   await page.getByRole("complementary").getByRole("link", { name: "Tasks" }).click();
 
@@ -220,7 +277,8 @@ test("tasks: filter by subject and show overdue dates in red", async ({ page }) 
   await editTask.getByLabel("Subject").selectOption("Chemistry");
   await editTask.getByLabel("Due date").fill("2000-01-01");
   await editTask.getByRole("button", { name: "Save changes" }).click();
-  await expect(todo.getByText("Jan 1, 2000")).toHaveCSS("color", "rgb(248, 113, 113)");
+  // Overdue is set in the ink colour, so red stays for errors. The spine on the card marks it.
+  await expect(todo.getByText("Jan 1, 2000")).toHaveCSS("color", "rgb(241, 234, 219)");
 
   const filter = page.getByRole("combobox", { name: "Filter by subject" });
   await filter.selectOption("Chemistry");

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Ink & Paper. Warm is the default. Dark and Light are their own designed sets, not inversions. */
 @theme inline {
   --color-background: var(--background);
   --color-sidebar: var(--sidebar);
@@ -8,71 +9,320 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
   --color-border: var(--border);
+  --color-rule: var(--rule);
+  --color-desk: var(--desk);
+  --color-pen: var(--pen);
+  --color-rule-strong: var(--rule-strong);
   --color-control: var(--control-border);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
-  --color-highlight: var(--highlight);
-  --color-highlight-foreground: var(--highlight-foreground);
   --color-danger: var(--danger);
   --color-danger-solid: var(--danger-solid);
+  --color-danger-foreground: var(--danger-foreground);
   --color-overlay: var(--overlay);
-  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
 }
 
-/* The theme is set on <html> by src/theme.ts and by the script in index.html. */
+@theme {
+  --font-sans: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
 :root {
-  color-scheme: light;
-  --background: #fafaf9;
-  --sidebar: #f2f2f0;
-  --surface: #ffffff;
-  --raised: #ffffff;
-  --foreground: #1c1917;
-  --muted: #efeeec;
-  --muted-foreground: #6b6560;
-  --border: #e7e5e4;
-  --control-border: #8f8a85;
-  --accent: #4f46e5;
-  --accent-foreground: #ffffff;
-  --accent-soft: #eef2ff;
-  --highlight: #fde68a;
-  --highlight-foreground: #1c1917;
-  --danger: #dc2626;
-  --danger-solid: #dc2626;
-  --overlay: rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+
+  /* Warm is the base set: the default, and the one the other dark set overrides. Iron-gall ink on brown paper. Never black. */
+  --desk: #100d0b;
+  --paper: #171310;
+  --background: #171310;
+  --sidebar: #100d0b;
+  --surface: #2a2119;
+  --raised: #33291f;
+  --muted: #26201a;
+  --foreground: #f1eadb;
+  --muted-foreground: #c3b9a6;
+  --faint: #9d9282;
+  --border: #362f27;
+  --rule: #362f27;
+  --rule-strong: #7a6e5e;
+  --ruled: #3d362d;
+  --control-border: #837666;
+  --accent: #f0785a;
+  --accent-foreground: #171310;
+  --accent-soft: rgb(240 120 90 / 0.16);
+  --margin: rgb(240 120 90 / 0.5);
+  --danger: #f0785a;
+  --danger-solid: #f0785a;
+  --danger-foreground: #171310;
+  --overlay: rgb(10 7 5 / 0.6);
+  --lift: 0 24px 36px -28px rgb(0 0 0 / 0.85);
+  --lamp: rgb(255 200 130 / 0.085);
+  --glow: rgb(255 205 140 / 0.05);
+
+  /* The paper behind a PDF page. Warm prints on this cream. Dark and Light set neutral paper and shadows. */
+  --shade: 40 28 14;
+  --sheet: #e2d8c2;
+  --sheet-ink: #241e19;
+  --sheet-2: #5b5044;
+  --sheet-rule: #c2b596;
+  --pen: #2b4b78;
+  --edge-1: #3d352b;
+  --edge-2: #342e25;
+  --edge-3: #2c261f;
+
+  /* Subject inks, mapped from the stored colour ids in lib/subject-colors.ts. */
+  --subject-rose: #e08b9c;
+  --subject-orange: #d98e68;
+  --subject-amber: #e2aa5b;
+  --subject-green: #97c9a1;
+  --subject-teal: #7fc2b8;
+  --subject-blue: #8db0e3;
+  --subject-graphite: #a8a096;
+  --subject-umber: #a67c5c;
+
+  --speck-light: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .96  0 0 0 0 .88  0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --speck-grey: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --speck-neutral: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain: var(--speck-light);
 }
 
+/* Dark, neutral: the same layout, fonts, grain, and vermilion, on charcoal with at most a whisper of warmth. The accent and the subject inks are shared with warm. */
 [data-theme="dark"] {
   color-scheme: dark;
-  --background: #0c0a09;
-  --sidebar: #141210;
-  --surface: #1c1917;
-  --raised: #332d2a;
-  --foreground: #fafaf9;
-  --muted: #292524;
-  --muted-foreground: #a8a29e;
-  --border: #3a3431;
-  --control-border: #716a67;
-  --accent: #818cf8;
-  --accent-foreground: #0c0a09;
-  --accent-soft: #1e1b4b;
-  --highlight: #854d0e;
-  --highlight-foreground: #fef3c7;
-  --danger: #f87171;
-  --overlay: rgb(0 0 0 / 0.6);
+  --shade: 0 0 0;
+  --sheet: #e6e6e6;
+  --sheet-ink: #1a1a1a;
+  --sheet-rule: #d0d0d0;
+  --desk: #0e0e0e;
+  --paper: #161616;
+  --background: #161616;
+  --sidebar: #0e0e0e;
+  --surface: #1d1d1d;
+  --raised: #292929;
+  --muted: #242424;
+  --foreground: #f1f0ee;
+  --muted-foreground: #bdbcb9;
+  --faint: #9a9996;
+  --border: #363636;
+  --rule: #363636;
+  --rule-strong: #7b7a77;
+  --control-border: #7e7d79;
+  --accent-foreground: #161616;
+  --danger-foreground: #161616;
+  --overlay: rgb(8 8 8 / 0.6);
+  --lift: 0 24px 36px -28px rgb(0 0 0 / 0.85);
+  --lamp: rgb(255 255 255 / 0.04);
+  --glow: rgb(255 255 255 / 0.03);
+  --edge-1: #3a3a3a;
+  --edge-2: #323232;
+  --edge-3: #2b2b2b;
+  --ruled: #3a3a3a;
+  --grain: var(--speck-neutral);
 }
 
-/* Dark surfaces cast no visible shadow, so a raised one gets a light top edge instead. */
-[data-theme="dark"] .raised-edge {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+
+[data-theme="light"] {
+  color-scheme: light;
+  /* Pure white paper and neutral greys only. No cream, beige, sepia, or warm cast. Vermilion is the accent. */
+  --desk: #e9e9e9;
+  --shade: 0 0 0;
+  --paper: #ffffff;
+  --background: #ffffff;
+  --sidebar: #f5f5f5;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --muted: #f0f0f0;
+  --foreground: #1a1a1a;
+  --muted-foreground: #555555;
+  --faint: #6b6b6b;
+  --border: #e3e3e3;
+  --rule: #e3e3e3;
+  --rule-strong: #8c8c8c;
+  --control-border: #7a7a7a;
+  --accent: #b5382a;
+  --accent-foreground: #ffffff;
+  --accent-soft: rgb(181 56 42 / 0.1);
+  --margin: rgb(181 56 42 / 0.42);
+  --danger: #b5382a;
+  --danger-solid: #b5382a;
+  --danger-foreground: #ffffff;
+  --overlay: rgb(0 0 0 / 0.25);
+  --lift: 0 24px 36px -28px rgb(0 0 0 / 0.3);
+  --lamp: rgb(0 0 0 / 0.02);
+  --glow: rgb(0 0 0 / 0.02);
+
+  --sheet: #ffffff;
+  --sheet-ink: #1a1a1a;
+  --sheet-2: #555555;
+  --sheet-rule: #e0e0e0;
+  --edge-1: #e6e6e6;
+  --edge-2: #dadada;
+  --edge-3: #cecece;
+  --ruled: #e4e4e4;
+
+  --subject-rose: #a8364f;
+  --subject-orange: #b4582c;
+  --subject-amber: #a8701b;
+  --subject-green: #3d6a4b;
+  --subject-teal: #2f6f69;
+  --subject-blue: #2b4b78;
+  --subject-graphite: #5c5c5c;
+  --subject-umber: #7a5230;
+
+  --grain: var(--speck-grey);
 }
 
-/* Dims the rendered page to cut glare. The ink overlay is not a canvas, so it keeps its colour. */
-[data-theme="dark"] section[data-page-number] canvas {
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    background: var(--paper);
+    scrollbar-color: var(--rule-strong) transparent;
+  }
+
+  body {
+    margin: 0;
+    color: var(--foreground);
+    background:
+      radial-gradient(1100px 620px at 14% -16%, var(--glow), transparent 64%), var(--grain), var(--paper);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: rgb(240 120 90 / 0.3);
+  }
+
+  /* Every icon draws a fine line, as in the mockup. */
+  .lucide {
+    stroke-width: 1.5px;
+  }
+}
+
+@layer components {
+  .label {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* A subject's mark: a small ink blot, not a perfect circle. The colour is set inline. */
+  .ink-dot {
+    display: block;
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 58% 42% 55% 45%;
+  }
+
+  /* The editorial rule under a masthead: one heavy line and one fine one. */
+  /* The lecture's surround: the desk under a lamp, with the grain on top. */
+  .desk {
+    background:
+      radial-gradient(900px 520px at 50% -10%, var(--lamp), transparent 70%), var(--grain), var(--desk);
+  }
+
+  /* A PDF page lies on the desk as a sheet. The canvas paints over it once the page is drawn. */
+  .pdf-sheet {
+    background-color: var(--sheet);
+    box-shadow:
+      0 0 0 1px rgb(var(--shade) / 0.06),
+      0 2px 3px rgb(var(--shade) / 0.12),
+      0 26px 46px -16px rgb(var(--shade) / 0.55);
+  }
+
+  /* Ruled notes: 28px lines under 28px of text, with one vermilion margin. Local attachment keeps the rules with the text as it scrolls. */
+  .ruled-paper {
+    background-image:
+      linear-gradient(90deg, transparent 50px, var(--margin) 50px, var(--margin) 51px, transparent 51px),
+      linear-gradient(transparent 27px, var(--ruled) 27px, var(--ruled) 28px);
+    background-size: 100% 100%, 100% 28px;
+    background-repeat: no-repeat, repeat;
+    background-attachment: local;
+    line-height: 28px;
+  }
+
+  .double-rule {
+    height: 6px;
+    background: linear-gradient(var(--foreground) 0 2px, transparent 2px 5px, var(--foreground) 5px 6px);
+  }
+}
+
+/* Surfaces that carry the paper grain. Dark surfaces cast no visible shadow, so a raised one gets a light top edge. */
+.grain {
+  background-image: var(--grain);
+}
+
+:root:not([data-theme="light"]) .raised-edge {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), var(--lift);
+}
+
+/* A real PDF keeps its own colours. Dark dims the white paper a little to cut glare. Warm multiplies the page onto the cream sheet, so white paper becomes cream and black ink stays black. Sepia cannot reach cream: on white it only lowers blue. The ink overlay is not a canvas, so it keeps its colour. */
+:root[data-theme="dark"] section[data-page-number] canvas {
   filter: brightness(0.9);
+}
+
+:root[data-theme="warm"] .pdf-sheet {
+  isolation: isolate;
+}
+
+:root[data-theme="warm"] section[data-page-number] canvas {
+  mix-blend-mode: multiply;
+}
+
+/* Sonner paints toasts from these variables. Its dark theme would otherwise use pure black. */
+[data-sonner-toast] {
+  --normal-bg: var(--raised);
+  --normal-border: var(--border);
+  --normal-text: var(--foreground);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift);
+}
+
+/* Sonner sets its own font on the toaster in a rule that loads after this one, so this needs !important. */
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
 }
 
 @keyframes fade-in {
@@ -88,34 +338,21 @@
   }
 }
 
-html,
-body,
-#root {
-  height: 100%;
+/* One orchestrated load: each block rises in turn. Transforms and opacity only. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+.rise {
+  animation: rise 640ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
 }
 
-::selection {
-  background: color-mix(in srgb, var(--accent) 28%, transparent);
-}
-
-/* Sonner paints toasts from these variables. Its dark theme would otherwise use pure black. */
-[data-sonner-toast] {
-  --normal-bg: var(--surface);
-  --normal-border: var(--border);
-  --normal-text: var(--foreground);
-}
-
-/* Sonner sets its own font on the toaster in a rule that loads after this one, so this needs !important. */
-[data-sonner-toaster] {
-  font-family: var(--font-sans) !important;
+:root[data-played] .rise {
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -123,6 +360,11 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .rise {
+    animation: none;
   }
 }

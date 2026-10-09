@@ -59,6 +59,14 @@ export function pageTops(heights: readonly number[], top: number, gap: number): 
   return tops;
 }
 
+/**
+ * The scroll position that shows a page with a little of the gap above it. The first page scrolls to
+ * the top, so its gutter stays in view under the floating palette.
+ */
+export function scrollTopForPage(page: number, top: number, gap: number): number {
+  return page === 1 ? 0 : top - gap;
+}
+
 /** The index of the page that contains `offset`: the last page whose top is at or above it. */
 export function pageAtOffset(tops: readonly number[], offset: number): number {
   let low = 0;
