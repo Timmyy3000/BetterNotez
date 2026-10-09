@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { displaySize, displayToUser, normalizeRotation, pageAtOffset, pageTops, type PageGeometry } from "./geometry";
+import {
+  displaySize,
+  displayToUser,
+  normalizeRotation,
+  pageAtOffset,
+  pageTops,
+  scrollTopForPage,
+  type PageGeometry,
+} from "./geometry";
 
 const letter: PageGeometry = { x: 0, y: 0, width: 612, height: 792, rotation: 0 };
 
@@ -51,5 +59,15 @@ describe("page layout", () => {
     expect(pageAtOffset(tops, 196)).toBe(1);
     expect(pageAtOffset(tops, 299)).toBe(1);
     expect(pageAtOffset(tops, 10_000)).toBe(2);
+  });
+});
+
+describe("scrollTopForPage", () => {
+  it("scrolls the first page to the top, so its gutter clears the palette", () => {
+    expect(scrollTopForPage(1, 80, 16)).toBe(0);
+  });
+
+  it("leaves a 16px gap above later pages", () => {
+    expect(scrollTopForPage(2, 500, 16)).toBe(484);
   });
 });

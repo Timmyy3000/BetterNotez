@@ -11,7 +11,7 @@ import {
   type RefObject,
   type UIEvent,
 } from "react";
-import { displaySize, normalizeRotation, pageAtOffset, pageTops, type PageGeometry } from "./geometry";
+import { displaySize, normalizeRotation, pageAtOffset, pageTops, scrollTopForPage, type PageGeometry } from "./geometry";
 import { PageOverlay } from "./PageOverlay";
 
 /** Space above the first page, under the floating toolbar. */
@@ -81,7 +81,7 @@ export function PdfPages({
     const top = tops[page - 1];
     if (element === null || top === undefined) return;
     anchor.current = page;
-    element.scrollTop = top - PAGE_GAP;
+    element.scrollTop = scrollTopForPage(page, top, PAGE_GAP);
     onPageChange(page);
   }
 
@@ -91,7 +91,7 @@ export function PdfPages({
     const top = tops[anchor.current - 1];
     const element = scrollRef.current;
     if (element !== null && top !== undefined) {
-      element.scrollTop = top - PAGE_GAP;
+      element.scrollTop = scrollTopForPage(anchor.current, top, PAGE_GAP);
     }
   }, [tops, scrollRef]);
 
