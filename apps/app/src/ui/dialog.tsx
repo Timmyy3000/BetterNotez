@@ -22,7 +22,7 @@ export function ModalDialog({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px] animate-[fade-in_150ms_ease-out]" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay backdrop-blur-[2px] animate-[fade-in_150ms_ease-out]" />
         <DialogPrimitive.Content className="fixed top-1/2 left-1/2 z-50 w-[min(calc(100vw-2rem),30rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-6 shadow-2xl outline-none animate-[dialog-in_180ms_ease-out]">
           <DialogPrimitive.Title className="pr-8 text-lg font-semibold tracking-tight">{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="mt-1 text-sm text-muted-foreground">
