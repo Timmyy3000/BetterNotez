@@ -113,6 +113,11 @@ body {
   --normal-text: var(--foreground);
 }
 
+/* Sonner sets its own font on the toaster in a rule that loads after this one, so this needs !important. */
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
