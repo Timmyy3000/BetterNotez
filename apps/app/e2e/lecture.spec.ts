@@ -512,3 +512,65 @@ test("the annotation toolbar stays whole when the notes are as wide as they go",
   expect(toolbar.x).toBeGreaterThanOrEqual(pdfColumn.x);
   expect(toolbar.x + toolbar.width).toBeLessThanOrEqual(pdfColumn.x + pdfColumn.width);
 });
+
+test("selected text becomes a highlight that survives a reload, and can be recoloured, removed, and undone", async ({
+  page,
+}) => {
+  mkdirSync(SHOTS, { recursive: true });
+  await createSubject(page, "Highlights");
+  await importLecture(page, "Marking.pdf", ["Boolean algebra and Karnaugh maps", "Timing diagrams"]);
+  await openLecture(page, "Marking");
+  const pageOne = page.locator('[data-page-number="1"]');
+  await pageOne.locator(".textLayer span").first().waitFor({ state: "attached" });
+  const popover = page.getByRole("toolbar", { name: "Highlight color" });
+  const highlights = pageOne.locator('[data-kind="highlight"]');
+
+  // Drag across "algebra and Karnaugh", which starts and ends inside one run of text.
+  const selected = await runCharacters(page, 8, 30);
+  await page.mouse.move(selected.startX, selected.y);
+  await page.mouse.down();
+  await page.mouse.move(selected.endX, selected.y, { steps: 12 });
+  await page.mouse.up();
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Highlight in Red" }).click();
+  await expect(popover).toBeHidden();
+  await expect(highlights).toHaveCount(1);
+  await expect(highlights).toHaveCSS("background-color", "rgb(181, 56, 42)");
+
+  await page.reload();
+  await expect(highlights).toHaveCount(1);
+
+  // A click on the highlighted words opens the popover for that highlight, with its colour pressed.
+  const word = await runCharacters(page, 18, 22);
+  await page.mouse.click(word.startX, word.y);
+  await expect(popover).toBeVisible();
+  await expect(page.getByRole("button", { name: "Highlight in Red" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Highlight in Ochre" }).click();
+  await expect(highlights).toHaveCSS("background-color", "rgb(168, 112, 27)");
+
+  await page.reload();
+  await expect(highlights).toHaveCSS("background-color", "rgb(168, 112, 27)");
+
+  await page.mouse.click(word.startX, word.y);
+  await page.getByRole("button", { name: "Delete highlight" }).click();
+  await expect(highlights).toHaveCount(0);
+
+  await page.keyboard.press("Control+z");
+  await expect(highlights).toHaveCount(1);
+});
+
+/** Where the characters from `from` to `to` of the page's first text run sit on screen, for a mouse drag over them. */
+async function runCharacters(page: Page, from: number, to: number): Promise<{ startX: number; endX: number; y: number }> {
+  return page.evaluate(
+    (bounds) => {
+      const node = document.querySelector('[data-page-number="1"] .textLayer span')?.firstChild;
+      if (!(node instanceof Text)) throw new Error("page 1 has no text run");
+      const range = document.createRange();
+      range.setStart(node, bounds.from);
+      range.setEnd(node, bounds.to);
+      const box = range.getBoundingClientRect();
+      return { startX: box.left + 1, endX: box.right - 1, y: box.top + box.height / 2 };
+    },
+    { from, to },
+  );
+}
