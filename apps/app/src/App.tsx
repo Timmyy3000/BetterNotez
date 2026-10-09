@@ -36,7 +36,7 @@ export function App() {
     <LibraryProvider>
       <TooltipProvider delayDuration={300}>
         <RouterProvider router={router} />
-        <Toaster position="bottom-right" closeButton theme={theme} />
+        <Toaster position="bottom-right" theme={theme} />
       </TooltipProvider>
     </LibraryProvider>
   );
