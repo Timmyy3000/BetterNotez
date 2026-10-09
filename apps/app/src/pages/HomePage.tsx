@@ -44,7 +44,7 @@ export function HomePage() {
             </Button>
           }
         >
-          Start with one subject, such as Digital Systems, then add its lecture PDFs.
+          Start with one subject, then add its PDFs.
         </EmptyState>
         {creating && <SubjectDialog onClose={() => setCreating(false)} />}
       </>
@@ -64,7 +64,7 @@ export function HomePage() {
         </div>
         <h1 className="mt-4 text-[clamp(3rem,5.6vw,5rem)] leading-[0.92] tracking-[-0.02em]">Subjects</h1>
         <p className="mt-4 font-serif text-2xl leading-[1.3] text-muted-foreground italic">
-          {`${countLabel(lectures.length, "lecture")} across ${countLabel(subjects.length, "subject")}`}
+          {`${countLabel(lectures.length, "material")} across ${countLabel(subjects.length, "subject")}`}
         </p>
       </header>
       <div aria-hidden className="double-rule my-10 rise" style={revealAt(1)} />
@@ -156,7 +156,7 @@ function Folio({
           />
         </span>
         <h2 className="mb-3 text-[42px] leading-none tracking-[-0.01em] text-balance">{subject.name}</h2>
-        <p className="mb-5 text-sm text-muted-foreground tabular-nums">{countLabel(lectures.length, "lecture")}</p>
+        <p className="mb-5 text-sm text-muted-foreground tabular-nums">{countLabel(lectures.length, "material")}</p>
         {latest !== undefined && (
           <p className="mt-auto border-t border-border pt-3.5 text-[15px] leading-snug text-muted-foreground">
             Latest: {displayTitle(latest.title)}

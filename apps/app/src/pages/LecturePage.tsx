@@ -38,11 +38,11 @@ export function LecturePage() {
     );
   }
   if (page.data === undefined || pdf.bytes === undefined || pdf.doc === undefined) {
-    return <div className="p-8 text-sm text-muted-foreground">Opening lecture…</div>;
+    return <div className="p-8 text-sm text-muted-foreground">Opening material…</div>;
   }
 
   return (
-    <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Opening lecture…</div>}>
+    <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Opening material…</div>}>
       <LectureView
         key={lectureId}
         lecture={page.data.lecture}

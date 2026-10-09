@@ -1,7 +1,9 @@
+/// <reference lib="dom" />
 import { mkdirSync, readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import { INK_COLORS } from "../src/lecture/inks";
 
 const SHOTS = "/tmp/bn-shots";
 
@@ -110,11 +112,11 @@ test("text box, pen stroke, notes, and export survive a reload, and undo works",
   await expect(page.locator('[data-page-number="2"] [data-kind="ink"]')).toHaveCount(1);
 
   await page.getByRole("button", { name: "Notes" }).click();
-  await page.getByRole("textbox", { name: "Lecture notes" }).fill("Remember the truth table");
+  await page.getByRole("textbox", { name: "Material notes" }).fill("Remember the truth table");
   await expect(page.getByRole("status")).toHaveText("Saved");
   await page.reload();
   await page.getByRole("button", { name: "Notes" }).click();
-  await expect(page.getByRole("textbox", { name: "Lecture notes" })).toHaveValue("Remember the truth table");
+  await expect(page.getByRole("textbox", { name: "Material notes" })).toHaveValue("Remember the truth table");
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -195,9 +197,67 @@ test("the lecture viewer renders in dark mode", async ({ page }) => {
   await importLecture(page, "Bonds.pdf", ["Ionic", "Covalent"]);
   await openLecture(page, "Bonds");
   await page.getByRole("button", { name: "Notes" }).click();
-  await expect(page.getByRole("textbox", { name: "Lecture notes" })).toBeEnabled();
+  await expect(page.getByRole("textbox", { name: "Material notes" })).toBeEnabled();
   await page.screenshot({ path: `${SHOTS}/lecture-dark.png`, animations: "disabled" });
 });
+
+/** The `rgb(...)` string the browser reports for a `#rrggbb` colour. */
+function rgbOf(hex: string): string {
+  const [red, green, blue] = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+/** WCAG 2.x contrast ratio of two `rgb(...)` colours, as the browser reports computed styles. */
+function contrastOf(first: string, second: string): number {
+  const luminanceOf = (css: string): number => {
+    const [red, green, blue] = (css.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map((channel) => {
+      const value = Number(channel) / 255;
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * (red ?? 0) + 0.7152 * (green ?? 0) + 0.0722 * (blue ?? 0);
+  };
+  const [lighter, darker] = [luminanceOf(first), luminanceOf(second)].sort((a, b) => b - a);
+  return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05);
+}
+
+for (const theme of ["warm", "dark", "light"] as const) {
+  test(`a text box sits on the paper and every pen ink stays readable in ${theme}`, async ({ page }) => {
+    await page.addInitScript((stored) => localStorage.setItem("betternotez.theme", stored), theme);
+    await createSubject(page, "Labs");
+    await importLecture(page, "Circuits.pdf", ["Resistors"]);
+    await openLecture(page, "Circuits");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+
+    const pageOne = page.locator('[data-page-number="1"]');
+    const paper = await pageOne.evaluate((element) => getComputedStyle(element).backgroundColor);
+
+    // Boxes are stored in the order they are made, so the nth box on the page is the one just added.
+    for (const [index, swatch] of INK_COLORS.entries()) {
+      const word = `Readable ${swatch.name}`;
+      const swatchButton = page.getByRole("button", { name: `Color ${swatch.name}` });
+      await swatchButton.click();
+      await expect(swatchButton).toHaveAttribute("aria-pressed", "true");
+
+      await page.getByRole("button", { name: "Text box", exact: true }).click();
+      const pageBox = await pageOne.boundingBox();
+      if (pageBox === null) throw new Error("page 1 is not on screen");
+      await page.mouse.click(pageBox.x + pageBox.width * 0.2, pageBox.y + pageBox.height * (0.15 + index * 0.12));
+      await page.keyboard.type(word);
+
+      const box = page.locator('[data-kind="text"]').nth(index);
+      const field = box.getByRole("textbox", { name: "Text box" });
+      await expect(field).toBeFocused();
+      await expect(box).toHaveCSS("background-color", paper);
+      await expect(field).toHaveCSS("color", rgbOf(swatch.value));
+      const ink = await field.evaluate((element) => getComputedStyle(element).color);
+      expect(contrastOf(ink, paper), `${swatch.name} on the ${theme} paper`).toBeGreaterThanOrEqual(4.5);
+
+      await page.getByRole("button", { name: "Select and move" }).click();
+      await expect(box).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(field).toHaveValue(word);
+    }
+  });
+}
 
 test("a text box moves and resizes by dragging, and undo returns it to where it was", async ({ page }) => {
   await createSubject(page, "Maths");

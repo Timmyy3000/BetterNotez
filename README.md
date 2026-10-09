@@ -61,7 +61,7 @@ The server reads `BetterNotez Library` in your home folder, the same folder the 
 
 Contributors can run the server from a checkout instead. Clone this repository, run `npm install` and `npm run build`, then use `packages/mcp/dist/index.js` in place of the file above. See [packages/mcp](packages/mcp/README.md).
 
-Then ask your assistant, for example: "Let's talk about Lecture 1 in Digital Systems in BetterNotez." The assistant can find the lecture, read its PDF text, notepad, and annotations, and add or edit notes, text boxes, ink, tasks, and planner cards. Changes appear in the app right away.
+Then ask your assistant, for example: "What material do I have in BetterNotez this week?" The assistant can find your material, read its PDF text, notepad, and annotations, and add or edit notes, text boxes, ink, tasks, and planner cards. Changes appear in the app right away.
 
 The web app cannot connect an assistant, because the MCP server reads the folder on your computer.
 

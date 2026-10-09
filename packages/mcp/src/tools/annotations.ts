@@ -70,7 +70,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
 
   tools.tool(
     "update_annotation",
-    "Change a text box or ink stroke on a lecture. Send only the fields that apply to that annotation's kind. The author cannot change.",
+    "Change a text box or ink stroke on a piece of material. Send only the fields that apply to that annotation's kind. The author cannot change.",
     {
       lectureId: lectureRef,
       annotationId: annotationRef,

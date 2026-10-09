@@ -16,7 +16,7 @@ export function registerTaskTools(tools: ToolRegistry, library: Library): void {
 
   tools.tool(
     "create_task",
-    "Create a task. Status defaults to todo. Subject, lecture, and due date are optional.",
+    "Create a task. Status defaults to todo. Subject, material, and due date are optional.",
     {
       title: z.string().min(1),
       status: TaskStatus.optional(),

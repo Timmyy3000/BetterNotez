@@ -29,7 +29,7 @@ export function EditLectureDialog({ lecture, onClose }: { readonly lecture: Lect
   }
 
   return (
-    <ModalDialog title="Edit lecture" description="Change the title or the date. The PDF stays as it is." onClose={onClose}>
+    <ModalDialog title="Edit material" description="Change the title or the date. The PDF stays as it is." onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <label className="block space-y-2">
           <span className="text-sm font-medium">Title</span>

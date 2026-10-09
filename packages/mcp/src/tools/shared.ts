@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const subjectRef = z.string().describe("Subject id from list_subjects.");
-export const lectureRef = z.string().describe("Lecture id from find_lecture or list_lectures.");
+export const lectureRef = z.string().describe("Material id from find_lecture or list_lectures.");
 export const annotationRef = z.string().describe("Annotation id from get_lecture.");
 export const taskRef = z.string().describe("Task id from list_tasks.");
 export const cardRef = z.string().describe("Planner card id from list_planner.");

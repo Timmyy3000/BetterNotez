@@ -26,6 +26,7 @@ import { errorMessage } from "../lib/errors";
 import { EmptyState } from "../ui/empty-state";
 import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
+import { Select } from "../ui/select";
 import { revealAt } from "../lib/motion";
 import { notifyLibraryChanged } from "../store";
 import { dropOver, isOverdue, localDateKey, planDrop, statusOf, toBoard, type Board, type OrderUpdate } from "../tasks/board";
@@ -221,26 +222,18 @@ export function TasksPage() {
         actions={
           <div className="flex flex-col items-start gap-1.5">
             <span className="label">Subject</span>
-            <div className="relative">
-              <select
-                aria-label="Filter by subject"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                className="min-w-52 cursor-pointer appearance-none border-0 border-b border-rule-strong bg-transparent py-2 pr-8 text-[17px] text-foreground transition-colors focus:border-accent"
-              >
-                <option value={ALL_SUBJECTS}>All subjects</option>
-                <option value={NO_SUBJECT}>No subject</option>
-                {subjectList.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-              <span
-                aria-hidden
-                className="pointer-events-none absolute top-[40%] right-1.5 size-[7px] -translate-y-1/2 rotate-45 border-r-[1.5px] border-b-[1.5px] border-muted-foreground"
-              />
-            </div>
+            <Select
+              aria-label="Filter by subject"
+              variant="inline"
+              className="min-w-52"
+              value={filter}
+              onValueChange={setFilter}
+              options={[
+                { value: ALL_SUBJECTS, label: "All subjects" },
+                { value: NO_SUBJECT, label: "No subject" },
+                ...subjectList.map((subject) => ({ value: subject.id, label: subject.name })),
+              ]}
+            />
           </div>
         }
       />

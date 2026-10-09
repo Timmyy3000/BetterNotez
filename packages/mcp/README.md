@@ -68,10 +68,10 @@ Coordinates on a page are normalized from 0 to 1, with the origin at the top-lef
 | `list_subjects` | List subjects. |
 | `create_subject` | Create a subject with `name` and optional `color`. |
 | `update_subject` | Change `subjectId` with optional `name` or `color`. |
-| `list_lectures` | List lectures, optionally for one `subjectId`. |
+| `list_lectures` | List material, optionally for one `subjectId`. |
 | `import_lecture` | Import a PDF from an absolute `pdfPath` on the student's computer into `subjectId`. Copies the PDF into the library and caches its text. Takes optional `title` (defaults to the file name) and `date`. |
-| `find_lecture` | Rank lectures for a phrase such as "Lecture 1 in Digital Systems". |
-| `get_lecture` | Return a lecture with its notes, annotations, and whether its PDF text is cached. |
+| `find_lecture` | Rank material for a phrase such as "Lecture 1 in [subject name]". |
+| `get_lecture` | Return one piece of material with its notes, annotations, and whether its PDF text is cached. |
 | `get_lecture_text` | Return PDF text per page, with optional `fromPage` and `toPage`. |
 | `update_lecture` | Change `title` or `date`. Pass `date: null` to clear it. |
 | `update_notes` | Set `text` with `mode` `append` (default) or `replace`. |
@@ -84,7 +84,7 @@ Coordinates on a page are normalized from 0 to 1, with the origin at the top-lef
 | `list_planner` | List the weekly timetable cards. |
 | `create_planner_card` | Add a subject card for `day` (0 is Monday), `start`, and `end`. |
 | `update_planner_card` | Move or edit a card by `cardId`. |
-| `search` | Search subject names, lecture titles, notepads, text boxes, and PDF text. |
+| `search` | Search subject names, material titles, notepads, text boxes, and PDF text. |
 | `request_deletion` | Explain to the student how to delete something in the app. Nothing is deleted. Takes `what`. |
 
 Every annotation the assistant creates has author `ai`. Annotations the student made keep their author when the assistant edits them.

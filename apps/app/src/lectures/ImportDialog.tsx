@@ -53,7 +53,7 @@ export function ImportDialog({
     }
     if (imported > 0) {
       notifyLibraryChanged();
-      toast.success(`Imported ${countLabel(imported, "lecture")}`);
+      toast.success(`Imported ${countLabel(imported, "material")}`);
     }
     if (failed.length === 0) {
       onClose();
@@ -65,8 +65,8 @@ export function ImportDialog({
 
   return (
     <ModalDialog
-      title="Import lecture PDFs"
-      description="Each PDF becomes a lecture, titled after its file name."
+      title="Import PDFs"
+      description="Each PDF is added to this subject, titled after its file name."
       onClose={onClose}
     >
       <div
@@ -124,7 +124,7 @@ export function ImportDialog({
       )}
 
       <label className="mt-5 block space-y-2">
-        <span className="text-sm font-medium">Lecture date (optional)</span>
+        <span className="text-sm font-medium">Date (optional)</span>
         <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
       </label>
 

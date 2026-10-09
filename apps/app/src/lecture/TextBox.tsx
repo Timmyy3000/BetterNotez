@@ -151,6 +151,7 @@ export function TextBoxView({
     if (event.key === "Escape") event.currentTarget.blur();
   }
 
+  // The box sits on the PDF page, which is paper in every theme. It takes the paper and the annotation's own ink, never a theme surface.
   const fontPx = box.fontSize * scale;
   return (
     <div
@@ -159,7 +160,7 @@ export function TextBoxView({
       className={cn(
         "group absolute rounded-sm border border-dashed",
         isEditing
-          ? "border-solid border-accent bg-surface/80 cursor-text"
+          ? "border-solid border-accent bg-sheet cursor-text"
           : "cursor-move touch-none border-pen/45 select-none hover:border-pen/80",
         isSelected && !isEditing && "border-solid border-accent",
         tool === "select" || tool === "text" ? "pointer-events-auto" : "pointer-events-none",
@@ -193,7 +194,7 @@ export function TextBoxView({
       {isSelected && (
         <span
           data-handle="resize"
-          className="absolute -right-1.5 -bottom-1.5 size-3 cursor-nwse-resize rounded-sm border border-accent bg-surface"
+          className="absolute -right-1.5 -bottom-1.5 size-3 cursor-nwse-resize rounded-sm border border-accent bg-sheet"
         />
       )}
       {box.author === "ai" && (

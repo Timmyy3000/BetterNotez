@@ -7,9 +7,7 @@ import { notifyLibraryChanged } from "../store";
 import { Button } from "../ui/button";
 import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
-
-const SELECT_CLASS =
-  "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] transition-colors focus:border-accent disabled:opacity-50";
+import { SelectField } from "../ui/select";
 
 export function TaskDialog({
   task,
@@ -79,47 +77,33 @@ export function TaskDialog({
   }
 
   return (
-    <ModalDialog title="Edit task" description="Link it to a subject, a lecture, or a due date." onClose={onClose}>
+    <ModalDialog title="Edit task" description="Link it to a subject, material, or a due date." onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <label className="block space-y-2">
           <span className="text-sm font-medium">Title</span>
           <Input autoFocus maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">Subject</span>
-          <select
-            className={SELECT_CLASS}
-            value={subjectId}
-            onChange={(event) => {
-              setSubjectId(event.target.value);
-            }}
-          >
-            <option value="">No subject</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Subject"
+          options={[
+            { value: "", label: "No subject" },
+            ...subjects.map((subject) => ({ value: subject.id, label: subject.name })),
+          ]}
+          value={subjectId}
+          onValueChange={setSubjectId}
+        />
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">Lecture</span>
-          <select
-            className={SELECT_CLASS}
-            value={linkedLectureId}
-            disabled={subjectId === ""}
-            onChange={(event) => setLectureId(event.target.value)}
-          >
-            <option value="">No lecture</option>
-            {subjectLectures.map((lecture) => (
-              <option key={lecture.id} value={lecture.id}>
-                {lecture.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Material"
+          options={[
+            { value: "", label: "No material" },
+            ...subjectLectures.map((lecture) => ({ value: lecture.id, label: lecture.title })),
+          ]}
+          value={linkedLectureId}
+          disabled={subjectId === ""}
+          onValueChange={setLectureId}
+        />
 
         <div className="space-y-2">
           <label htmlFor="task-due" className="block text-sm font-medium">
