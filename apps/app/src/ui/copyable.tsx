@@ -19,7 +19,7 @@ export function Copyable({ label, value }: { readonly label: string; readonly va
 
   return (
     <div className="relative mt-3">
-      <pre className="rounded-xl border border-border bg-muted p-4 pr-14 text-sm leading-relaxed break-all whitespace-pre-wrap">
+      <pre className="grain rounded-lg border border-border bg-surface p-4 pr-14 font-mono text-[13px] leading-relaxed break-all whitespace-pre-wrap">
         <code>{value}</code>
       </pre>
       <div className="absolute top-2 right-2">

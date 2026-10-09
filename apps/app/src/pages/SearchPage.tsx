@@ -3,8 +3,6 @@ import { Search, SearchX } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
-import { cardClass } from "../ui/card";
-import { Input } from "../ui/input";
 import { EmptyState } from "../ui/empty-state";
 import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
@@ -47,20 +45,20 @@ export function SearchPage() {
   return (
     <>
       <PageHeader title="Search" />
-      <div className="relative mt-6">
-        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <div className="flex items-center gap-4 border-b-2 border-foreground pb-2 focus-within:border-accent">
+        <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" />
+        <input
           type="search"
           aria-label="Search"
           autoFocus
-          className="h-11 pl-10"
+          className="min-w-0 flex-1 bg-transparent py-2 font-serif text-3xl outline-none placeholder:text-faint placeholder:italic"
           placeholder="Search subjects, lectures, notes, text boxes, or PDF text"
           value={query}
           onChange={(event) => setParams({ q: event.target.value }, { replace: true })}
         />
       </div>
 
-      <div className="mt-8 space-y-8">
+      <div className="mt-10 space-y-12">
         {needle === "" && (
           <EmptyState icon={Search} title="Search your semester">
             Find subjects, lectures, notes, text boxes, or words inside a PDF.
@@ -77,19 +75,19 @@ export function SearchPage() {
           if (rows.length === 0) return null;
           return (
             <section key={kind} aria-labelledby={`results-${kind}`}>
-              <h2
-                id={`results-${kind}`}
-                className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
-              >
+              <h2 id={`results-${kind}`} className="label">
                 {label} ({rows.length})
               </h2>
-              <ul className="space-y-2">
+              <ul>
                 {rows.map((row, index) => (
-                  <li key={index}>
-                    <Link to={row.to} className={cn(cardClass, "block px-4 py-3")}>
-                      <p className="font-medium">{row.title}</p>
-                      <p className="text-xs text-muted-foreground">{row.detail}</p>
-                      <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+                  <li key={index} className="border-t border-border">
+                    <Link
+                      to={row.to}
+                      className="block py-4 transition-colors duration-150 hover:bg-foreground/[0.025]"
+                    >
+                      <p className="font-serif text-[26px] leading-tight">{row.title}</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground">{row.detail}</p>
+                      <p className="mt-2 line-clamp-2 text-[15px] leading-relaxed text-muted-foreground">
                         <Highlight text={row.hit.snippet} query={needle} />
                       </p>
                     </Link>
@@ -129,7 +127,7 @@ function Highlight({ text, query }: { readonly text: string; readonly query: str
   const parts = text.split(new RegExp(`(${escapeRegExp(query)})`, "i"));
   return parts.map((part, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded bg-highlight px-0.5 text-highlight-foreground">
+      <mark key={index} className="rounded-[2px] bg-highlight px-0.5 text-highlight-foreground">
         {part}
       </mark>
     ) : (
