@@ -1,4 +1,4 @@
-import type { Annotation, Highlight, Ink, TextBox } from "@betternotez/core";
+import { textBoxStyle, type Annotation, type Highlight, type Ink, type TextBox } from "@betternotez/core";
 import { BlendMode, degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { displaySize, displayToUser, normalizeRotation, type PageGeometry } from "./geometry";
 import { HIGHLIGHT_OPACITY } from "./highlight";
@@ -55,13 +55,14 @@ function drawTextBox(page: PDFPage, geometry: PageGeometry, box: TextBox, font: 
   const left = box.x * display.width;
   const top = box.y * display.height;
   const maxWidth = box.width * display.width - 2 * TEXT_PADDING_PT;
+  const { fontSize } = textBoxStyle(box);
   const color = hexToRgb(box.color);
 
-  wrapLines(font, box.text, box.fontSize, maxWidth).forEach((line, index) => {
-    const baseline = top + TEXT_PADDING_PT + box.fontSize * BASELINE_RATIO + index * box.fontSize * LINE_HEIGHT;
+  wrapLines(font, box.text, fontSize, maxWidth).forEach((line, index) => {
+    const baseline = top + TEXT_PADDING_PT + fontSize * BASELINE_RATIO + index * fontSize * LINE_HEIGHT;
     const origin = displayToUser(geometry, (left + TEXT_PADDING_PT) / display.width, baseline / display.height);
     // Text runs along the reading direction of the rotated page, so it is turned to match.
-    page.drawText(line, { x: origin.x, y: origin.y, font, size: box.fontSize, color, rotate: degrees(geometry.rotation) });
+    page.drawText(line, { x: origin.x, y: origin.y, font, size: fontSize, color, rotate: degrees(geometry.rotation) });
   });
 }
 

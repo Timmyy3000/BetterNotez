@@ -1,4 +1,4 @@
-import type { TextBox as TextBoxModel } from "@betternotez/core";
+import { textBoxStyle, type TextBox as TextBoxModel } from "@betternotez/core";
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { cn } from "../lib/cn";
 import { useEditor } from "./editor";
@@ -152,7 +152,7 @@ export function TextBoxView({
   }
 
   // The box sits on the PDF page, which is paper in every theme. It takes the paper and the annotation's own ink, never a theme surface.
-  const fontPx = box.fontSize * scale;
+  const fontPx = textBoxStyle(box).fontSize * scale;
   return (
     <div
       data-kind="text"
