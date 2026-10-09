@@ -4,7 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays, Check, Pencil } from "lucide-react";
 import type { PointerEvent, KeyboardEvent } from "react";
 import { cn } from "../lib/cn";
-import { formatLectureDate } from "../lib/format";
+import { displayTitle, formatLectureDate } from "../lib/format";
 import { subjectTone } from "../lib/subject-colors";
 import { iconButtonClass } from "../ui/button";
 
@@ -88,7 +88,7 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
               <span className="truncate">{subject.name}</span>
             </span>
           )}
-          {lectureTitle !== undefined && <span className="min-w-0 truncate">{lectureTitle}</span>}
+          {lectureTitle !== undefined && <span className="min-w-0 truncate">{displayTitle(lectureTitle)}</span>}
           {task.due !== undefined && (
             <span className={cn("inline-flex items-center gap-1.5 tabular-nums", overdue && "font-semibold text-foreground")}>
               <CalendarDays className="size-3.5" />

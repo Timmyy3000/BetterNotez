@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { dueLedger } from "../due/ledger";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
-import { countLabel, isoWeek, romanNumeral } from "../lib/format";
+import { countLabel, displayTitle, isoWeek, romanNumeral } from "../lib/format";
 import { revealAt } from "../lib/motion";
 import { subjectTone } from "../lib/subject-colors";
 import { SubjectDialog } from "../subjects/SubjectDialog";
@@ -156,7 +156,7 @@ function Folio({
         <p className="mb-5 text-sm text-muted-foreground tabular-nums">{countLabel(lectures.length, "lecture")}</p>
         {latest !== undefined && (
           <p className="mt-auto border-t border-border pt-3.5 text-[15px] leading-snug text-muted-foreground">
-            Latest: {latest.title}
+            Latest: {displayTitle(latest.title)}
           </p>
         )}
       </Link>

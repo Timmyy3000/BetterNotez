@@ -51,7 +51,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await page.getByLabel("Lecture date").fill("2026-10-12");
   await page.getByRole("button", { name: "Import 1 PDF" }).click();
 
-  const lectureLink = page.getByRole("link", { name: "Lecture 1 - Logic gates", exact: true });
+  const lectureLink = page.getByRole("link", { name: "Lecture 1 – Logic gates", exact: true });
   await expect(lectureLink).toBeVisible();
   await expect(page.getByText("Oct 12, 2026 · 2 pages")).toBeVisible();
 
@@ -67,7 +67,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await page.screenshot({ path: `${SHOTS}/search-dark.png`, animations: "disabled" });
 
   await page.getByRole("link", { name: /Karnaugh maps reduce expressions/ }).click();
-  await expect(page.getByRole("heading", { name: "Lecture 1 - Logic gates", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lecture 1 – Logic gates", exact: true })).toBeVisible();
   await expect(page.getByText("Page 2 of 2")).toBeVisible();
 
   await page.getByRole("complementary").getByRole("link", { name: "Digital Systems" }).click();

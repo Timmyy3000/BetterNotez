@@ -7,6 +7,7 @@ import { Link, useSearchParams } from "react-router";
 import { useStore } from "zustand";
 import { useLibrary } from "../library";
 import { errorMessage } from "../lib/errors";
+import { displayTitle } from "../lib/format";
 import { savePdf } from "../lib/save-pdf";
 import { Button, iconButtonClass } from "../ui/button";
 import { commitTextEdit, createAnnotationStore } from "./annotation-store";
@@ -137,7 +138,7 @@ export function LectureView({
           </Link>
           <div className="min-w-0 flex-1">
             <p className="label truncate text-[11px]">{subject.name}</p>
-            <h1 className="mt-0.5 truncate text-[27px] leading-tight">{lecture.title}</h1>
+            <h1 className="mt-0.5 truncate text-[27px] leading-tight">{displayTitle(lecture.title)}</h1>
           </div>
           <Button variant="secondary" aria-pressed={notesOpen} onClick={() => setNotesOpen((open) => !open)}>
             <NotebookPen />

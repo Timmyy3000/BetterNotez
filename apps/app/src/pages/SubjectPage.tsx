@@ -7,7 +7,7 @@ import { EditLectureDialog } from "../lectures/EditLectureDialog";
 import { ImportDialog } from "../lectures/ImportDialog";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
-import { countLabel, lectureMeta } from "../lib/format";
+import { countLabel, displayTitle, lectureMeta } from "../lib/format";
 import { revealAt } from "../lib/motion";
 import { subjectTone } from "../lib/subject-colors";
 import { sortLectures } from "../lib/lectures";
@@ -165,7 +165,7 @@ function LectureRow({
           to={`/lecture/${lecture.id}`}
           className="block truncate font-serif text-[28px] leading-tight after:absolute after:inset-0 after:rounded-lg"
         >
-          {lecture.title}
+          {displayTitle(lecture.title)}
         </Link>
         <p className="mt-1.5 text-sm text-muted-foreground tabular-nums">{lectureMeta(lecture)}</p>
       </div>
