@@ -14,6 +14,11 @@ export interface NotesWidthBounds {
   readonly max: number;
 }
 
+/** Resizing needs room for the narrowest notes beside the narrowest PDF. Below that the panel keeps its default width. */
+export function notesCanResize(areaWidth: number): boolean {
+  return areaWidth >= NOTES_MIN_WIDTH + PDF_MIN_WIDTH;
+}
+
 /** The narrowest and widest the notes can be in a lecture area of this width. The minimum wins when the area is tiny. */
 export function notesWidthBounds(areaWidth: number): NotesWidthBounds {
   const max = Math.floor(Math.min(areaWidth * NOTES_MAX_SHARE, areaWidth - PDF_MIN_WIDTH));

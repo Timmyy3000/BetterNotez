@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clampNotesWidth,
   NOTES_MIN_WIDTH,
+  notesCanResize,
   notesWidthBounds,
   parseNotesWidth,
+  PDF_MIN_WIDTH,
   readNotesWidth,
   writeNotesWidth,
 } from "./notes-width";
@@ -34,6 +36,13 @@ describe("notesWidthBounds", () => {
 
   it("never gives a maximum below the minimum", () => {
     expect(notesWidthBounds(500)).toEqual({ min: NOTES_MIN_WIDTH, max: NOTES_MIN_WIDTH });
+  });
+});
+
+describe("notesCanResize", () => {
+  it("needs room for the narrowest notes beside the narrowest PDF", () => {
+    expect(notesCanResize(NOTES_MIN_WIDTH + PDF_MIN_WIDTH)).toBe(true);
+    expect(notesCanResize(NOTES_MIN_WIDTH + PDF_MIN_WIDTH - 1)).toBe(false);
   });
 });
 
