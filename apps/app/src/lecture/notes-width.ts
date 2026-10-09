@@ -4,8 +4,8 @@ export const NOTES_DEFAULT_WIDTH = 340;
 export const NOTES_MIN_WIDTH = 280;
 /** Notes take at most this share of the lecture area, which is the window less the rail. */
 const NOTES_MAX_SHARE = 0.6;
-/** The PDF keeps at least this much width, however wide the notes are. */
-export const PDF_MIN_WIDTH = 360;
+/** The PDF keeps at least this much width, however wide the notes are. The floating annotation toolbar is about 613px wide, so the PDF is never narrower than it. */
+export const PDF_MIN_WIDTH = 620;
 /** How far an arrow key moves the notes edge. */
 export const NOTES_KEY_STEP = 16;
 
@@ -14,15 +14,14 @@ export interface NotesWidthBounds {
   readonly max: number;
 }
 
-/** Resizing needs room for the narrowest notes beside the narrowest PDF. Below that the panel keeps its default width. */
-export function notesCanResize(areaWidth: number): boolean {
-  return areaWidth >= NOTES_MIN_WIDTH + PDF_MIN_WIDTH;
-}
-
-/** The narrowest and widest the notes can be in a lecture area of this width. The minimum wins when the area is tiny. */
-export function notesWidthBounds(areaWidth: number): NotesWidthBounds {
+/**
+ * The narrowest and widest the notes can be in a lecture area of this width. Undefined when the area cannot fit the
+ * narrowest notes beside the PDF, which leaves nothing to resize.
+ */
+export function notesWidthBounds(areaWidth: number): NotesWidthBounds | undefined {
+  if (areaWidth < NOTES_MIN_WIDTH + PDF_MIN_WIDTH) return undefined;
   const max = Math.floor(Math.min(areaWidth * NOTES_MAX_SHARE, areaWidth - PDF_MIN_WIDTH));
-  return { min: NOTES_MIN_WIDTH, max: Math.max(NOTES_MIN_WIDTH, max) };
+  return { min: NOTES_MIN_WIDTH, max };
 }
 
 export function clampNotesWidth(width: number, bounds: NotesWidthBounds): number {
