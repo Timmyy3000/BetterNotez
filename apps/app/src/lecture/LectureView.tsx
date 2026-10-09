@@ -137,7 +137,7 @@ export function LectureView({
           </Link>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-muted-foreground">{subject.name}</p>
-            <h1 className="truncate text-sm font-semibold">{lecture.title}</h1>
+            <h1 className="truncate text-[15px] font-semibold">{lecture.title}</h1>
           </div>
           <Button
             variant="ghost"
