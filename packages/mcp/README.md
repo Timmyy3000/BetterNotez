@@ -71,10 +71,10 @@ Coordinates on a page are normalized from 0 to 1, with the origin at the top-lef
 | `list_lectures` | List material, optionally for one `subjectId`. |
 | `import_lecture` | Import a PDF from an absolute `pdfPath` on the student's computer into `subjectId`. Copies the PDF into the library and caches its text. Takes optional `title` (defaults to the file name) and `date`. |
 | `find_lecture` | Rank material for a phrase such as "Lecture 1 in [subject name]". |
-| `get_lecture` | Return one piece of material with its notes, annotations, and whether its PDF text is cached. Notes come per page, each with its `page`. Pass `page` to read one page's note. |
+| `get_lecture` | Return one piece of material with its notes, annotations, and whether its PDF text is cached. Notes come per page, each with its `page`. Pass `page` to read one page's note. If the notes file cannot be read, `notes` is `null` and a `warning` says why. |
 | `get_lecture_text` | Return PDF text per page, with optional `fromPage` and `toPage`. |
 | `update_lecture` | Change `title` or `date`. Pass `date: null` to clear it. |
-| `update_notes` | Set `text` on `page` with `mode` `append` (default) or `replace`. Only that page's note changes. |
+| `update_notes` | Set `text` on `page` with `mode` `append` (default) or `replace`. Only that page's note changes. Returns `{ lectureId, page, text }`, where `text` is the page's note after the edit. |
 | `add_text_box` | Add a text box to `page` at `x`, `y`, with `text`, and optional `fontSize` (11, 14, 18, or 24), `bold`, `italic`, `underline`, and `color`. Text is italic unless `italic` is `false`. |
 | `add_ink` | Add a freehand stroke from `points` (`[x, y]` or `[x, y, pressure]`). |
 | `add_highlight` | Highlight `text` on `page`, found exactly as it reads on the page. Takes optional `occurrence` when the text appears more than once, and `color`: `yellow` (the default), `green`, `pink`, `blue`, or `orange`. |
@@ -93,8 +93,12 @@ Every annotation the assistant creates has author `ai`. Annotations the student 
 ## Notes
 
 - The assistant cannot delete. Calling a tool named `delete_*` or `remove_*` gets an error result that says the tool is not found. For a deletion request, `request_deletion` replies that nothing was deleted and that the student can delete it in the app.
-- Notes are per page. `update_notes` requires a `page`, so a note is never written to page 1 by accident. A material saved before per-page notes keeps its single `notes.md`, which reads as page 1.
+- Notes are per page. `update_notes` requires a `page`, so a note is never written to page 1 by accident.
+- `update_notes` with `mode` `append` adds a new line to the page's note. Appending empty text changes nothing. `mode` `replace` with empty text clears that page's note.
+- A note of only spaces and line breaks is no note. It is not stored and is not searched.
+- A material saved before per-page notes keeps its single `notes.md`, which reads as page 1. The upgrade is one-way: once a note is written to `notes.json`, `notes.md` is no longer read, and an older build of BetterNotez will not show notes written after that.
+- If `notes.json` is damaged, or was written by a newer version of BetterNotez, the server does not read it as empty and never writes over it. `get_lecture` returns the rest of the material with `notes: null` and a `warning`, and `update_notes` fails and leaves the file as it is.
 - `import_lecture` cannot read password-protected or corrupt PDFs. It says why and imports nothing.
 - Tool calls run one at a time, so overlapping requests cannot drop each other's writes.
 - PDF text is cached when a lecture is imported with `import_lecture`, or when the student opens it in the app. Until then, `get_lecture_text` says so.
-- The app and this server both write the same folder. Writes are atomic per file, but the server does not lock against the app.
+- The app and this server both write the same folder. Writes are atomic per file, but the server does not lock against the app. If the app and the assistant edit the same page's note at the same moment, the later save wins and the other edit is lost. Edits to different pages do not interfere.

@@ -82,7 +82,7 @@ BetterNotez Library/
       lecture.pdf                   the PDF you imported
       annotations.json              text boxes and ink
       notes.json                    notes for each page, by page number
-      notes.md                      notes from before per-page notes, read as page 1
+      notes.md                      notes from before per-page notes, read as page 1 until notes.json exists. The upgrade is one-way: older versions of BetterNotez will not show notes written after it.
       text.json                     PDF text, cached for search
 ```
 
