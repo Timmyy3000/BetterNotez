@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { mkdirSync, readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
