@@ -22,8 +22,8 @@ It is local-first. There is no account, and your library is a folder of plain fi
 - **Subjects and lectures.** Make a subject for each class and import lecture PDFs into it. Add a date to a lecture if you want to sort by it. Lectures without a date work too.
 - **Annotate pages.** Add text boxes and type into them, or draw freehand ink for diagrams with a mouse, touch, or stylus. Select text to highlight it in a colour, then click a highlight to change or remove it. Undo and redo cover your edits during a session.
 - **Format text boxes.** Select a text box to get a small bar for its size, bold, italic, underline, and color. The bar sits above the box, or below it where the toolbar is in the way. Ctrl+B, Ctrl+I, and Ctrl+U work while you type.
-- **A notepad per lecture.** Each lecture has its own notes, saved as you type.
-- **Search.** Find text in subject names, lecture titles, notepads, text boxes, and the PDF text itself.
+- **Notes for each page.** Every page of a material has its own note, saved as you type. The notes panel shows the note for the page you are reading, and a small mark beside the page shows which pages have notes.
+- **Search.** Find text in subject names, material titles, page notes, text boxes, and the PDF text itself. A note found by search opens its page.
 - **Export.** Save a lecture as a PDF with your annotations drawn on its pages. Any PDF viewer can open it.
 - **Weekly planner.** Drag or click on the week to place a subject card in a time slot.
 - **Task board.** Move tasks through To do, Doing, and Done. A task can link to a subject, a lecture, and a due date.
@@ -62,7 +62,7 @@ The server reads `BetterNotez Library` in your home folder, the same folder the 
 
 Contributors can run the server from a checkout instead. Clone this repository, run `npm install` and `npm run build`, then use `packages/mcp/dist/index.js` in place of the file above. See [packages/mcp](packages/mcp/README.md).
 
-Then ask your assistant, for example: "What material do I have in BetterNotez this week?" The assistant can find your material, read its PDF text, notepad, and annotations, and add or edit notes, text boxes, ink, highlights of exact text, tasks, and planner cards. Changes appear in the app right away.
+Then ask your assistant, for example: "What material do I have in BetterNotez this week?" The assistant can find your material, read its PDF text, its notes page by page, and its annotations, and add or edit notes, text boxes, ink, highlights of exact text, tasks, and planner cards. Changes appear in the app right away.
 
 The web app cannot connect an assistant, because the MCP server reads the folder on your computer.
 
@@ -81,7 +81,8 @@ BetterNotez Library/
       lecture.json                  title, date, page count
       lecture.pdf                   the PDF you imported
       annotations.json              text boxes and ink
-      notes.md                      the lecture notepad
+      notes.json                    notes for each page, by page number
+      notes.md                      notes from before per-page notes, read as page 1
       text.json                     PDF text, cached for search
 ```
 
