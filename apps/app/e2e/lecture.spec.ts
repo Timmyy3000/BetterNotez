@@ -283,6 +283,24 @@ async function dragNotesEdge(page: Page, dx: number): Promise<void> {
   await page.mouse.up();
 }
 
+/** The width the page-1 canvas was drawn at, in device pixels. */
+async function drawnWidth(page: Page): Promise<number> {
+  return Number(await page.locator('[data-page-number="1"] canvas').getAttribute("width"));
+}
+
+/** The width page 1 is shown at, in device pixels. */
+async function pageDeviceWidth(page: Page): Promise<number> {
+  const box = await page.locator('[data-page-number="1"]').boundingBox();
+  if (box === null) throw new Error("page 1 is not on screen");
+  // The canvas is drawn at the device pixel ratio, so the shown width is scaled to match.
+  return box.width * (await page.evaluate<number>("window.devicePixelRatio"));
+}
+
+/** How far the page-1 bitmap is from the width page 1 is shown at. A stretched or stale bitmap is far off. */
+async function redrawGap(page: Page): Promise<number> {
+  return Math.abs((await drawnWidth(page)) - (await pageDeviceWidth(page)));
+}
+
 test("the notes edge drags wider and narrower, the PDF refits, and the width survives a reload", async ({ page }) => {
   await createSubject(page, "Markets");
   await importLecture(page, "Supply curves.pdf", ["Supply", "Demand"]);
@@ -296,16 +314,18 @@ test("the notes edge drags wider and narrower, the PDF refits, and the width sur
   const pageBefore = (await pdfPage.boundingBox())?.width ?? 0;
 
   await dragNotesEdge(page, -120);
-  expect(await notesWidth(page)).toBeCloseTo(before + 120, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(before + 120, 0);
   await expect.poll(async () => (await pdfPage.boundingBox())?.width ?? 0).toBeCloseTo(pageBefore - 120, 0);
 
   await dragNotesEdge(page, 60);
-  expect(await notesWidth(page)).toBeCloseTo(before + 60, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(before + 60, 0);
 
-  expect(await page.evaluate(() => localStorage.getItem("betternotez.notesWidth"))).toBe(String(before + 60));
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("betternotez.notesWidth")))
+    .toBe(String(before + 60));
   await page.reload();
   await page.getByRole("button", { name: "Notes" }).click();
-  expect(await notesWidth(page)).toBeCloseTo(before + 60, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(before + 60, 0);
 });
 
 test("the keyboard moves the notes edge in steps and to its limits, and a double click resets it", async ({ page }) => {
@@ -318,6 +338,10 @@ test("the keyboard moves the notes edge in steps and to its limits, and a double
   await expect(edge).toHaveAttribute("aria-orientation", "vertical");
   await expect(edge).toHaveAttribute("aria-valuemin", "280");
   await expect(edge).toHaveAttribute("aria-valuenow", "340");
+  await expect(edge).toHaveAttribute("aria-valuetext", "Notes 340 pixels wide");
+  const controls = await edge.getAttribute("aria-controls");
+  expect(controls).toBeTruthy();
+  await expect(page.locator(`[id="${controls}"]`)).toHaveAccessibleName("Notes");
   // At rest the edge is only the panel's hairline, so its accent line and grip are hidden.
   await expect(edge.locator("span").first()).toHaveCSS("opacity", "0");
 
@@ -325,23 +349,72 @@ test("the keyboard moves the notes edge in steps and to its limits, and a double
   // from the keyboard, which is when the accent line shows.
   await edge.press("ArrowLeft");
   await expect(edge).toHaveAttribute("aria-valuenow", "356");
+  await expect(edge).toHaveAttribute("aria-valuetext", "Notes 356 pixels wide");
   await expect(edge.locator("span").first()).toHaveCSS("opacity", "1");
-  expect(await notesWidth(page)).toBeCloseTo(356, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(356, 0);
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await expect(edge).toHaveAttribute("aria-valuenow", "324");
 
-  // 60% of the 1216px lecture area at the 1280px desktop viewport, less the rail.
+  // The PDF keeps 620px, which is the floating toolbar's width, so the notes stop at 596px in a 1216px lecture area.
   await page.keyboard.press("End");
-  await expect(edge).toHaveAttribute("aria-valuenow", "729");
-  expect(await notesWidth(page)).toBeCloseTo(729, 0);
+  await expect(edge).toHaveAttribute("aria-valuenow", "596");
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(596, 0);
   await page.keyboard.press("Home");
   await expect(edge).toHaveAttribute("aria-valuenow", "280");
-  expect(await notesWidth(page)).toBeCloseTo(280, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(280, 0);
 
   await edge.dblclick();
   await expect(edge).toHaveAttribute("aria-valuenow", "340");
-  expect(await notesWidth(page)).toBeCloseTo(340, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(340, 0);
+});
+
+test("hovering the notes edge shows a grip, and the accent appears only while the edge is held", async ({ page }) => {
+  await createSubject(page, "Thermo");
+  await importLecture(page, "Entropy.pdf", ["Entropy"]);
+  await openLecture(page, "Entropy");
+  await page.getByRole("button", { name: "Notes" }).click();
+
+  const edge = notesEdge(page);
+  const line = edge.locator("span").nth(0);
+  const grip = edge.locator("span").nth(1);
+  await expect(line).toHaveCSS("opacity", "0");
+  await expect(grip).toHaveCSS("opacity", "0");
+
+  const box = await edge.boundingBox();
+  if (box === null) throw new Error("notes edge is not on screen");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await expect(grip).toHaveCSS("opacity", "1");
+  await expect(line).toHaveCSS("opacity", "0");
+
+  await page.mouse.down();
+  await expect(line).toHaveCSS("opacity", "1");
+  await page.mouse.up();
+  await expect(line).toHaveCSS("opacity", "0");
+});
+
+test("the PDF redraws at its new width once a notes drag settles, and at once after a zoom", async ({ page }) => {
+  await createSubject(page, "Optics");
+  await importLecture(page, "Lenses.pdf", ["Convex", "Concave"]);
+  await openLecture(page, "Lenses");
+  await page.getByRole("button", { name: "Notes" }).click();
+  await expect(notesEdge(page)).toBeVisible();
+
+  // The bitmap matches the width page 1 is shown at, to within a device pixel.
+  await expect.poll(() => redrawGap(page)).toBeLessThanOrEqual(1);
+  const shownBefore = await pageDeviceWidth(page);
+
+  await dragNotesEdge(page, -120);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(460, 0);
+  await expect.poll(() => pageDeviceWidth(page)).toBeLessThan(shownBefore);
+  await expect.poll(() => redrawGap(page)).toBeLessThanOrEqual(1);
+
+  const shownAtFit = await pageDeviceWidth(page);
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect.poll(() => pageDeviceWidth(page)).toBeGreaterThan(shownAtFit);
+  await expect.poll(() => redrawGap(page)).toBeLessThanOrEqual(1);
 });
 
 test("the notes edge is not offered in a window too narrow for both panels, and the chosen width returns when it fits", async ({
@@ -352,13 +425,30 @@ test("the notes edge is not offered in a window too narrow for both panels, and 
   await openLecture(page, "Triangles");
   await page.getByRole("button", { name: "Notes" }).click();
   await dragNotesEdge(page, -120);
-  expect(await notesWidth(page)).toBeCloseTo(460, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(460, 0);
 
   await page.setViewportSize({ width: 600, height: 800 });
   await expect(notesEdge(page)).toHaveCount(0);
-  expect(await notesWidth(page)).toBeCloseTo(340, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(340, 0);
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await expect(notesEdge(page)).toBeVisible();
   await expect.poll(() => notesWidth(page)).toBeCloseTo(460, 0);
+});
+
+test("the annotation toolbar stays whole when the notes are as wide as they go", async ({ page }) => {
+  await createSubject(page, "Lighting");
+  await importLecture(page, "Refraction.pdf", ["Refraction"]);
+  await openLecture(page, "Refraction");
+  await page.getByRole("button", { name: "Notes" }).click();
+
+  // Dragged well past the limit, so the notes stop at their widest: 596px at the 1280px desktop viewport.
+  await dragNotesEdge(page, -600);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(596, 0);
+
+  const toolbar = await page.getByRole("toolbar", { name: "Annotate" }).boundingBox();
+  const pdfColumn = await page.locator(".desk").boundingBox();
+  if (toolbar === null || pdfColumn === null) throw new Error("the toolbar or the PDF is not on screen");
+  expect(toolbar.x).toBeGreaterThanOrEqual(pdfColumn.x);
+  expect(toolbar.x + toolbar.width).toBeLessThanOrEqual(pdfColumn.x + pdfColumn.width);
 });
