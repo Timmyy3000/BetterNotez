@@ -272,10 +272,10 @@ function BoardColumn({
   const label = COLUMN_LABELS[status];
 
   return (
-    <section aria-label={label} className="flex min-h-72 flex-col rounded-2xl bg-muted/60 p-3">
+    <section aria-label={label} className="flex min-h-72 flex-col rounded-2xl bg-sidebar p-3">
       <header className="flex items-center justify-between px-1 pb-3">
         <h2 className="text-sm font-semibold">{label}</h2>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
           {tasks.length}
         </span>
       </header>

@@ -64,7 +64,7 @@ function AppearanceSection() {
                 "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors [&_svg]:size-4",
                 focusRing,
                 selected
-                  ? "bg-surface text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"
+                  ? "raised-edge bg-raised text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >

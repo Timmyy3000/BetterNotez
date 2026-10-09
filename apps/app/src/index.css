@@ -4,6 +4,7 @@
   --color-background: var(--background);
   --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
@@ -25,6 +26,7 @@
   --background: #fafaf9;
   --sidebar: #f2f2f0;
   --surface: #ffffff;
+  --raised: #ffffff;
   --foreground: #1c1917;
   --muted: #efeeec;
   --muted-foreground: #6b6560;
@@ -42,6 +44,7 @@
   --background: #0c0a09;
   --sidebar: #141210;
   --surface: #1c1917;
+  --raised: #332d2a;
   --foreground: #fafaf9;
   --muted: #292524;
   --muted-foreground: #a8a29e;
@@ -52,6 +55,11 @@
   --accent-soft: #1e1b4b;
   --danger: #f87171;
   --overlay: rgb(0 0 0 / 0.6);
+}
+
+/* Dark surfaces cast no visible shadow, so a raised one gets a light top edge instead. */
+[data-theme="dark"] .raised-edge {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
 @keyframes fade-in {
