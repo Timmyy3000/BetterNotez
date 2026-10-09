@@ -11,7 +11,7 @@ export interface SelectOption {
 /** Radix does not accept an empty value for an option, so "" (such as "No subject") is carried as this stand-in. */
 const EMPTY_ITEM = "__empty__";
 
-export interface SelectProps {
+interface SelectCommon {
   readonly options: readonly SelectOption[];
   readonly value: string;
   readonly onValueChange: (value: string) => void;
@@ -19,9 +19,14 @@ export interface SelectProps {
   /** `field` is a boxed control, as in the forms. `inline` is underlined, for a page's header. */
   readonly variant?: "field" | "inline";
   readonly className?: string;
-  readonly "aria-label"?: string;
-  readonly "aria-labelledby"?: string;
 }
+
+/** Every dropdown needs an accessible name: an `aria-label`, or the id of the element that labels it. */
+type SelectName =
+  | { readonly "aria-label": string; readonly "aria-labelledby"?: never }
+  | { readonly "aria-labelledby": string; readonly "aria-label"?: never };
+
+export type SelectProps = SelectCommon & SelectName;
 
 const FIELD_TRIGGER =
   "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] hover:border-rule-strong focus:border-foreground focus-visible:outline-foreground data-[state=open]:border-foreground";
@@ -33,23 +38,35 @@ const INLINE_TRIGGER =
  * A dropdown drawn in the app's own paper and ink. A native select opens its list in the operating system's colours,
  * which ignore the theme. Keyboard use follows the listbox pattern: arrows, typing to jump, Enter, and Escape.
  */
-export function Select({
+export function Select(props: SelectProps) {
+  return <SelectControl {...props} />;
+}
+
+interface SelectControlProps extends SelectCommon {
+  readonly id?: string;
+  readonly "aria-label"?: string;
+  readonly "aria-labelledby"?: string;
+}
+
+function SelectControl({
   options,
   value,
   onValueChange,
   disabled = false,
   variant = "field",
   className,
+  id,
   "aria-label": ariaLabel,
   "aria-labelledby": labelledBy,
-}: SelectProps) {
+}: SelectControlProps) {
   return (
     <SelectPrimitive.Root
       value={toItem(value)}
-      onValueChange={(next) => onValueChange(next === EMPTY_ITEM ? "" : next)}
+      onValueChange={(next) => onValueChange(fromItem(next))}
       disabled={disabled}
     >
       <SelectPrimitive.Trigger
+        id={id}
         aria-label={ariaLabel}
         aria-labelledby={labelledBy}
         className={cn(
@@ -92,19 +109,25 @@ export function Select({
   );
 }
 
-function toItem(value: string): string {
+/** The value Radix is given. The empty value becomes the stand-in, because Radix rejects an empty item value. */
+export function toItem(value: string): string {
   return value === "" ? EMPTY_ITEM : value;
 }
 
-/** A select with its visible label. The label names the control for assistive technology and for the tests. */
-export function SelectField({ label, ...select }: Omit<SelectProps, "aria-label" | "aria-labelledby"> & { readonly label: string }) {
-  const labelId = useId();
+/** The value the caller is given. Choosing the stand-in reports the empty value again. */
+export function fromItem(item: string): string {
+  return item === EMPTY_ITEM ? "" : item;
+}
+
+/** A select under a visible `<label>`. The label is tied to the trigger, so it names the control for assistive technology. */
+export function SelectField({ label, ...control }: SelectCommon & { readonly label: string }) {
+  const triggerId = useId();
   return (
     <div className="space-y-2">
-      <span id={labelId} className="block text-sm font-medium">
+      <label htmlFor={triggerId} className="block text-sm font-medium">
         {label}
-      </span>
-      <Select {...select} aria-labelledby={labelId} />
+      </label>
+      <SelectControl {...control} id={triggerId} />
     </div>
   );
 }
