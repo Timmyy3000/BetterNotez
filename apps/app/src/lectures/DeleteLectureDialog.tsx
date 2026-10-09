@@ -27,7 +27,7 @@ export function DeleteLectureDialog({ lecture, onClose }: { readonly lecture: Le
   return (
     <ModalDialog
       title={`Delete ${lecture.title}?`}
-      description="There is no trash, so this cannot be undone."
+      description="This can't be undone."
       onClose={onClose}
     >
       <p className="text-sm text-muted-foreground">

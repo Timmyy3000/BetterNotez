@@ -62,7 +62,7 @@ export function Toolbar({
     <div
       role="toolbar"
       aria-label="Annotate"
-      className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border bg-surface/95 p-1.5 shadow-lg backdrop-blur"
+      className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border raised-edge bg-raised/95 p-1.5 shadow-lg backdrop-blur"
     >
       {TOOLS.map(({ tool: value, label, icon: Icon }) => (
         <IconToggle key={value} label={label} active={tool === value} onClick={() => onTool(value)}>
@@ -80,11 +80,11 @@ export function Toolbar({
           aria-pressed={color === swatch.value}
           onClick={() => onColor(swatch.value)}
           className={cn(
-            "grid size-7 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "relative grid size-7 place-items-center rounded-full outline-none before:absolute before:-inset-1.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-accent",
             color === swatch.value && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
           )}
         >
-          <span className="size-4 rounded-full border border-black/10" style={{ backgroundColor: swatch.value }} />
+          <span className="size-4 rounded-full border-2 border-foreground/40" style={{ backgroundColor: swatch.value }} />
         </button>
       ))}
 
@@ -98,7 +98,7 @@ export function Toolbar({
           aria-pressed={size === option.value}
           onClick={() => onSize(option.value)}
           className={cn(
-            "grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-accent",
+            "relative grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-muted focus-visible:ring-2 focus-visible:ring-accent",
             size === option.value && "bg-accent-soft text-accent",
           )}
         >
@@ -136,7 +136,7 @@ export function ViewControls({
 }) {
   const percent = Math.round(zoom * 100);
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border bg-surface/95 p-1.5 text-sm shadow-lg backdrop-blur">
+    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border raised-edge bg-raised/95 p-1.5 text-sm shadow-lg backdrop-blur">
       <IconToggle label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)}>
         <ChevronUp />
       </IconToggle>
@@ -188,7 +188,7 @@ function IconToggle({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
+        "relative grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none before:absolute before:-inset-1 before:content-[''] hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
         active && "bg-accent-soft text-accent",
       )}
     >

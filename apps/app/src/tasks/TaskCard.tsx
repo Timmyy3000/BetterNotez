@@ -5,7 +5,8 @@ import { CalendarDays, Pencil } from "lucide-react";
 import type { PointerEvent, KeyboardEvent } from "react";
 import { cn } from "../lib/cn";
 import { formatLectureDate } from "../lib/format";
-import { iconButtonClass } from "../ui/button";
+import { focusRing, iconButtonClass } from "../ui/button";
+import { cardClass } from "../ui/card";
 
 export interface TaskCardInfo {
   readonly task: Task;
@@ -25,7 +26,7 @@ export function SortableTaskCard({ info, onEdit }: { readonly info: TaskCardInfo
       {...listeners}
       onClick={onEdit}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("touch-none cursor-grab active:cursor-grabbing", isDragging && "opacity-40")}
+      className={cn("touch-none cursor-grab rounded-xl active:cursor-grabbing", focusRing, isDragging && "opacity-40")}
     >
       <TaskCardFace info={info} onEdit={onEdit} />
     </div>
@@ -38,14 +39,14 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
   const stop = (event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>) => event.stopPropagation();
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-3 shadow-sm transition-shadow hover:shadow-md">
+    <div className={cn(cardClass, "p-3 shadow-sm hover:shadow-md")}>
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-sm leading-snug font-medium break-words">{task.title}</p>
         {onEdit !== undefined && (
           <button
             type="button"
             aria-label={`Edit ${task.title}`}
-            className={cn(iconButtonClass, "-mt-1 -mr-1 size-7")}
+            className={cn(iconButtonClass, "-mt-1 -mr-1")}
             onPointerDown={stop}
             onKeyDown={stop}
             onClick={(event) => {

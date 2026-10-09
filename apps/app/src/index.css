@@ -4,47 +4,75 @@
   --color-background: var(--background);
   --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-control: var(--control-border);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-danger: var(--danger);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-danger-solid: var(--danger-solid);
+  --color-overlay: var(--overlay);
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 }
 
+/* The theme is set on <html> by src/theme.ts and by the script in index.html. */
 :root {
+  color-scheme: light;
   --background: #fafaf9;
   --sidebar: #f2f2f0;
   --surface: #ffffff;
+  --raised: #ffffff;
   --foreground: #1c1917;
   --muted: #efeeec;
-  --muted-foreground: #78716c;
+  --muted-foreground: #6b6560;
   --border: #e7e5e4;
+  --control-border: #8f8a85;
   --accent: #4f46e5;
   --accent-foreground: #ffffff;
   --accent-soft: #eef2ff;
+  --highlight: #fde68a;
+  --highlight-foreground: #1c1917;
   --danger: #dc2626;
+  --danger-solid: #dc2626;
+  --overlay: rgb(0 0 0 / 0.25);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --sidebar: #141210;
-    --surface: #1c1917;
-    --foreground: #fafaf9;
-    --muted: #262221;
-    --muted-foreground: #a8a29e;
-    --border: #2c2826;
-    --accent: #818cf8;
-    --accent-foreground: #0c0a09;
-    --accent-soft: #1e1b4b;
-    --danger: #f87171;
-  }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0c0a09;
+  --sidebar: #141210;
+  --surface: #1c1917;
+  --raised: #332d2a;
+  --foreground: #fafaf9;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --border: #3a3431;
+  --control-border: #716a67;
+  --accent: #818cf8;
+  --accent-foreground: #0c0a09;
+  --accent-soft: #1e1b4b;
+  --highlight: #854d0e;
+  --highlight-foreground: #fef3c7;
+  --danger: #f87171;
+  --overlay: rgb(0 0 0 / 0.6);
+}
+
+/* Dark surfaces cast no visible shadow, so a raised one gets a light top edge instead. */
+[data-theme="dark"] .raised-edge {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+/* Dims the rendered page to cut glare. The ink overlay is not a canvas, so it keeps its colour. */
+[data-theme="dark"] section[data-page-number] canvas {
+  filter: brightness(0.9);
 }
 
 @keyframes fade-in {
@@ -72,6 +100,22 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Sonner paints toasts from these variables. Its dark theme would otherwise use pure black. */
+[data-sonner-toast] {
+  --normal-bg: var(--surface);
+  --normal-border: var(--border);
+  --normal-text: var(--foreground);
+}
+
+/* Sonner sets its own font on the toaster in a rule that loads after this one, so this needs !important. */
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

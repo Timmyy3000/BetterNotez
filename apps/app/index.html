@@ -3,9 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
     <meta name="description" content="BetterNotez: a free, open-source study app for lecture PDFs." />
     <title>BetterNotez</title>
+    <!-- Sets the theme before first paint. The rules are the ones in src/theme.ts, which cannot run this early. -->
+    <script>
+      (function () {
+        var preference = "dark";
+        try {
+          var stored = localStorage.getItem("betternotez.theme");
+          if (stored === "system" || stored === "light" || stored === "dark") preference = stored;
+        } catch (error) {
+          // Storage can be blocked. The default applies.
+        }
+        var dark = preference === "dark" || (preference === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

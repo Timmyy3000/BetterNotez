@@ -64,9 +64,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await page.getByRole("searchbox", { name: "Search" }).fill("karnaugh");
   await expect(page.getByRole("heading", { name: /PDF text/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Karnaugh maps reduce expressions/ })).toContainText("Page 2");
-  await page.emulateMedia({ colorScheme: "dark" });
   await page.screenshot({ path: `${SHOTS}/search-dark.png`, animations: "disabled" });
-  await page.emulateMedia({ colorScheme: "light" });
 
   await page.getByRole("link", { name: /Karnaugh maps reduce expressions/ }).click();
   await expect(page.getByRole("heading", { name: "Lecture 1 - Logic gates", exact: true })).toBeVisible();
@@ -87,20 +85,46 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await expect(deleteSubject).toBeVisible();
   await deleteSubject.getByRole("button", { name: "Delete subject" }).click();
   await expect(page.getByRole("heading", { name: "Welcome to BetterNotez" })).toBeVisible();
-  await expect(page.getByText("No subjects yet.")).toBeVisible();
+  await expect(page.getByText("No subjects yet", { exact: true })).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });
 
-test("about page says the AI connection needs the desktop app on the web", async ({ page }) => {
+test("settings says the AI connection needs the desktop app on the web", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "About & AI" }).click();
-  await expect(page.getByRole("heading", { name: "About & AI" })).toBeVisible();
+  await page.getByRole("complementary").getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   await expect(page.getByText(/needs the desktop app/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Download the desktop app" })).toHaveAttribute(
     "href",
     "https://github.com/Timmyy3000/BetterNotez/releases",
   );
+});
+
+test("the old about address opens settings", async ({ page }) => {
+  await page.goto("/#/about");
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/#\/settings$/);
+});
+
+test("the appearance setting switches the theme and is remembered", async ({ page }) => {
+  await page.goto("/");
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("complementary").getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Light", exact: true }).click();
+  await expect(html).toHaveAttribute("data-theme", "light");
+
+  await page.reload();
+  await expect(html).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("button", { name: "System", exact: true }).click();
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(html).toHaveAttribute("data-theme", "light");
 });
 
 test("explains why a file cannot be imported and keeps the subject usable", async ({ page }) => {
