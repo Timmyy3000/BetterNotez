@@ -80,4 +80,16 @@ describe("betternotez-mcp bundle, run alone with no node_modules", () => {
     ]);
     expect(await readdir(join(sandbox, "library"))).toContain("library.json");
   });
+
+  it("writes a note to one page and reads it back per page", async () => {
+    const [subject] = JSON.parse(textOf(await call("list_subjects"))) as Array<{ id: string }>;
+    const [lecture] = JSON.parse(textOf(await call("list_lectures", { subjectId: subject?.id }))) as Array<{
+      id: string;
+    }>;
+    if (lecture === undefined) throw new Error("the lecture from the previous test is missing");
+
+    await call("update_notes", { lectureId: lecture.id, page: 2, text: "Gates and truth tables" });
+    const details = JSON.parse(textOf(await call("get_lecture", { lectureId: lecture.id, page: 2 })));
+    expect(details.notes).toEqual([{ page: 2, text: "Gates and truth tables" }]);
+  });
 });

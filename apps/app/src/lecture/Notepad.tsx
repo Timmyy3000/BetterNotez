@@ -1,106 +1,25 @@
 import { Check } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useLibrary } from "../library";
-import { useRefreshWhileVisible } from "./use-refresh";
+import type { PageNotesView } from "./use-page-notes";
 
-const SAVE_DELAY_MS = 500;
-
-type SaveStatus = "saved" | "saving" | "failed";
-
-const STATUS_LABEL: Record<SaveStatus, string> = {
-  saved: "Saved",
-  saving: "Saving…",
-  failed: "Couldn't save",
-};
-
+/**
+ * The notes for the page the panel shows. Switching pages swaps the text and keeps the field focused, so typing carries
+ * on from the new page. The text of the page being left is already in memory, and is saved with the other pages.
+ */
 export function Notepad({
   id,
-  lectureId,
+  page,
+  notes,
   width,
+  onFocusChange,
 }: {
   readonly id: string;
-  readonly lectureId: string;
+  /** The page whose note is shown and edited. */
+  readonly page: number;
+  readonly notes: PageNotesView;
   readonly width: number;
+  /** Reports when the field gains or loses focus, so the page under typing can be held. */
+  readonly onFocusChange: (focused: boolean) => void;
 }) {
-  const library = useLibrary();
-  const [text, setText] = useState<string>();
-  const [status, setStatus] = useState<SaveStatus>("saved");
-  // `shown` is what the field holds, `stored` is what the notes file holds as far as we know.
-  const shown = useRef("");
-  const stored = useRef("");
-  const timer = useRef<number | undefined>(undefined);
-  const queue = useRef<Promise<void>>(Promise.resolve());
-  const inFlight = useRef(0);
-  const saves = useRef(0);
-
-  function unsaved(): boolean {
-    return timer.current !== undefined || inFlight.current > 0 || shown.current !== stored.current;
-  }
-
-  function save(): void {
-    window.clearTimeout(timer.current);
-    timer.current = undefined;
-    const value = shown.current;
-    saves.current += 1;
-    inFlight.current += 1;
-    queue.current = queue.current.then(async () => {
-      let written = true;
-      try {
-        await library.setNotes(lectureId, value);
-        stored.current = value;
-      } catch {
-        written = false;
-      }
-      inFlight.current -= 1;
-      setStatus(!written ? "failed" : unsaved() ? "saving" : "saved");
-    });
-  }
-
-  useEffect(() => {
-    let live = true;
-    void library.getNotes(lectureId).then(
-      (value) => {
-        if (!live) return;
-        shown.current = value;
-        stored.current = value;
-        setText(value);
-      },
-      () => {
-        if (live) setStatus("failed");
-      },
-    );
-    return () => {
-      live = false;
-      // Typing that has not reached disk yet is saved before the panel goes away.
-      if (unsaved()) save();
-    };
-  }, [library, lectureId]);
-
-  useRefreshWhileVisible(async () => {
-    const startedAt = saves.current;
-    let onDisk: string;
-    try {
-      onDisk = await library.getNotes(lectureId);
-    } catch {
-      return;
-    }
-    // A read that overlaps a save, or lands on unsaved typing, must not overwrite the field.
-    if (saves.current !== startedAt || unsaved()) return;
-    if (onDisk !== stored.current) {
-      shown.current = onDisk;
-      stored.current = onDisk;
-      setText(onDisk);
-    }
-  });
-
-  function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
-    shown.current = event.target.value;
-    setText(shown.current);
-    setStatus("saving");
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(save, SAVE_DELAY_MS);
-  }
-
   return (
     <aside
       id={id}
@@ -109,20 +28,51 @@ export function Notepad({
       className="grain flex shrink-0 flex-col border-l border-border bg-surface"
     >
       <div className="flex h-[84px] shrink-0 items-end justify-between pt-0 pr-6 pb-1.5 pl-[66px]">
-        <h2 className="font-serif text-[32px] leading-none">Notes</h2>
-        <span role="status" className="flex items-center gap-1.5 text-[13px] text-faint">
-          {status === "saved" && <Check aria-hidden className="size-3.5" />}
-          {STATUS_LABEL[status]}
-        </span>
+        <h2 className="font-serif text-[32px] leading-none">
+          Notes <span className="label ml-1 text-[11px]">· Page {page}</span>
+        </h2>
+        <SaveStatus notes={notes} />
       </div>
-      <textarea
-        aria-label="Material notes"
-        placeholder="Write notes for this material"
-        disabled={text === undefined}
-        value={text ?? ""}
-        onChange={handleChange}
-        className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base leading-[28px] text-foreground placeholder:text-faint disabled:opacity-60"
-      />
+      {notes.status === "unreadable" ? (
+        <p role="alert" className="pt-2 pr-6 pl-[66px] text-[15px] leading-relaxed text-muted-foreground">
+          This material's notes can't be read. The notes file is damaged or was made by a newer version of BetterNotez,
+          so it has been left as it is.
+        </p>
+      ) : (
+        <textarea
+          aria-label={`Notes for page ${page}`}
+          placeholder={`Write notes for page ${page}`}
+          disabled={!notes.ready}
+          value={notes.textOf(page)}
+          onChange={(event) => notes.edit(page, event.target.value)}
+          onFocus={() => onFocusChange(true)}
+          onBlur={() => onFocusChange(false)}
+          className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base leading-[28px] text-foreground placeholder:text-faint disabled:opacity-60"
+        />
+      )}
     </aside>
+  );
+}
+
+/**
+ * The save state. Only a failure is announced, so the routine "Saving…" and "Saved" are not read out on every keystroke.
+ */
+function SaveStatus({ notes }: { readonly notes: PageNotesView }) {
+  if (notes.status === "failed") {
+    return (
+      <span className="flex items-center gap-2 text-[13px] text-faint">
+        <span role="alert">{notes.ready ? "Couldn't save" : "Couldn't load notes"}</span>
+        <button type="button" onClick={notes.retry} className="text-foreground underline underline-offset-4">
+          Retry
+        </button>
+      </span>
+    );
+  }
+  if (notes.status === "unreadable") return null;
+  return (
+    <span className="flex items-center gap-1.5 text-[13px] text-faint">
+      {notes.status === "saved" && <Check aria-hidden className="size-3.5" />}
+      {notes.status === "loading" ? "Loading…" : notes.status === "saving" ? "Saving…" : "Saved"}
+    </span>
   );
 }

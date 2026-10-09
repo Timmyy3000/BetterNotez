@@ -124,17 +124,18 @@ describe("Lecture 1 in Digital Systems", () => {
     });
     expect(matches[0]?.lecture.id).toBe(lectureId);
 
-    const details = await callJson<{ lecture: Lecture; notes: string; annotations: unknown[]; pdfTextCached: boolean }>(
+    const details = await callJson<{ lecture: Lecture; notes: unknown[]; annotations: unknown[]; pdfTextCached: boolean }>(
       "get_lecture",
       { lectureId },
     );
-    expect(details).toMatchObject({ notes: "", annotations: [], pdfTextCached: true });
+    expect(details).toMatchObject({ notes: [], annotations: [], pdfTextCached: true });
 
-    await callJson("update_notes", { lectureId, text: "Key idea: gates", mode: "append" });
-    await callJson("update_notes", { lectureId, text: "Exam: truth tables" });
-    expect(await readFile(join(root, "subjects", subject.id, "lectures", lectureId, "notes.md"), "utf8")).toBe(
-      "Key idea: gates\nExam: truth tables",
-    );
+    await callJson("update_notes", { lectureId, page: 1, text: "Key idea: gates", mode: "append" });
+    await callJson("update_notes", { lectureId, page: 1, text: "Exam: truth tables" });
+    expect(await readJsonFile("subjects", subject.id, "lectures", lectureId, "notes.json")).toEqual({
+      version: 1,
+      pages: { "1": "Key idea: gates\nExam: truth tables" },
+    });
 
     await callJson("add_text_box", { lectureId, page: 2, x: 0.1, y: 0.2, text: "Check the truth table" });
     await callJson("add_ink", { lectureId, page: 2, points: [[0.1, 0.5], [0.2, 0.6, 0.9]] });
@@ -370,6 +371,125 @@ describe("highlighting text", () => {
     expect(textOf(result)).toBe(
       "An assistant cannot change a highlight. The student can change or remove it in the app.",
     );
+  });
+});
+
+describe("page notes", () => {
+  it("keeps a note for each page and reads each one back", async () => {
+    const { lecture } = await seedLecture();
+    const lectureId = lecture.id;
+
+    await callJson("update_notes", { lectureId, page: 2, text: "Gates and truth tables" });
+    await callJson("update_notes", { lectureId, page: 3, text: "Flip-flops" });
+
+    expect(await callJson("get_lecture", { lectureId })).toMatchObject({
+      notes: [
+        { page: 2, text: "Gates and truth tables" },
+        { page: 3, text: "Flip-flops" },
+      ],
+    });
+    expect(await callJson("get_lecture", { lectureId, page: 3 })).toMatchObject({
+      notes: [{ page: 3, text: "Flip-flops" }],
+    });
+    expect(await callJson("get_lecture", { lectureId, page: 1 })).toMatchObject({ notes: [] });
+  });
+
+  it("changes only the page it is given, in append and replace modes", async () => {
+    const { lecture } = await seedLecture();
+    const lectureId = lecture.id;
+    await callJson("update_notes", { lectureId, page: 2, text: "Gates" });
+    await callJson("update_notes", { lectureId, page: 3, text: "Flip-flops" });
+
+    expect(await callJson("update_notes", { lectureId, page: 2, text: "Truth tables" })).toEqual({
+      lectureId,
+      page: 2,
+      text: "Gates\nTruth tables",
+    });
+    expect(
+      await callJson("update_notes", { lectureId, page: 3, text: "Edge-triggered only", mode: "replace" }),
+    ).toEqual({ lectureId, page: 3, text: "Edge-triggered only" });
+    expect(await callJson("get_lecture", { lectureId })).toMatchObject({
+      notes: [
+        { page: 2, text: "Gates\nTruth tables" },
+        { page: 3, text: "Edge-triggered only" },
+      ],
+    });
+  });
+
+  it("names the page of a note in search results", async () => {
+    const { lecture } = await seedLecture();
+    await callJson("update_notes", { lectureId: lecture.id, page: 3, text: "Flip-flops hold state" });
+
+    const hits = await callJson<Array<{ kind: string; page?: number }>>("search", { query: "hold state" });
+    expect(hits).toEqual([expect.objectContaining({ kind: "notes", page: 3 })]);
+  });
+
+  it("requires the page when it updates notes", async () => {
+    const { lecture } = await seedLecture();
+
+    const result = await call("update_notes", { lectureId: lecture.id, text: "No page given" });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("at page");
+    expect(await callJson("get_lecture", { lectureId: lecture.id })).toMatchObject({ notes: [] });
+  });
+
+  it("refuses a page the material does not have, for reading and for writing", async () => {
+    const { lecture } = await seedLecture();
+
+    const write = await call("update_notes", { lectureId: lecture.id, page: 4, text: "Too far" });
+    expect(write.isError).toBe(true);
+    expect(textOf(write)).toBe("Page 4 is outside this lecture's 3 pages.");
+
+    const read = await call("get_lecture", { lectureId: lecture.id, page: 4 });
+    expect(read.isError).toBe(true);
+    expect(textOf(read)).toBe("Page 4 is outside this lecture's 3 pages.");
+  });
+
+  it("returns the rest of the material with a warning when its notes file cannot be read", async () => {
+    const { subject, lecture } = await seedLecture();
+    const notesPath = join(root, "subjects", subject.id, "lectures", lecture.id, "notes.json");
+    await writeFile(notesPath, "{ not json");
+
+    expect(await callJson("get_lecture", { lectureId: lecture.id })).toMatchObject({
+      lecture: { id: lecture.id },
+      notes: null,
+      warning: expect.stringContaining("can't be read"),
+    });
+    const write = await call("update_notes", { lectureId: lecture.id, page: 1, text: "Not saved" });
+    expect(write.isError).toBe(true);
+    expect(await readFile(notesPath, "utf8")).toBe("{ not json");
+  });
+
+  it("refuses to read a notes file from a newer version, and leaves it as it is", async () => {
+    const { subject, lecture } = await seedLecture();
+    const notesPath = join(root, "subjects", subject.id, "lectures", lecture.id, "notes.json");
+    const newer = JSON.stringify({ version: 2, pages: { "1": "From the future" } });
+    await writeFile(notesPath, newer);
+
+    expect(await callJson("get_lecture", { lectureId: lecture.id, page: 1 })).toMatchObject({ notes: null });
+    expect(await readFile(notesPath, "utf8")).toBe(newer);
+  });
+
+  it("reads a note saved before per-page notes as page 1, and leaves that file as it was", async () => {
+    const { subject, lecture } = await seedLecture();
+    const legacyPath = join(root, "subjects", subject.id, "lectures", lecture.id, "notes.md");
+    await writeFile(legacyPath, "Old single note\n");
+
+    expect(await callJson("get_lecture", { lectureId: lecture.id, page: 1 })).toMatchObject({
+      notes: [{ page: 1, text: "Old single note\n" }],
+    });
+    expect(await callJson("search", { query: "single" })).toEqual([
+      expect.objectContaining({ kind: "notes", page: 1 }),
+    ]);
+
+    await callJson("update_notes", { lectureId: lecture.id, page: 2, text: "New page" });
+    expect(await callJson("get_lecture", { lectureId: lecture.id })).toMatchObject({
+      notes: [
+        { page: 1, text: "Old single note\n" },
+        { page: 2, text: "New page" },
+      ],
+    });
+    expect(await readFile(legacyPath, "utf8")).toBe("Old single note\n");
   });
 });
 

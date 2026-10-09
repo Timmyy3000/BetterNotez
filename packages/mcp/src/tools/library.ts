@@ -45,7 +45,7 @@ export function registerLibraryTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "search",
-    "Search subject names, material titles, notepads, text boxes, and PDF text. Each hit names its material and, when relevant, its page.",
+    "Search subject names, material titles, notes on each page, text boxes, and PDF text. Each hit names its material and, when relevant, its page.",
     { query: z.string().min(1) },
     ({ query }) => library.search(query),
   );

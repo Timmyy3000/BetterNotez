@@ -95,15 +95,40 @@ describe.each(storageBackends)("findLecture and search on $name", ({ create }) =
       ]);
     });
 
-    it("finds words in the notepad", async () => {
-      await library.setNotes(logicGates.id, "Remember the De Morgan law for NAND gates.");
+    it("finds words in a page's note, with that page number", async () => {
+      await library.setPageNote(logicGates.id, 2, "Remember the De Morgan law for NAND gates.");
 
       expect(await library.search("morgan")).toEqual([
         {
           kind: "notes",
           subjectId: digital.id,
           lectureId: logicGates.id,
+          page: 2,
           snippet: "Remember the De Morgan law for NAND gates.",
+        },
+      ]);
+    });
+
+    it("reports each page whose note matches, in page order", async () => {
+      await library.setPageNote(logicGates.id, 2, "NAND gates");
+      await library.setPageNote(logicGates.id, 1, "more NAND gates");
+
+      expect(await library.search("nand")).toEqual([
+        { kind: "notes", subjectId: digital.id, lectureId: logicGates.id, page: 1, snippet: "more NAND gates" },
+        { kind: "notes", subjectId: digital.id, lectureId: logicGates.id, page: 2, snippet: "NAND gates" },
+      ]);
+    });
+
+    it("finds a note kept from before per-page notes, on page 1", async () => {
+      await env.open().writeText(`subjects/${digital.id}/lectures/${logicGates.id}/notes.md`, "Old XNOR note");
+
+      expect(await library.search("xnor")).toEqual([
+        {
+          kind: "notes",
+          subjectId: digital.id,
+          lectureId: logicGates.id,
+          page: 1,
+          snippet: "Old XNOR note",
         },
       ]);
     });
@@ -181,7 +206,7 @@ describe.each(storageBackends)("findLecture and search on $name", ({ create }) =
     });
 
     it("trims long context around a match to 40 characters on each side", async () => {
-      await library.setNotes(logicGates.id, `${"a".repeat(100)}needle${"b".repeat(100)}`);
+      await library.setPageNote(logicGates.id, 1, `${"a".repeat(100)}needle${"b".repeat(100)}`);
 
       const [hit] = await library.search("needle");
       expect(hit?.snippet).toBe(`...${"a".repeat(40)}needle${"b".repeat(40)}...`);
