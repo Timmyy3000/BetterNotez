@@ -10,19 +10,22 @@ const VARIANTS: Record<ButtonVariant, string> = {
   ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
 };
 
-const FOCUS_RING =
+/** The keyboard focus ring for buttons, links, and cards. Inputs use their own border and ring. */
+export const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function buttonClass(variant: ButtonVariant = "secondary"): string {
   return cn(
     "inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-opacity disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
-    FOCUS_RING,
+    focusRing,
     VARIANTS[variant],
   );
 }
 
-export const iconButtonClass =
-  "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent [&_svg]:size-4";
+export const iconButtonClass = cn(
+  "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&_svg]:size-4",
+  focusRing,
+);
 
 export function Button({
   variant,

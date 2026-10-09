@@ -2,8 +2,12 @@ import type { Lecture, SearchHit, Subject } from "@betternotez/core";
 import { Search, SearchX } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
+import { cn } from "../lib/cn";
+import { focusRing } from "../ui/button";
+import { cardClass } from "../ui/card";
 import { Input } from "../ui/input";
 import { EmptyState } from "../ui/empty-state";
+import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
 
 type HitKind = SearchHit["kind"];
@@ -43,7 +47,7 @@ export function SearchPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">Search</h1>
+      <PageHeader title="Search" />
       <div className="relative mt-6">
         <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -83,10 +87,7 @@ export function SearchPage() {
               <ul className="space-y-2">
                 {rows.map((row, index) => (
                   <li key={index}>
-                    <Link
-                      to={row.to}
-                      className="block rounded-xl border border-border bg-surface px-4 py-3 outline-none transition-shadow hover:shadow-sm focus-visible:ring-2 focus-visible:ring-accent"
-                    >
+                    <Link to={row.to} className={cn(cardClass, "block px-4 py-3", focusRing)}>
                       <p className="font-medium">{row.title}</p>
                       <p className="text-xs text-muted-foreground">{row.detail}</p>
                       <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">

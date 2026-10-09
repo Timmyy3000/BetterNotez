@@ -7,8 +7,9 @@ import { cn } from "../lib/cn";
 import { isDesktop } from "../lib/platform";
 import { libraryFolder } from "../storage";
 import { type ThemePreference, useThemeStore } from "../theme";
-import { Button } from "../ui/button";
+import { Button, focusRing } from "../ui/button";
 import { Copyable } from "../ui/copyable";
+import { PageHeader } from "../ui/page-header";
 
 const RELEASES_URL = "https://github.com/Timmyy3000/BetterNotez/releases";
 const LATEST_RELEASE_URL = `${RELEASES_URL}/latest`;
@@ -33,10 +34,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Appearance, your library, and the AI assistant.</p>
-      </header>
+      <PageHeader title="Settings" description="Appearance, your library, and the AI assistant." />
 
       <AppearanceSection />
       <AssistantSection desktop={desktop} folder={folder} />
@@ -63,8 +61,11 @@ function AppearanceSection() {
               aria-pressed={selected}
               onClick={() => setPreference(value)}
               className={cn(
-                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent [&_svg]:size-4",
-                selected ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors [&_svg]:size-4",
+                focusRing,
+                selected
+                  ? "bg-surface text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Icon />
