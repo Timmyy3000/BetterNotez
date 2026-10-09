@@ -1,11 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window may use the core APIs, read and write the library folder, and save exports the student picks.",
+  "description": "The main window may use the core APIs, read and write the library folder, save exports the student picks, and install signed updates.",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:allow-save",
+    "updater:default",
+    "process:allow-restart",
     {
       "identifier": "fs:allow-exists",
       "allow": [{ "path": "$HOME/BetterNotez Library" }, { "path": "$HOME/BetterNotez Library/**" }]

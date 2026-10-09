@@ -1,6 +1,6 @@
 [package]
 name = "betternotez"
-version = "0.1.0"
+version = "0.2.0"
 description = "A free, open-source study app for lecture PDFs."
 edition = "2021"
 license = "AGPL-3.0-only"
@@ -17,3 +17,6 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = { version = "2", features = ["watch"] }
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+serde_json = "1"
