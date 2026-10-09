@@ -56,6 +56,7 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
   const justDragged = useRef(false);
   const height = minutesToPx(range.end, range.start);
   const hours = Array.from({ length: (range.end - range.start) / 60 + 1 }, (_, index) => range.start + index * 60);
+  const todayIndex = (new Date().getDay() + 6) % 7;
 
   function handleDragEnd({ active, over, delta }: DragEndEvent) {
     justDragged.current = true;
@@ -81,7 +82,13 @@ export function PlannerGrid({ days, blocks, range, onCreate, onOpen, onChange }:
       >
         <div />
         {days.map((day) => (
-          <div key={day} className="pb-2 text-center text-xs font-medium text-muted-foreground">
+          <div
+            key={day}
+            className={cn(
+              "mb-2 rounded-lg py-1 text-center text-[13px] font-medium text-muted-foreground",
+              day === todayIndex && "bg-accent-soft text-accent",
+            )}
+          >
             {DAY_NAMES[day]?.slice(0, 3)}
           </div>
         ))}
@@ -254,7 +261,7 @@ function BlockView({
       }}
     >
       <div className="@container h-full min-w-0">
-        <p className="truncate font-semibold">{block.name}</p>
+        <p className="truncate text-[13px] font-semibold">{block.name}</p>
         {height >= 44 && <p className="truncate text-muted-foreground">{time}</p>}
         {height >= 62 && block.location !== undefined && (
           <p className="hidden truncate text-muted-foreground @[7rem]:block">{block.location}</p>
@@ -286,7 +293,7 @@ function ResizeHandle({
   return (
     <div
       aria-hidden
-      className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize"
+      className="group absolute inset-x-0 bottom-0 flex h-2 cursor-ns-resize items-center justify-center"
       onPointerDown={(event) => {
         event.stopPropagation();
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -303,6 +310,8 @@ function ResizeHandle({
       onPointerUp={finish}
       onPointerCancel={finish}
       onClick={(event) => event.stopPropagation()}
-    />
+    >
+      <span className="h-0.5 w-6 rounded-full bg-foreground/25 opacity-0 transition-opacity group-hover:opacity-100" />
+    </div>
   );
 }
