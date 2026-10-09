@@ -5,6 +5,7 @@ import { cn } from "../lib/cn";
 import { useEditor, type TextStylePatch } from "./editor";
 import { placeBar, type Frame } from "./format-placement";
 import { INK_COLORS } from "./inks";
+import { Divider } from "./Toolbar";
 
 /** Font sizes in points. M is the size a new box is made at. */
 export const FONT_SIZES = [
@@ -148,10 +149,6 @@ export function FormatBar({
       </div>
     </div>
   );
-}
-
-function Divider() {
-  return <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />;
 }
 
 function FormatButton({
