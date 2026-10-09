@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useParams } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { subjectTone } from "../lib/subject-colors";
@@ -15,6 +15,9 @@ import { MAIN_NAV, SETTINGS_NAV } from "./nav";
  */
 export function Rail() {
   const subjects = useLibraryQuery((library) => library.listSubjects());
+  const { lectureId = "" } = useParams();
+  // The open lecture's subject stays marked, since the lecture route is not a subject route.
+  const openSubject = useLibraryQuery((library) => library.getLecture(lectureId).then((lecture) => lecture.subjectId), [lectureId]);
   const [creating, setCreating] = useState(false);
   const SettingsIcon = SETTINGS_NAV.icon;
 
@@ -39,7 +42,7 @@ export function Rail() {
             to={`/subjects/${subject.id}`}
             aria-label={subject.name}
             title={subject.name}
-            className={({ isActive }) => railItemClass(isActive)}
+            className={({ isActive }) => railItemClass(isActive || subject.id === openSubject.data)}
           >
             <span className="ink-dot" style={{ backgroundColor: subjectTone(subject.color) }} />
           </NavLink>

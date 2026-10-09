@@ -38,7 +38,8 @@ export function Sidebar() {
             <Plus />
           </IconButton>
         </div>
-        <ul className="flex flex-col gap-0.5 overflow-y-auto">
+        {/* The list clips at its padding edge, so the active marker's 22px offset must sit inside that padding. */}
+        <ul className="-ml-[22px] flex flex-col gap-0.5 overflow-y-auto pl-[22px]">
           {subjects.data?.map((subject) => (
             <li key={subject.id}>
               <NavLink to={`/subjects/${subject.id}`} className={({ isActive }) => subjectItemClass(isActive)}>
