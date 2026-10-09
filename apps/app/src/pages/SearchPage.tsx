@@ -130,7 +130,7 @@ function Highlight({ text, query }: { readonly text: string; readonly query: str
   const parts = text.split(new RegExp(`(${escapeRegExp(query)})`, "i"));
   return parts.map((part, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded bg-accent-soft px-0.5 text-foreground">
+      <mark key={index} className="rounded bg-highlight px-0.5 text-highlight-foreground">
         {part}
       </mark>
     ) : (
