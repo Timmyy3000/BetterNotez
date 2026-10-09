@@ -67,6 +67,18 @@ export function scrollTopForPage(page: number, top: number, gap: number): number
   return page === 1 ? 0 : top - gap;
 }
 
+/**
+ * The page in view after a scroll, 1-based. The view stays on `current` while the reading line is within `band` of that
+ * page, so a line that rests on a page edge does not flicker between two pages. Past that band, the page under the line
+ * takes over. `tops` are the page tops and `offset` and `band` are in the same units.
+ */
+export function pageAfterScroll(tops: readonly number[], current: number, offset: number, band: number): number {
+  const top = tops[current - 1];
+  const nextTop = tops[current];
+  const stays = top !== undefined && offset >= top - band && (nextTop === undefined || offset < nextTop + band);
+  return stays ? current : pageAtOffset(tops, offset) + 1;
+}
+
 /** The index of the page that contains `offset`: the last page whose top is at or above it. */
 export function pageAtOffset(tops: readonly number[], offset: number): number {
   let low = 0;

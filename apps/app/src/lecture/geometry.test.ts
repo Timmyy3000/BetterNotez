@@ -3,6 +3,7 @@ import {
   displaySize,
   displayToUser,
   normalizeRotation,
+  pageAfterScroll,
   pageAtOffset,
   pageTops,
   scrollTopForPage,
@@ -69,5 +70,33 @@ describe("scrollTopForPage", () => {
 
   it("leaves a 16px gap above later pages", () => {
     expect(scrollTopForPage(2, 500, 16)).toBe(484);
+  });
+});
+
+describe("pageAfterScroll", () => {
+  // Three pages whose tops are 80, 500 and 920, with the band of the viewer.
+  const tops = [80, 500, 920];
+  const band = 24;
+
+  it("switches to the next page only once the reading line is a band past its top", () => {
+    expect(pageAfterScroll(tops, 1, 510, band)).toBe(1);
+    expect(pageAfterScroll(tops, 1, 523, band)).toBe(1);
+    expect(pageAfterScroll(tops, 1, 524, band)).toBe(2);
+  });
+
+  it("switches back only once the reading line is a band above the current page's top", () => {
+    expect(pageAfterScroll(tops, 2, 490, band)).toBe(2);
+    expect(pageAfterScroll(tops, 2, 476, band)).toBe(2);
+    expect(pageAfterScroll(tops, 2, 475, band)).toBe(1);
+  });
+
+  it("does not flicker while the line rests on an edge", () => {
+    const readings = [498, 502, 499, 503, 497, 501];
+    expect(readings.map((offset) => pageAfterScroll(tops, 1, offset, band))).toEqual([1, 1, 1, 1, 1, 1]);
+  });
+
+  it("follows a large jump at once, such as a jump to a page or a fast scroll", () => {
+    expect(pageAfterScroll(tops, 1, 960, band)).toBe(3);
+    expect(pageAfterScroll(tops, 3, 100, band)).toBe(1);
   });
 });

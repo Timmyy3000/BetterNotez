@@ -11,7 +11,14 @@ import {
   type RefObject,
   type UIEvent,
 } from "react";
-import { displaySize, normalizeRotation, pageAtOffset, pageTops, scrollTopForPage, type PageGeometry } from "./geometry";
+import {
+  displaySize,
+  normalizeRotation,
+  pageAfterScroll,
+  pageTops,
+  scrollTopForPage,
+  type PageGeometry,
+} from "./geometry";
 import { PageOverlay } from "./PageOverlay";
 import { PageText } from "./PageText";
 import { useNearViewport } from "./use-near-viewport";
@@ -20,6 +27,8 @@ import { useNearViewport } from "./use-near-viewport";
 const PAGE_TOP = 80;
 const PAGE_GAP = 16;
 const GUTTER = 56;
+/** The reading line must pass a page edge by this much, in CSS pixels, before the page in view changes. */
+const PAGE_SWITCH_BAND = 24;
 /** Caps the canvas size so zooming in on a large page does not exhaust memory. */
 const MAX_CANVAS_PIXELS = 16_000_000;
 /** While the notes edge is held, a page is redrawn once its width has held this long. Until then it is stretched. */
@@ -109,7 +118,8 @@ export function PdfPages({
 
   function handleScroll(event: UIEvent<HTMLDivElement>) {
     const element = event.currentTarget;
-    const page = pageAtOffset(tops, element.scrollTop + element.clientHeight * 0.35) + 1;
+    const probe = element.scrollTop + element.clientHeight * 0.35;
+    const page = pageAfterScroll(tops, anchor.current, probe, PAGE_SWITCH_BAND);
     anchor.current = page;
     onPageChange(page);
   }
@@ -163,7 +173,7 @@ const PageSlot = memo(function PageSlot({
   return (
     <section
       data-page-number={pageNumber}
-      aria-label={`Page ${pageNumber}`}
+      aria-label={noted ? `Page ${pageNumber}, has a note` : `Page ${pageNumber}`}
       tabIndex={-1}
       className="pdf-sheet relative shrink-0"
       style={{ width, height }}
@@ -173,7 +183,13 @@ const PageSlot = memo(function PageSlot({
         <PageText doc={doc} pageNumber={pageNumber} width={width} scale={scale} scrollRef={scrollRef} />
       </PageOverlay>
       {noted && (
-        <span aria-hidden data-has-note className="pointer-events-none absolute top-3 right-3 size-2 rounded-full bg-accent" />
+        // In the margin beside the sheet, so no slide content is covered. It is a quiet mark, not a selection.
+        <span
+          aria-hidden
+          title="Has a note"
+          data-has-note
+          className="absolute top-3 -right-5 size-1.5 rounded-full bg-foreground/40"
+        />
       )}
     </section>
   );
