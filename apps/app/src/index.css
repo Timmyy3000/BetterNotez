@@ -13,6 +13,8 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-danger: var(--danger);
   --color-danger-solid: var(--danger-solid);
   --color-overlay: var(--overlay);
@@ -36,6 +38,8 @@
   --accent: #4f46e5;
   --accent-foreground: #ffffff;
   --accent-soft: #eef2ff;
+  --highlight: #fde68a;
+  --highlight-foreground: #1c1917;
   --danger: #dc2626;
   --danger-solid: #dc2626;
   --overlay: rgb(0 0 0 / 0.25);
@@ -55,6 +59,8 @@
   --accent: #818cf8;
   --accent-foreground: #0c0a09;
   --accent-soft: #1e1b4b;
+  --highlight: #854d0e;
+  --highlight-foreground: #fef3c7;
   --danger: #f87171;
   --overlay: rgb(0 0 0 / 0.6);
 }
