@@ -31,14 +31,14 @@ export function DeleteLectureDialog({ lecture, onClose }: { readonly lecture: Le
       onClose={onClose}
     >
       <p className="text-sm text-muted-foreground">
-        This removes the lecture's PDF, its annotations, and its notes. Tasks linked to it stay, but lose the link.
+        This removes the material's PDF, its annotations, and its notes. Tasks linked to it stay, but lose the link.
       </p>
       <DialogActions>
         <Button onClick={onClose} disabled={deleting}>
           Cancel
         </Button>
         <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-          Delete lecture
+          Delete material
         </Button>
       </DialogActions>
     </ModalDialog>

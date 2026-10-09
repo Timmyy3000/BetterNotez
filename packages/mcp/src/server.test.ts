@@ -400,13 +400,13 @@ describe("refusals and errors", () => {
     expect(textOf(result)).toBe("Page 9 is outside this lecture's 3 pages.");
   });
 
-  it("asks the student to open the lecture when its text is not cached", async () => {
+  it("asks the student to open the material when its text is not cached", async () => {
     const subject = await library.createSubject({ name: "Digital Systems" });
     const lecture = await library.importLecture(subject.id, "Lecture 2", PDF, 1);
 
     const result = await call("get_lecture_text", { lectureId: lecture.id });
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toContain("open the lecture once in BetterNotez");
+    expect(textOf(result)).toContain("open the material once in BetterNotez");
   });
 
   it("rejects a page range outside the lecture", async () => {

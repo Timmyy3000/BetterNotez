@@ -44,7 +44,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
       title={subject === undefined ? "New subject" : "Rename subject"}
       description={
         subject === undefined
-          ? "A subject groups the lecture PDFs for one course."
+          ? "A subject groups the PDFs for one course or topic."
           : "Change the name or the color."
       }
       onClose={onClose}
@@ -56,7 +56,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
             autoFocus
             maxLength={80}
             value={name}
-            placeholder="e.g. Digital Systems"
+            placeholder="e.g. a course or topic"
             onChange={(event) => setName(event.target.value)}
           />
         </label>

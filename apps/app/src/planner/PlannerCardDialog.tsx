@@ -7,10 +7,8 @@ import { notifyLibraryChanged } from "../store";
 import { Button } from "../ui/button";
 import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { SelectField } from "../ui/select";
 import { DAY_NAMES, toMinutes, toTime, type Span } from "./time";
-
-const SELECT_CLASS =
-  "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] transition-colors focus:border-accent disabled:opacity-50";
 
 /** Adds a class when `card` is absent, and edits or removes it otherwise. */
 export function PlannerCardDialog({
@@ -85,7 +83,7 @@ export function PlannerCardDialog({
     return (
       <ModalDialog
         title={`Remove ${subjectName}?`}
-        description="This takes the class off your timetable. The subject and its lectures stay."
+        description="This takes the class off your timetable. The subject and its material stay."
         onClose={onClose}
       >
         <DialogActions>
@@ -107,28 +105,20 @@ export function PlannerCardDialog({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">Subject</span>
-          <select className={SELECT_CLASS} value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Subject"
+          options={subjects.map((subject) => ({ value: subject.id, label: subject.name }))}
+          value={subjectId}
+          onValueChange={setSubjectId}
+        />
 
         <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-3">
-          <label className="block space-y-2">
-            <span className="text-sm font-medium">Day</span>
-            <select className={SELECT_CLASS} value={day} onChange={(event) => setDay(Number(event.target.value))}>
-              {DAY_NAMES.map((name, index) => (
-                <option key={name} value={index}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Day"
+            options={DAY_NAMES.map((name, index) => ({ value: String(index), label: name }))}
+            value={String(day)}
+            onValueChange={(next) => setDay(Number(next))}
+          />
           <label className="block space-y-2">
             <span className="text-sm font-medium">Start</span>
             <Input type="time" step={900} value={start} onChange={(event) => setStart(event.target.value)} />

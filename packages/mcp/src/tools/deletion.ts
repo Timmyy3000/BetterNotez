@@ -6,7 +6,7 @@ export function registerDeletionTools(tools: ToolRegistry): void {
     "request_deletion",
     "BetterNotez does not let AI assistants delete anything. Call this only to explain to the user how to delete it themselves in the app.",
     {
-      what: z.string().describe("What the student wants deleted, for example Lecture 1 in Digital Systems."),
+      what: z.string().describe("What the student wants deleted, for example a piece of material or a subject."),
     },
     ({ what }) => {
       const target = what.trim() === "" ? "it" : `"${what.trim()}"`;
