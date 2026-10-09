@@ -6,7 +6,7 @@ import { cn } from "../lib/cn";
 import { countLabel } from "../lib/format";
 import { subjectTone } from "../lib/subject-colors";
 import { SubjectDialog } from "../subjects/SubjectDialog";
-import { Button, focusRing } from "../ui/button";
+import { Button } from "../ui/button";
 import { cardClass } from "../ui/card";
 import { EmptyState } from "../ui/empty-state";
 import { PageHeader } from "../ui/page-header";
@@ -54,7 +54,7 @@ export function HomePage() {
           const count = lectures.filter((lecture) => lecture.subjectId === subject.id).length;
           return (
             <li key={subject.id}>
-              <Link to={`/subjects/${subject.id}`} className={cn(cardClass, "block p-5", focusRing)}>
+              <Link to={`/subjects/${subject.id}`} className={cn(cardClass, "block p-5")}>
                 <span className="block h-1.5 w-10 rounded-full" style={{ backgroundColor: subjectTone(subject.color) }} />
                 <span className="mt-6 block truncate text-base font-semibold">{subject.name}</span>
                 <span className="mt-1 block text-sm text-muted-foreground">{countLabel(count, "lecture")}</span>

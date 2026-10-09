@@ -11,6 +11,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-faint: var(--faint);
   --color-border: var(--border);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
   --color-control: var(--control-border);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
