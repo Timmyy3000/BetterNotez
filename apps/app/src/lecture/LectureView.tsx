@@ -244,7 +244,8 @@ export function LectureView({
             </>
           )}
         </div>
-        <div role="status" aria-live="polite" className="sr-only">
+        {/* A live region needs no role. A role of status would collide with the notes' "Saved" indicator. */}
+        <div aria-live="polite" className="sr-only">
           <span key={announcement.id}>{announcement.text}</span>
         </div>
       </div>
