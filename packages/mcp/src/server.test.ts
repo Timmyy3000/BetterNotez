@@ -88,6 +88,7 @@ describe("tool surface", () => {
 
     expect(names.filter((name) => /^(delete|remove)_/.test(name))).toEqual([]);
     expect(names.sort()).toEqual([
+      "add_highlight",
       "add_ink",
       "add_text_box",
       "create_planner_card",
@@ -226,6 +227,104 @@ describe("Lecture 1 in Digital Systems", () => {
       patch: { text: "Revised note" },
     });
     expect(updated).toMatchObject({ text: "Revised note", author: "user" });
+  });
+});
+
+describe("highlighting text", () => {
+  /** A lecture whose PDF is real, so its text has positions for the highlight to use. */
+  async function seedPdfLecture(pages: string[]) {
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const lecture = await library.importLecture(subject.id, "Gates", await makePdf(pages), pages.length);
+    return { subject, lecture };
+  }
+
+  it("boxes the phrase where the page draws it, as fractions of the page", async () => {
+    const { subject, lecture } = await seedPdfLecture(["Gates and truth tables"]);
+
+    const highlight = await callJson<{ kind: string; author: string; text: string; color: string; rects: unknown[] }>(
+      "add_highlight",
+      { lectureId: lecture.id, page: 1, text: "Gates" },
+    );
+
+    expect(highlight).toMatchObject({
+      kind: "highlight",
+      author: "ai",
+      text: "Gates",
+      color: "#a8701b",
+    });
+    // The text starts 20 points from the left of a 300 point page and "Gates" is 48 points wide at 18 points.
+    expect(highlight.rects).toHaveLength(1);
+    const [box] = highlight.rects as Array<{ x: number; y: number; width: number; height: number }>;
+    expect(box?.x).toBeCloseTo(20 / 300, 3);
+    expect(box?.width).toBeCloseTo(48.02 / 300, 3);
+    // The line sits on a baseline at 100 points of a 200 point page, so its box runs from 114.4 to 96.4 points.
+    expect(box?.y).toBeCloseTo((200 - 114.4) / 200, 3);
+    expect(box?.height).toBeCloseTo(18 / 200, 3);
+
+    expect(await readJsonFile("subjects", subject.id, "lectures", lecture.id, "annotations.json")).toEqual([
+      expect.objectContaining({ kind: "highlight", page: 1, author: "ai", text: "Gates", rects: [box] }),
+    ]);
+  });
+
+  it("starts the box where the phrase starts, even after other words on the line", async () => {
+    const { lecture } = await seedPdfLecture(["Gates and truth tables"]);
+
+    const highlight = await callJson<{ rects: Array<{ x: number; width: number }> }>("add_highlight", {
+      lectureId: lecture.id,
+      page: 1,
+      text: "truth",
+    });
+
+    // "Gates and " is 88 points wide, so "truth" starts 108 points in and is 36 points wide.
+    expect(highlight.rects[0]?.x).toBeCloseTo((20 + 88.06) / 300, 3);
+    expect(highlight.rects[0]?.width).toBeCloseTo(36.02 / 300, 3);
+  });
+
+  it("asks which occurrence to take when the phrase appears more than once", async () => {
+    const { lecture } = await seedPdfLecture(["Gates", "Gates and Gates"]);
+
+    const ambiguous = await call("add_highlight", { lectureId: lecture.id, page: 2, text: "Gates" });
+    expect(ambiguous.isError).toBe(true);
+    expect(textOf(ambiguous)).toBe(
+      '"Gates" appears 2 times on page 2. Pass occurrence from 1 to 2 to choose one.',
+    );
+
+    const second = await callJson<{ rects: Array<{ x: number }> }>("add_highlight", {
+      lectureId: lecture.id,
+      page: 2,
+      text: "Gates",
+      occurrence: 2,
+    });
+    expect(second.rects[0]?.x).toBeCloseTo((20 + 88.06) / 300, 3);
+  });
+
+  it("explains a phrase that is not on the page and a page the PDF does not have", async () => {
+    const { lecture } = await seedPdfLecture(["Gates and truth tables", "Flip-flops"]);
+
+    const missing = await call("add_highlight", { lectureId: lecture.id, page: 1, text: "Flip-flops" });
+    expect(missing.isError).toBe(true);
+    expect(textOf(missing)).toBe(
+      '"Flip-flops" is not on page 1. Check the spelling and capitals against the page text.',
+    );
+
+    const late = await call("add_highlight", { lectureId: lecture.id, page: 9, text: "Gates" });
+    expect(late.isError).toBe(true);
+    expect(textOf(late)).toBe("Page 9 is outside the 2 pages of this PDF.");
+  });
+
+  it("refuses to change a highlight, so the student's colour and removal stay in the app", async () => {
+    const { lecture } = await seedPdfLecture(["Gates and truth tables"]);
+    const highlight = await callJson<{ id: string }>("add_highlight", { lectureId: lecture.id, page: 1, text: "Gates" });
+
+    const result = await call("update_annotation", {
+      lectureId: lecture.id,
+      annotationId: highlight.id,
+      patch: { color: "#2b4b78" },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(
+      "An assistant cannot change a highlight. The student can change or remove it in the app.",
+    );
   });
 });
 
