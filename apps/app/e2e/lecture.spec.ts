@@ -199,6 +199,48 @@ test("the lecture viewer renders in dark mode", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/lecture-dark.png`, animations: "disabled" });
 });
 
+/** WCAG 2.x contrast ratio of two `rgb(...)` colours, as the browser reports computed styles. */
+function contrastOf(first: string, second: string): number {
+  const luminanceOf = (css: string): number => {
+    const [red, green, blue] = (css.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map((channel) => {
+      const value = Number(channel) / 255;
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * (red ?? 0) + 0.7152 * (green ?? 0) + 0.0722 * (blue ?? 0);
+  };
+  const [lighter, darker] = [luminanceOf(first), luminanceOf(second)].sort((a, b) => b - a);
+  return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05);
+}
+
+for (const theme of ["warm", "dark", "light"] as const) {
+  test(`a text box sits on the paper and its ink stays readable in ${theme}`, async ({ page }) => {
+    await page.addInitScript((stored) => localStorage.setItem("betternotez.theme", stored), theme);
+    await createSubject(page, "Labs");
+    await importLecture(page, "Circuits.pdf", ["Resistors"]);
+    await openLecture(page, "Circuits");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+
+    const pageOne = page.locator('[data-page-number="1"]');
+    const paper = await pageOne.evaluate((element) => getComputedStyle(element).backgroundColor);
+    await page.getByRole("button", { name: "Text box", exact: true }).click();
+    const pageBox = await pageOne.boundingBox();
+    if (pageBox === null) throw new Error("page 1 is not on screen");
+    await page.mouse.click(pageBox.x + pageBox.width * 0.2, pageBox.y + pageBox.height * 0.3);
+    await page.keyboard.type("Readable");
+
+    const field = page.getByRole("textbox", { name: "Text box" });
+    const container = page.locator('[data-kind="text"]');
+    await expect(field).toBeFocused();
+    await expect(container).toHaveCSS("background-color", paper);
+    const ink = await field.evaluate((element) => getComputedStyle(element).color);
+    expect(contrastOf(ink, paper)).toBeGreaterThanOrEqual(4.5);
+
+    await page.getByRole("button", { name: "Select and move" }).click();
+    await expect(container).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(field).toHaveValue("Readable");
+  });
+}
+
 test("a text box moves and resizes by dragging, and undo returns it to where it was", async ({ page }) => {
   await createSubject(page, "Maths");
   await importLecture(page, "Limits.pdf", ["Limits"]);
