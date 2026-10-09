@@ -13,7 +13,13 @@ mkdirSync(outDir, { recursive: true });
 
 const BASE_URL = (process.env.SHOTS_URL ?? "http://127.0.0.1:4180").replace(/\/$/, "");
 const VIEWPORT = { width: 1440, height: 900 };
-const SCHEMES = ["light", "dark"];
+// Each appearance: its file name, the preference stored for it, and the operating-system scheme it is shown under.
+// Warm is a dark appearance, so it runs under a dark system scheme.
+const APPEARANCES = [
+  { name: "light", stored: "light", media: "light" },
+  { name: "dark", stored: "dark", media: "dark" },
+  { name: "warm", stored: "warm", media: "dark" },
+];
 // Written before each capture. Builds without a theme setting ignore it.
 const THEME_KEY = "betternotez.theme";
 const SEARCH_QUERY = "eigenvalue";
@@ -271,6 +277,8 @@ async function settle(page) {
 }
 
 async function boxOf(locator) {
+  // A page can be scrolled out of view, and a box measured there would put the mouse off screen.
+  await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
   if (box === null) throw new Error("element is not on screen");
   return box;
@@ -370,6 +378,7 @@ async function addTextBox(page, text) {
 
 async function drawStroke(page, pageNumber, points) {
   await page.getByRole("button", { name: "Pen", exact: true }).click();
+  await page.locator('button[aria-label="Pen"][aria-pressed="true"]').waitFor();
   const box = await boxOf(page.locator(`[data-page-number="${pageNumber}"]`));
   const [start, ...rest] = points.map(([u, v]) => ({ x: box.x + u * box.width, y: box.y + v * box.height }));
   await page.mouse.move(start.x, start.y);
@@ -429,19 +438,17 @@ async function editTask(page, task) {
 }
 
 async function moveTask(page, task) {
-  const presses = COLUMNS.indexOf(task.column);
-  if (presses <= 0) return;
-  const card = page.locator('[aria-roledescription="sortable"]').filter({ hasText: task.title });
-  await card.focus();
-  await page.keyboard.press("Space");
-  await page.locator('[aria-roledescription="sortable"][aria-pressed="true"]').filter({ hasText: task.title }).waitFor();
-  // Back-to-back key presses did not move the card when tested.
-  for (let index = 0; index < presses; index += 1) {
-    await page.keyboard.press("ArrowRight");
-    await page.waitForTimeout(200);
-  }
-  await page.keyboard.press("Space");
-  await page.getByRole("region", { name: task.column }).getByText(task.title, { exact: true }).waitFor();
+  if (COLUMNS.indexOf(task.column) <= 0) return;
+  // A mouse drag, as the e2e suite does it. Keyboard pick-up right after a dialog closes was not reliable.
+  const card = page.locator('[aria-roledescription="sortable"]').filter({ hasText: task.title }).first();
+  const target = page.getByRole("region", { name: task.column });
+  const from = await boxOf(card);
+  const to = await boxOf(target);
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await target.getByText(task.title, { exact: true }).waitFor();
 }
 
 async function arrangeTask(page, task) {
@@ -484,10 +491,10 @@ async function seed(page, routes) {
   }
 }
 
-async function applyScheme(page, scheme) {
-  await page.emulateMedia({ colorScheme: scheme });
+async function applyAppearance(page, appearance) {
+  await page.emulateMedia({ colorScheme: appearance.media });
   await page.goto(`${BASE_URL}/`);
-  await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [THEME_KEY, scheme]);
+  await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [THEME_KEY, appearance.stored]);
   await page.reload();
   await settle(page);
 }
@@ -604,8 +611,9 @@ try {
   page.on("pageerror", (error) => pageErrors.add(error.message));
 
   await seed(page, routes);
-  for (const scheme of SCHEMES) {
-    await applyScheme(page, scheme);
+  for (const appearance of APPEARANCES) {
+    const scheme = appearance.name;
+    await applyAppearance(page, appearance);
     for (const screen of screensFor(routes)) {
       await shoot(page, scheme, screen, captured, skipped);
     }
