@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Eraser, Highlighter, MousePointer2, Pen, Redo2, Trash2, Type, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { HIGHLIGHT_COLORS } from "@betternotez/core";
 import { cn } from "../lib/cn";
 import type { Tool } from "./editor";
 import { INK_COLORS } from "./inks";
@@ -11,6 +12,12 @@ export const ZOOM_STEP = 1.25;
 
 /** The ink a new stroke or text box starts with: the pen blue of the mockup. */
 export const DEFAULT_INK = "#2b4b78";
+
+/** The colour swatches the tool panel offers for a tool. The highlighter has its own marker palette. */
+export function paletteFor(tool: Tool): readonly { readonly label: string; readonly value: string }[] {
+  if (tool === "highlighter") return HIGHLIGHT_COLORS.map((swatch) => ({ label: swatch.label, value: swatch.value }));
+  return INK_COLORS.map((swatch) => ({ label: swatch.name, value: swatch.value }));
+}
 
 export const PEN_SIZES = [
   { name: "Thin", value: 1.5 },
@@ -68,10 +75,10 @@ export function Toolbar({
 
       <Divider />
 
-      {INK_COLORS.map((swatch) => (
+      {paletteFor(tool).map((swatch) => (
         <ColorSwatch
           key={swatch.value}
-          label={`Color ${swatch.name}`}
+          label={`Color ${swatch.label}`}
           value={swatch.value}
           pressed={color === swatch.value}
           onClick={() => onColor(swatch.value)}

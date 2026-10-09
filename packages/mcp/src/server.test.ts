@@ -250,7 +250,7 @@ describe("highlighting text", () => {
       kind: "highlight",
       author: "ai",
       text: "Gates",
-      color: "#a8701b",
+      color: "#ffd21f",
     });
     // The text starts 20 points from the left of a 300 point page and "Gates" is 48 points wide at 18 points.
     expect(highlight.rects).toHaveLength(1);

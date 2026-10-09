@@ -532,10 +532,10 @@ test("selected text becomes a highlight that survives a reload, and can be recol
   await page.mouse.move(selected.endX, selected.y, { steps: 12 });
   await page.mouse.up();
   await expect(popover).toBeVisible();
-  await page.getByRole("button", { name: "Highlight in Red" }).click();
+  await page.getByRole("button", { name: "Highlight in Pink" }).click();
   await expect(popover).toBeHidden();
   await expect(highlights).toHaveCount(1);
-  await expect(highlights).toHaveCSS("background-color", "rgb(181, 56, 42)");
+  await expect(highlights).toHaveCSS("background-color", "rgb(255, 95, 160)");
 
   await page.reload();
   await expect(highlights).toHaveCount(1);
@@ -544,12 +544,12 @@ test("selected text becomes a highlight that survives a reload, and can be recol
   const word = await runCharacters(page, 18, 22);
   await page.mouse.click(word.startX, word.y);
   await expect(popover).toBeVisible();
-  await expect(page.getByRole("button", { name: "Highlight in Red" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Highlight in Ochre" }).click();
-  await expect(highlights).toHaveCSS("background-color", "rgb(168, 112, 27)");
+  await expect(page.getByRole("button", { name: "Highlight in Pink" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Highlight in Green" }).click();
+  await expect(highlights).toHaveCSS("background-color", "rgb(92, 207, 110)");
 
   await page.reload();
-  await expect(highlights).toHaveCSS("background-color", "rgb(168, 112, 27)");
+  await expect(highlights).toHaveCSS("background-color", "rgb(92, 207, 110)");
 
   await page.mouse.click(word.startX, word.y);
   await page.getByRole("button", { name: "Delete highlight" }).click();

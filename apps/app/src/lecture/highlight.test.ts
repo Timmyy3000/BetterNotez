@@ -1,6 +1,6 @@
-import { AnnotationId, type Highlight } from "@betternotez/core";
+import { AnnotationId, HIGHLIGHT_COLORS, type Highlight } from "@betternotez/core";
 import { describe, expect, it } from "vitest";
-import { anchorOf, highlightAt, pageRectOf, popoverBelow } from "./highlight";
+import { anchorOf, HIGHLIGHT_OPACITY, highlightAt, pageRectOf, popoverBelow } from "./highlight";
 
 /** A letter-sized page on screen, 600 pixels wide, starting at (100, 50). */
 const page = { left: 100, top: 50, right: 700, bottom: 1050 };
@@ -60,6 +60,64 @@ describe("popoverBelow", () => {
   it("opens below a selection that sits at the very top of the page", () => {
     expect(popoverBelow({ x: 0.5, top: 0.01, bottom: 0.03 }, 1000)).toBe(true);
     expect(popoverBelow({ x: 0.5, top: 0.2, bottom: 0.22 }, 1000)).toBe(false);
+  });
+});
+
+/** The papers a page is read on, as the screen shows a page under a highlight, in 0 to 1 sRGB. */
+const PAPERS = {
+  // The warm sheet. The white PDF page multiplies onto it, so the page takes its colour.
+  warm: [0xe2, 0xd8, 0xc2].map((channel) => channel / 255),
+  // The dark sheet. The white page is dimmed to 0.9 of white by the dark theme.
+  dark: [0.9, 0.9, 0.9],
+  light: [1, 1, 1],
+};
+
+describe("highlight colours", () => {
+  // A highlight multiplies its colour onto the paper at HIGHLIGHT_OPACITY, which is what the screen and the export both do.
+  function onPaper(hex: string, paper: readonly number[]): number[] {
+    const hue = [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255);
+    return paper.map((channel, index) => channel * (1 - HIGHLIGHT_OPACITY + HIGHLIGHT_OPACITY * (hue[index] ?? 1)));
+  }
+
+  function luminance(rgb: readonly number[]): number {
+    const [r, g, b] = rgb.map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
+  }
+
+  /** The CIE 1976 colour difference, which tracks how far apart two colours look. */
+  function difference(a: readonly number[], b: readonly number[]): number {
+    const lab = (rgb: readonly number[]) => {
+      const [r = 0, g = 0, bl = 0] = rgb.map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+      const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+      const x = f((0.4124 * r + 0.3576 * g + 0.1805 * bl) / 0.95047);
+      const y = f(0.2126 * r + 0.7152 * g + 0.0722 * bl);
+      const z = f((0.0193 * r + 0.1192 * g + 0.9505 * bl) / 1.08883);
+      return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+    };
+    return Math.hypot(...lab(a).map((value, index) => value - (lab(b)[index] ?? 0)));
+  }
+
+  it("keeps black text readable on every highlight colour, on each paper", () => {
+    for (const swatch of HIGHLIGHT_COLORS) {
+      for (const paper of Object.values(PAPERS)) {
+        const background = luminance(onPaper(swatch.value, paper));
+        // Black text has a luminance of 0, so the contrast ratio is (background + 0.05) / 0.05.
+        expect((background + 0.05) / 0.05, `${swatch.label} on a paper`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("makes each highlight colour visible on every paper, and tells the colours apart", () => {
+    for (const swatch of HIGHLIGHT_COLORS) {
+      for (const paper of Object.values(PAPERS)) {
+        expect(difference(onPaper(swatch.value, paper), paper), `${swatch.label} against its paper`).toBeGreaterThan(15);
+      }
+    }
+    for (const [index, first] of HIGHLIGHT_COLORS.entries()) {
+      for (const second of HIGHLIGHT_COLORS.slice(index + 1)) {
+        expect(difference(onPaper(first.value, PAPERS.warm), onPaper(second.value, PAPERS.warm)), `${first.label} and ${second.label}`).toBeGreaterThan(15);
+      }
+    }
   });
 });
 

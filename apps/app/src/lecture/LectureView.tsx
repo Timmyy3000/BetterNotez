@@ -1,4 +1,4 @@
-import type { Lecture, Subject } from "@betternotez/core";
+import { DEFAULT_HIGHLIGHT_COLOR, type Lecture, type Subject } from "@betternotez/core";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ChevronLeft, FileDown, NotebookPen } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -40,6 +40,9 @@ export function LectureView({
 
   const [tool, setTool] = useState<Tool>("select");
   const [color, setColor] = useState<string>(DEFAULT_INK);
+  // The highlighter has its own marker palette, so its colour is kept apart from the pen's.
+  const [markColor, setMarkColor] = useState<string>(DEFAULT_HIGHLIGHT_COLOR);
+  const activeColor = tool === "highlighter" ? markColor : color;
   const [size, setSize] = useState<number>(PEN_SIZES[1].value);
   const [selectedId, setSelectedId] = useState<string>();
   const [editing, setEditing] = useState<EditSession>();
@@ -88,8 +91,8 @@ export function LectureView({
   );
 
   const editor = useMemo<EditorValue>(
-    () => ({ store, tool, color, size, selectedId, editing, pendingText, scrollRef, select, beginEdit, endEdit }),
-    [store, tool, color, size, selectedId, editing, pendingText, select, beginEdit, endEdit],
+    () => ({ store, tool, color: activeColor, size, selectedId, editing, pendingText, scrollRef, select, beginEdit, endEdit }),
+    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit],
   );
 
   function deleteSelected() {
@@ -174,8 +177,8 @@ export function LectureView({
             <Toolbar
               tool={tool}
               onTool={setTool}
-              color={color}
-              onColor={setColor}
+              color={activeColor}
+              onColor={tool === "highlighter" ? setMarkColor : setColor}
               size={size}
               onSize={setSize}
               canUndo={canUndo}

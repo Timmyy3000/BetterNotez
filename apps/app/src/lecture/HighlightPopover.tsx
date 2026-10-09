@@ -1,9 +1,9 @@
-import type { PageRect } from "@betternotez/core";
+import { HIGHLIGHT_COLORS, type PageRect } from "@betternotez/core";
 import { Trash2 } from "lucide-react";
 import { useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { cn } from "../lib/cn";
 import { anchorOf, popoverBelow } from "./highlight";
-import { ColorSwatch, Divider, IconToggle, INK_COLORS } from "./Toolbar";
+import { ColorSwatch, Divider, IconToggle } from "./Toolbar";
 
 /** The gap between the popover and the text it points at, and the smallest gap to the page's edge. */
 const GAP_PX = 10;
@@ -63,10 +63,10 @@ export function HighlightPopover({
       )}
       style={{ left: place?.left ?? 0, top: place?.top ?? 0 }}
     >
-      {INK_COLORS.map((swatch) => (
+      {HIGHLIGHT_COLORS.map((swatch) => (
         <ColorSwatch
           key={swatch.value}
-          label={`Highlight in ${swatch.name}`}
+          label={`Highlight in ${swatch.label}`}
           value={swatch.value}
           pressed={color === swatch.value}
           onClick={() => onPick(swatch.value)}
