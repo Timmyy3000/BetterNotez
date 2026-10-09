@@ -82,13 +82,48 @@ function AppearanceSection() {
   );
 }
 
+function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
+  if (!desktop) {
+    return (
+      <Section id="library-heading" title="Your library" icon={FolderOpen}>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+          This web app keeps your library in this browser only. Clearing your browser's data deletes it, and other
+          browsers or computers cannot open it. To keep one lecture, open it and click Export PDF. To back up the whole
+          library as a folder, use the desktop app.
+        </p>
+      </Section>
+    );
+  }
+
+  return (
+    <Section id="library-heading" title="Your library" icon={FolderOpen}>
+      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+        Your library is one folder on this computer. BetterNotez saves lectures, notes, annotations, and tasks as ordinary
+        files, so you can copy or back them up without the app. The folders are named by ID, and each PDF is saved as
+        lecture.pdf, so use BetterNotez to find a lecture.
+      </p>
+      {folder !== undefined && (
+        <>
+          <div className="mt-4">
+            <Button onClick={() => void openFolder(folder)}>
+              <FolderOpen />
+              Open folder
+            </Button>
+          </div>
+          <Copyable label="Library folder" value={folder} />
+        </>
+      )}
+    </Section>
+  );
+}
+
 function AssistantSection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
   if (!desktop) {
     return (
       <Section id="assistant-heading" title="Connect Claude" icon={Bot}>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          Connecting an AI assistant needs the desktop app. The assistant reads the library folder on your computer, and
-          the web app keeps its library in this browser.{" "}
+          Connecting Claude needs the desktop app. Claude reads your library from a folder on your computer. The web app
+          keeps its library in this browser, where Claude cannot reach it.{" "}
           <a href={RELEASES_URL} className="text-accent underline underline-offset-2">
             Download the desktop app
           </a>
@@ -108,97 +143,84 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
     null,
     2,
   );
-  const claudeCodeCommand = `claude mcp add betternotez -- node ${SERVER_PLACEHOLDER} --library "${libraryPath}"`;
+  const claudeCodeCommand = `claude mcp add betternotez -- node "${SERVER_PLACEHOLDER}" --library "${libraryPath}"`;
 
   return (
     <Section id="assistant-heading" title="Connect Claude" icon={Bot}>
       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-        An AI assistant such as Claude can read your library and make changes for you. It connects through MCP, a
-        standard way for AI apps to use tools on your computer. BetterNotez includes that tool. Setup takes three steps.
+        Claude can find a lecture by name, read its PDF text and your notes, and help you write notes or add text boxes
+        and drawings to a PDF. Try asking about one of your lectures, such as &quot;Let's talk about Lecture 1 in Digital
+        Systems.&quot; Setup takes three steps, and you do it once.
       </p>
-
-      <ol className="mt-6 space-y-6">
-        <Step number={1}>
-          <p>
-            Download <code className="text-foreground">betternotez-mcp.mjs</code> from the{" "}
-            <a href={LATEST_RELEASE_URL} className="text-accent underline underline-offset-2">
-              latest release
-            </a>
-            . Save it in a folder you will keep, then copy its full file path.
-          </p>
-          <p className="text-muted-foreground">
-            It needs{" "}
-            <a href={NODE_URL} className="text-accent underline underline-offset-2">
-              Node.js
-            </a>{" "}
-            22 or newer.
-          </p>
-        </Step>
-
-        <Step number={2}>
-          <p>Add the server to Claude. Replace the placeholder path below with the file path from step 1.</p>
-          <h3 className="mt-4 text-sm font-medium">Claude Desktop</h3>
-          <p className="mt-1 text-muted-foreground">Paste this into claude_desktop_config.json.</p>
-          <Copyable label="Claude Desktop config" value={claudeDesktopConfig} />
-          <h3 className="mt-4 text-sm font-medium">Claude Code</h3>
-          <p className="mt-1 text-muted-foreground">Run this once in a terminal.</p>
-          <Copyable label="Claude Code command" value={claudeCodeCommand} />
-        </Step>
-
-        <Step number={3}>
-          <p>Restart Claude Desktop, or start a new Claude Code session.</p>
-        </Step>
-      </ol>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
           <h3 className="text-sm font-medium">What Claude can do</h3>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-            <li>Read subjects, lectures, notes, and the text inside PDFs</li>
-            <li>Create and edit notes, tasks, planner classes, and drawings on PDFs</li>
+            <li>Find and read subjects, lectures, notes, text boxes, and PDF text</li>
+            <li>Create and edit subjects, lectures, notes, tasks, and timetable classes</li>
+            <li>Add text boxes and drawings to PDF pages</li>
           </ul>
         </div>
         <div>
           <h3 className="text-sm font-medium">What Claude can't do</h3>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
             <li>Delete anything. Deleting happens only in the app.</li>
+            <li>Bring back a note's text after Claude replaces it. There is no trash or history.</li>
           </ul>
         </div>
       </div>
-    </Section>
-  );
-}
-
-function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
-  if (!desktop) {
-    return (
-      <Section id="library-heading" title="Your library" icon={FolderOpen}>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          This web app keeps your library in this browser. Clearing site data removes it, and other browsers cannot see
-          it. To keep a copy of one lecture, use Export PDF in its viewer. For a library you can back up as a folder, use
-          the desktop app.
-        </p>
-      </Section>
-    );
-  }
-
-  return (
-    <Section id="library-heading" title="Your library" icon={FolderOpen}>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-        Your library is one folder on this computer. Lectures, notes, annotations, and tasks are plain files, so you can
-        open, copy, or back up the folder without BetterNotez.
+      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+        Text Claude reads, such as your notes and PDF text, goes to the AI service you use so it can answer you.
       </p>
-      {folder !== undefined && (
-        <>
-          <div className="mt-4">
-            <Button onClick={() => void openFolder(folder)}>
-              <FolderOpen />
-              Open folder
-            </Button>
-          </div>
-          <Copyable label="Library folder" value={folder} />
-        </>
-      )}
+
+      <ol className="mt-8 space-y-6">
+        <Step number={1}>
+          <p>
+            Install{" "}
+            <a href={NODE_URL} className="text-accent underline underline-offset-2">
+              Node.js
+            </a>{" "}
+            22 or newer.
+          </p>
+          <p>
+            Download <code className="text-foreground">betternotez-mcp.mjs</code> from the{" "}
+            <a href={LATEST_RELEASE_URL} className="text-accent underline underline-offset-2">
+              latest release
+            </a>{" "}
+            into a folder you will keep. Don't move it later, or Claude will lose the connection. Then copy its full path.
+            On Windows, right-click the file and choose Copy as path. On a Mac, hold Option, right-click the file, and
+            choose Copy as Pathname.
+          </p>
+        </Step>
+
+        <Step number={2}>
+          <p>
+            Add BetterNotez to Claude. In each snippet below, replace /absolute/path/to/betternotez-mcp.mjs with the path
+            you copied in step 1. On Windows, use forward slashes, such as C:/Users/you/Downloads/betternotez-mcp.mjs,
+            because backslashes break the JSON.
+          </p>
+          <h3 className="mt-4 text-sm font-medium">Claude Desktop</h3>
+          <p className="mt-1 text-muted-foreground">
+            In Claude Desktop, open Settings, then Developer, then Edit Config. If the file is new or empty, paste the
+            whole snippet. If it already has settings, add the betternotez entry inside its mcpServers section and keep
+            the rest.
+          </p>
+          <Copyable label="Claude Desktop config" value={claudeDesktopConfig} />
+          <h3 className="mt-4 text-sm font-medium">Claude Code (for terminal users)</h3>
+          <p className="mt-1 text-muted-foreground">
+            Open a terminal, paste this command, and press Enter. You only need to do this once.
+          </p>
+          <Copyable label="Claude Code command" value={claudeCodeCommand} />
+        </Step>
+
+        <Step number={3}>
+          <p>
+            Quit Claude Desktop completely, then open it again. Or start a new Claude Code session. Then ask Claude,
+            &quot;List my BetterNotez subjects.&quot; If it lists your subjects, the connection works.
+          </p>
+        </Step>
+      </ol>
     </Section>
   );
 }
@@ -253,6 +275,8 @@ async function openFolder(path: string): Promise<void> {
   try {
     await invoke("reveal_folder", { path });
   } catch {
-    toast.error("The folder could not be opened. Open it from your file manager.");
+    toast.error(
+      "The folder could not be opened. Copy the path below and paste it into your file manager.",
+    );
   }
 }
