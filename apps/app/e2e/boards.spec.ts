@@ -196,12 +196,34 @@ test("tasks: move a card with the keyboard", async ({ page }) => {
   // The keyboard sensor picks the card up asynchronously. Arrow keys sent before that are lost.
   await expect(card).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("status")).toContainText("was moved over droppable area");
+  await expect(page.getByRole("status")).toContainText("Keyboard task was moved over Doing.");
   await page.keyboard.press("Space");
 
   await expect(doing.getByText("Keyboard task", { exact: true })).toBeVisible();
   await page.reload();
   await expect(doing.getByText("Keyboard task", { exact: true })).toBeVisible();
+});
+
+test("tasks: Enter opens a card, and Space picks it up", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("complementary").getByRole("link", { name: "Tasks" }).click();
+
+  const todoInput = page.getByRole("textbox", { name: "Add a task to To do" });
+  await todoInput.fill("Enter task");
+  await todoInput.press("Enter");
+
+  const card = page.locator('[aria-roledescription="sortable"]').filter({ hasText: "Enter task" });
+  await card.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Edit task" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(card).toBeFocused();
+
+  await page.keyboard.press("Space");
+  await expect(card).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("tasks: filter by subject and mark overdue dates", async ({ page }) => {
