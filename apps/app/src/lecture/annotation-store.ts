@@ -1,8 +1,8 @@
-import { AnnotationId, newId, NotFoundError, type Annotation, type Library } from "@betternotez/core";
+import { AnnotationId, newId, NotFoundError, type Annotation, type Library, type TextBox } from "@betternotez/core";
 import { toast } from "sonner";
 import { createStore } from "zustand/vanilla";
 import { errorMessage } from "../lib/errors";
-import type { EditSession } from "./editor";
+import type { EditSession, TextStylePatch } from "./editor";
 import type { TextPiece } from "./highlight";
 import {
   applyStep,
@@ -151,6 +151,36 @@ export function commitTextEdit(store: AnnotationStore, session: EditSession): vo
   } else if (!sameAnnotation(before, current)) {
     store.getState().apply([{ type: "put", next: current, prev: before }], { record: true });
   }
+}
+
+/**
+ * Changes a text box's style, and returns the typing session that carries on from it. Each change is one undo step.
+ * A box being typed in has its text so far recorded first, so undo steps back through the text and then the style.
+ * The session then starts again from the changed box, so the next commit records only what is typed after it.
+ */
+export function restyleTextBox(
+  store: AnnotationStore,
+  id: string,
+  patch: TextStylePatch,
+  session?: EditSession,
+): EditSession | undefined {
+  const current = store.getState().annotations.find((annotation) => annotation.id === id);
+  if (current?.kind !== "text") return session;
+  const next: TextBox = { ...current, ...patch };
+  if (sameAnnotation(next, current)) return session;
+
+  if (session?.id !== id) {
+    store.getState().apply([{ type: "put", next, prev: current }], { record: true });
+    return session;
+  }
+  // A box with no text is not kept until it has some. Its style is set now and recorded with the box when it is.
+  if (current.text.trim() === "") {
+    store.getState().preview([{ type: "put", next }]);
+    return session;
+  }
+  commitTextEdit(store, session);
+  store.getState().apply([{ type: "put", next, prev: current }], { record: true });
+  return { id, before: next };
 }
 
 async function writeCommand(library: Library, lectureId: string, command: Command): Promise<void> {

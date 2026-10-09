@@ -259,6 +259,28 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       expect(await library.listAnnotations(lecture.id)).toEqual([updated]);
     });
 
+    it("keeps the size, style, and colour of a text box when the library is opened again", async () => {
+      const lecture = await importSampleLecture();
+      const box = await library.addAnnotation(lecture.id, {
+        kind: "text",
+        page: 1,
+        author: "user",
+        x: 0.1,
+        y: 0.1,
+        width: 0.2,
+        height: 0.1,
+        text: "Formatted",
+        fontSize: 24,
+        color: "#a3321f",
+        bold: true,
+        italic: false,
+        underline: true,
+      });
+
+      const reopened = new Library(env.open(), { now: () => CLOCK });
+      expect(await reopened.listAnnotations(lecture.id)).toEqual([box]);
+    });
+
     it("rejects a page that the lecture does not have", async () => {
       const lecture = await importSampleLecture();
       await expect(

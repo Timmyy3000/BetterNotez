@@ -754,3 +754,214 @@ async function runCharacters(page: Page, from: number, to: number): Promise<{ st
     { from, to },
   );
 }
+
+/** A computed style of a locator, as the browser reports it. */
+async function computedStyle(locator: Locator, property: string): Promise<string> {
+  return locator.evaluate((element, name) => getComputedStyle(element).getPropertyValue(name), property);
+}
+
+/** The text box's font size in CSS pixels. A 420-point page is drawn at the width of its section, so points scale by it. */
+async function fontPixels(field: Locator): Promise<number> {
+  return parseFloat(await computedStyle(field, "font-size"));
+}
+
+const TOOLBAR_BUTTONS = [
+  "Select and move",
+  "Text box",
+  "Pen",
+  "Highlighter",
+  "Eraser",
+  "Color Black",
+  "Color Red",
+  "Color Green",
+  "Color Blue",
+  "Color Ochre",
+  "Thin",
+  "Medium",
+  "Thick",
+  "Undo",
+  "Redo",
+  "Delete selected",
+];
+
+/** The labels of the floating toolbar's buttons, in order. A change to the palette shows up here. */
+async function toolbarLabels(page: Page): Promise<string[]> {
+  return page
+    .getByRole("toolbar", { name: "Annotate" })
+    .getByRole("button")
+    .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label") ?? ""));
+}
+
+/** Starts a text box on page 1 at the given fraction of the page, and types into it. */
+async function typeBoxOnPageOne(page: Page, at: { x: number; y: number }, text: string): Promise<void> {
+  await page.getByRole("button", { name: "Text box", exact: true }).click();
+  const pageBox = await page.locator('[data-page-number="1"]').boundingBox();
+  if (pageBox === null) throw new Error("page 1 is not on screen");
+  await page.mouse.click(pageBox.x + pageBox.width * at.x, pageBox.y + pageBox.height * at.y);
+  await page.keyboard.type(text);
+}
+
+test("the format bar sets a box's size, style, and color, and the choices survive a reload", async ({ page }) => {
+  await createSubject(page, "Formatting");
+  await importLecture(page, "Styles.pdf", ["Styles"]);
+  await openLecture(page, "Styles");
+
+  await typeBoxOnPageOne(page, { x: 0.2, y: 0.3 }, "Key result");
+  const field = page.getByRole("textbox", { name: "Text box" });
+  const pageWidth = (await page.locator('[data-page-number="1"]').boundingBox())?.width ?? 0;
+  const scale = pageWidth / 420;
+
+  await page.getByRole("button", { name: "Large text", exact: true }).click();
+  await expect.poll(() => fontPixels(field)).toBeCloseTo(18 * scale, 1);
+  await expect(page.getByRole("button", { name: "Large text", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  // Boxes are italic until they are set otherwise, so Italic starts pressed and a click takes it off.
+  await expect(page.getByRole("button", { name: "Italic" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Italic" }).click();
+  await expect(field).toHaveCSS("font-style", "normal");
+
+  await page.getByRole("button", { name: "Bold" }).click();
+  await expect(field).toHaveCSS("font-weight", "700");
+  await page.getByRole("button", { name: "Underline" }).click();
+  await expect.poll(() => computedStyle(field, "text-decoration-line")).toContain("underline");
+  await page.getByRole("button", { name: "Red ink" }).click();
+  await expect(field).toHaveCSS("color", rgbOf(INK_COLORS[1].value));
+
+  // The first Escape leaves the text, and the box stays selected. The second clears the selection.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("group", { name: "Format text box" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("group", { name: "Format text box" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: "Text box" })).toHaveValue("Key result");
+
+  await page.locator('[data-kind="text"]').click();
+  await expect(page.getByRole("button", { name: "Large text", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Italic" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Underline" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Red ink" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("Ctrl+B, Ctrl+I, and Ctrl+U style the text as it is typed, and Tab and Escape move between the box and its bar", async ({
+  page,
+}) => {
+  await createSubject(page, "Shortcuts");
+  await importLecture(page, "Keys.pdf", ["Keys"]);
+  await openLecture(page, "Keys");
+
+  await typeBoxOnPageOne(page, { x: 0.2, y: 0.3 }, "Shortcut");
+  const field = page.getByRole("textbox", { name: "Text box" });
+
+  await page.keyboard.press("Control+b");
+  await expect(field).toHaveCSS("font-weight", "700");
+  await page.keyboard.press("Control+i");
+  await expect(field).toHaveCSS("font-style", "normal");
+  await page.keyboard.press("Control+u");
+  await expect.poll(() => computedStyle(field, "text-decoration-line")).toContain("underline");
+  await page.keyboard.type(" more");
+  await expect(field).toHaveValue("Shortcut more");
+  await expect(field).toHaveCSS("font-weight", "700");
+
+  // Tab leaves the text for the bar, where the first control is the S size.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Small text" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Small text" })).toHaveAttribute("aria-pressed", "true");
+
+  // Escape returns focus to the box, which opens for typing again.
+  await page.keyboard.press("Escape");
+  await expect(field).toBeFocused();
+  await page.keyboard.type("!");
+  await expect(field).toHaveValue("Shortcut more!");
+});
+
+test("each formatting change is one undo step, and redo brings it back", async ({ page }) => {
+  await createSubject(page, "Undo");
+  await importLecture(page, "History.pdf", ["History"]);
+  await openLecture(page, "History");
+
+  await typeBoxOnPageOne(page, { x: 0.2, y: 0.3 }, "Undo style");
+  await page.getByRole("button", { name: "Select and move" }).click();
+  await expect(page.getByRole("group", { name: "Format text box" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Large text", exact: true }).click();
+  await page.getByRole("button", { name: "Bold" }).click();
+  await expect(page.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Large text", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByRole("button", { name: "Medium text" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.press("Control+Shift+z");
+  await expect(page.getByRole("button", { name: "Large text", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("a text box is recoloured after the fact, and the palette and the bar stay apart", async ({ page }) => {
+  await createSubject(page, "Palette");
+  await importLecture(page, "Colours.pdf", ["Colours"]);
+  await openLecture(page, "Colours");
+
+  await expect(page.getByRole("group", { name: "Format text box" })).toHaveCount(0);
+  expect(await toolbarLabels(page)).toEqual(TOOLBAR_BUTTONS);
+
+  // New boxes take the palette's ink, which is Blue, so the recolour goes to Ochre.
+  await typeBoxOnPageOne(page, { x: 0.2, y: 0.3 }, "Recolour me");
+  await page.getByRole("button", { name: "Select and move" }).click();
+  await page.locator('[data-page-number="1"] [data-kind="text"]').click();
+  await expect(page.getByRole("button", { name: "Blue ink" })).toHaveAttribute("aria-pressed", "true");
+  // The toolbar's own swatches are still the only "Color" buttons, and the bar has none of its own.
+  expect(await toolbarLabels(page)).toEqual(TOOLBAR_BUTTONS);
+  expect(await page.getByRole("toolbar", { name: "Annotate" }).getByRole("button", { name: "Bold" }).count()).toBe(0);
+
+  await page.getByRole("button", { name: "Ochre ink" }).click();
+  await expect(page.getByRole("textbox", { name: "Text box" })).toHaveCSS("color", rgbOf(INK_COLORS[4].value));
+  await expect(page.getByRole("button", { name: "Ochre ink" })).toHaveAttribute("aria-pressed", "true");
+
+  // Undo takes the box back to Blue, and redo puts Ochre back. The bar belongs to the selected box, so it stays.
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("group", { name: "Format text box" })).toHaveCount(0);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('[data-page-number="1"] [data-kind="text"] textarea')).toHaveCSS(
+    "color",
+    rgbOf(INK_COLORS[3].value),
+  );
+  await page.keyboard.press("Control+Shift+z");
+  await expect(page.locator('[data-page-number="1"] [data-kind="text"] textarea')).toHaveCSS(
+    "color",
+    rgbOf(INK_COLORS[4].value),
+  );
+
+  await page.reload();
+  await page.locator('[data-page-number="1"] [data-kind="text"]').click();
+  await expect(page.getByRole("button", { name: "Ochre ink" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("the format bar sits above a box in the page and moves below it near the top", async ({ page }) => {
+  await createSubject(page, "Placement");
+  await importLecture(page, "Margins.pdf", ["Margins"]);
+  await openLecture(page, "Margins");
+
+  const bar = page.getByRole("group", { name: "Format text box" });
+
+  await typeBoxOnPageOne(page, { x: 0.2, y: 0.005 }, "At the top");
+  await expect(bar).toBeVisible();
+  const top = await page.locator('[data-kind="text"]').boundingBox();
+  const topBar = await bar.boundingBox();
+  if (top === null || topBar === null) throw new Error("the box or its bar is not on screen");
+  expect(topBar.y).toBeGreaterThanOrEqual(top.y + top.height);
+
+  const pageBox = await page.locator('[data-page-number="1"]').boundingBox();
+  if (pageBox === null) throw new Error("page 1 is not on screen");
+  await page.mouse.click(pageBox.x + pageBox.width * 0.2, pageBox.y + pageBox.height * 0.6);
+  await page.keyboard.type("Lower down");
+  await expect(bar).toBeVisible();
+  const lower = await page.locator('[data-kind="text"]').nth(1).boundingBox();
+  const lowerBar = await bar.boundingBox();
+  if (lower === null || lowerBar === null) throw new Error("the lower box or its bar is not on screen");
+  expect(lowerBar.y + lowerBar.height).toBeLessThanOrEqual(lower.y);
+});

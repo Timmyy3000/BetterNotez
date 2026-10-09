@@ -11,6 +11,9 @@ export interface EditSession {
   readonly before?: TextBox;
 }
 
+/** The style fields a text box can change. Its text, position, and author are not in it. */
+export type TextStylePatch = Partial<Pick<TextBox, "fontSize" | "bold" | "italic" | "underline" | "color">>;
+
 export interface EditorValue {
   readonly store: AnnotationStore;
   readonly tool: Tool;
@@ -27,6 +30,8 @@ export interface EditorValue {
   readonly announce: (message: string) => void;
   /** Text the student has selected with the select tool and not yet given a highlight colour. */
   readonly pendingText?: TextSelection;
+  /** Changes a text box's style as one undo step, without ending a typing session in progress. */
+  readonly restyle: (id: string, patch: TextStylePatch) => void;
 }
 
 export const EditorContext = createContext<EditorValue | undefined>(undefined);
