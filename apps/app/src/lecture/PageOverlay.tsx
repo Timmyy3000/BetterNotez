@@ -62,11 +62,11 @@ export function PageOverlay({
   const highlights = onPage.filter((annotation): annotation is Highlight => annotation.kind === "highlight");
   const hoveredAi = inks.find((ink) => ink.id === hovered && ink.author === "ai");
   // The popover for a selection points at its last piece, which sits on the page the selection ends on.
-  const pendingPiece = pendingText?.at(-1);
+  const pendingPiece = pendingText?.pieces.at(-1);
   const selectedHighlight = tool === "select" ? highlights.find((highlight) => highlight.id === selectedId) : undefined;
 
   function highlightPendingText(picked: string) {
-    if (pendingText !== undefined) commitHighlights(store, pendingText, picked);
+    if (pendingText !== undefined) commitHighlights(store, pendingText.pieces, picked);
     window.getSelection()?.removeAllRanges();
   }
 

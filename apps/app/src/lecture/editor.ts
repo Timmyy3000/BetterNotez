@@ -1,7 +1,7 @@
 import type { TextBox } from "@betternotez/core";
 import { createContext, useContext, type RefObject } from "react";
 import type { AnnotationStore } from "./annotation-store";
-import type { TextPiece } from "./highlight";
+import type { TextSelection } from "./text-selection";
 
 export type Tool = "select" | "text" | "pen" | "highlighter" | "eraser";
 
@@ -24,7 +24,7 @@ export interface EditorValue {
   readonly beginEdit: (session: EditSession) => void;
   readonly endEdit: (id: string) => void;
   /** Text the student has selected with the select tool and not yet given a highlight colour. */
-  readonly pendingText?: readonly TextPiece[];
+  readonly pendingText?: TextSelection;
 }
 
 export const EditorContext = createContext<EditorValue | undefined>(undefined);
