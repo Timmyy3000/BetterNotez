@@ -170,13 +170,13 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
     it("deletes a lecture and everything stored with it", async () => {
       const subject = await library.createSubject({ name: "Digital Systems" });
       const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 1);
-      await library.setNotes(lecture.id, "notes");
+      await library.setPageNote(lecture.id, 1, "notes");
 
       await library.deleteLecture(lecture.id);
 
       expect(await library.listLectures()).toEqual([]);
       await expect(library.getPdf(lecture.id)).rejects.toBeInstanceOf(NotFoundError);
-      await expect(library.getNotes(lecture.id)).rejects.toBeInstanceOf(NotFoundError);
+      await expect(library.getPageNote(lecture.id, 1)).rejects.toBeInstanceOf(NotFoundError);
     });
   });
 
@@ -542,7 +542,7 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       const subject = await library.createSubject({ name: "Digital Systems" });
       const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 2);
       await library.setPdfText(lecture.id, ["Full adder circuit", "Flip-flops"]);
-      await library.setNotes(lecture.id, "Revise the full adder.");
+      await library.setPageNote(lecture.id, 2, "Revise the full adder.");
       await library.addAnnotation(lecture.id, {
         kind: "text",
         page: 1,
@@ -559,6 +559,7 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       const hits = await library.search("full adder");
 
       expect(hits.map((hit) => hit.kind).sort()).toEqual(["annotation", "notes", "pdf"]);
+      expect(hits.find((hit) => hit.kind === "notes")).toMatchObject({ page: 2 });
     });
 
     it("leaves out a lecture whose files cannot be read, and searches the rest", async () => {
@@ -577,29 +578,136 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
     });
   });
 
-  describe("notes", () => {
-    it("reads empty notes for a new lecture", async () => {
+  describe("page notes", () => {
+    async function importThreePageLecture() {
       const subject = await library.createSubject({ name: "Digital Systems" });
-      const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 1);
-      expect(await library.getNotes(lecture.id)).toBe("");
+      const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 3);
+      return { subject, lecture, dir: `subjects/${subject.id}/lectures/${lecture.id}` };
+    }
+
+    it("has no notes for a new material", async () => {
+      const { lecture } = await importThreePageLecture();
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+      expect(await library.getPageNote(lecture.id, 1)).toBe("");
     });
 
-    it("sets notes and appends to them on a new line", async () => {
-      const subject = await library.createSubject({ name: "Digital Systems" });
-      const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 1);
+    it("keeps each page's note apart and lists the notes in page order", async () => {
+      const { lecture } = await importThreePageLecture();
 
-      await library.setNotes(lecture.id, "# Week 1\n- stacks");
-      await library.appendNotes(lecture.id, "- queues");
-      expect(await library.getNotes(lecture.id)).toBe("# Week 1\n- stacks\n- queues");
+      await library.setPageNote(lecture.id, 3, "Flip-flops");
+      await library.setPageNote(lecture.id, 1, "Gates");
+
+      expect(await library.listPageNotes(lecture.id)).toEqual([
+        { page: 1, text: "Gates" },
+        { page: 3, text: "Flip-flops" },
+      ]);
+      expect(await library.getPageNote(lecture.id, 2)).toBe("");
     });
 
-    it("does not add an extra blank line when notes already end in a newline", async () => {
-      const subject = await library.createSubject({ name: "Digital Systems" });
-      const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 1);
+    it("replaces a page's note, and an empty note removes it", async () => {
+      const { lecture } = await importThreePageLecture();
+      await library.setPageNote(lecture.id, 2, "first draft");
+      await library.setPageNote(lecture.id, 2, "final");
+      expect(await library.getPageNote(lecture.id, 2)).toBe("final");
 
-      await library.setNotes(lecture.id, "a\n");
-      await library.appendNotes(lecture.id, "b");
-      expect(await library.getNotes(lecture.id)).toBe("a\nb");
+      await library.setPageNote(lecture.id, 2, "");
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+    });
+
+    it("appends to one page's note on a new line", async () => {
+      const { lecture } = await importThreePageLecture();
+
+      await library.setPageNote(lecture.id, 2, "# Week 1\n- stacks");
+      await library.appendPageNote(lecture.id, 2, "- queues");
+      await library.appendPageNote(lecture.id, 3, "- trees");
+      expect(await library.getPageNote(lecture.id, 2)).toBe("# Week 1\n- stacks\n- queues");
+      expect(await library.getPageNote(lecture.id, 3)).toBe("- trees");
+    });
+
+    it("does not add an extra blank line when a note already ends in a newline", async () => {
+      const { lecture } = await importThreePageLecture();
+
+      await library.setPageNote(lecture.id, 1, "a\n");
+      await library.appendPageNote(lecture.id, 1, "b");
+      expect(await library.getPageNote(lecture.id, 1)).toBe("a\nb");
+    });
+
+    it("keeps notes when the library is opened again", async () => {
+      const { lecture } = await importThreePageLecture();
+      await library.setPageNote(lecture.id, 2, "kept");
+
+      const reopened = new Library(env.open(), { now: () => CLOCK });
+      expect(await reopened.getPageNote(lecture.id, 2)).toBe("kept");
+    });
+
+    it("rejects a page the material does not have", async () => {
+      const { lecture } = await importThreePageLecture();
+
+      await expect(library.setPageNote(lecture.id, 4, "too far")).rejects.toBeInstanceOf(InvalidError);
+      await expect(library.getPageNote(lecture.id, 4)).rejects.toThrow("Page 4 is outside this lecture's 3 pages.");
+      await expect(library.setPageNote(lecture.id, 0, "no page")).rejects.toBeInstanceOf(ZodError);
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+    });
+
+    it("keeps a note from before per-page notes as page 1, byte for byte", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      const legacy = "# Week 1\r\n- stacks\n\nÜnïcode and a trailing newline\n";
+      await env.open().writeText(`${dir}/notes.md`, legacy);
+
+      expect(await library.listPageNotes(lecture.id)).toEqual([{ page: 1, text: legacy }]);
+      expect(await library.getPageNote(lecture.id, 1)).toBe(legacy);
+    });
+
+    it("treats an empty notes.md from before per-page notes as no note", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      await env.open().writeText(`${dir}/notes.md`, "");
+
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+    });
+
+    it("writes new notes to notes.json and leaves notes.md untouched", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      const legacy = "Old single note";
+      await env.open().writeText(`${dir}/notes.md`, legacy);
+
+      await library.setPageNote(lecture.id, 2, "New page note");
+
+      expect(await env.open().readText(`${dir}/notes.md`)).toBe(legacy);
+      expect(JSON.parse((await env.open().readText(`${dir}/notes.json`)) ?? "null")).toEqual({
+        version: 1,
+        pages: { "1": legacy, "2": "New page note" },
+      });
+      expect(await library.listPageNotes(lecture.id)).toEqual([
+        { page: 1, text: legacy },
+        { page: 2, text: "New page note" },
+      ]);
+    });
+
+    it("does not bring a cleared legacy note back once notes.json exists", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      await env.open().writeText(`${dir}/notes.md`, "Old single note");
+
+      await library.setPageNote(lecture.id, 1, "");
+
+      const reopened = new Library(env.open(), { now: () => CLOCK });
+      expect(await reopened.listPageNotes(lecture.id)).toEqual([]);
+      expect(await env.open().readText(`${dir}/notes.md`)).toBe("Old single note");
+    });
+
+    it("keeps every note when edits to different pages arrive together", async () => {
+      const { lecture } = await importThreePageLecture();
+
+      await Promise.all([
+        library.setPageNote(lecture.id, 1, "one"),
+        library.setPageNote(lecture.id, 2, "two"),
+        library.appendPageNote(lecture.id, 3, "three"),
+      ]);
+
+      expect(await library.listPageNotes(lecture.id)).toEqual([
+        { page: 1, text: "one" },
+        { page: 2, text: "two" },
+        { page: 3, text: "three" },
+      ]);
     });
   });
 

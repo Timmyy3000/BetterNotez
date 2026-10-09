@@ -16,7 +16,7 @@ const timestamp = z.iso.datetime();
 const label = z.string().trim().min(1);
 const unitInterval = z.number().min(0).max(1);
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
-const pageNumber = z.number().int().min(1);
+export const PageNumber = z.number().int().min(1);
 
 export const LibraryFile = z.object({ version: z.literal(1) });
 
@@ -44,7 +44,7 @@ const author = z.enum(["user", "ai"]);
 export const TextBox = z.object({
   id: AnnotationId,
   kind: z.literal("text"),
-  page: pageNumber,
+  page: PageNumber,
   author,
   x: unitInterval,
   y: unitInterval,
@@ -86,7 +86,7 @@ export function textBoxStyle(box: Pick<TextBox, "fontSize" | "bold" | "italic" |
 export const Ink = z.object({
   id: AnnotationId,
   kind: z.literal("ink"),
-  page: pageNumber,
+  page: PageNumber,
   author,
   points: z.array(z.tuple([unitInterval, unitInterval, unitInterval])).min(1),
   color: hexColor,
@@ -108,7 +108,7 @@ export type PageRect = z.infer<typeof PageRect>;
 export const Highlight = z.object({
   id: AnnotationId,
   kind: z.literal("highlight"),
-  page: pageNumber,
+  page: PageNumber,
   author,
   /** One box per line of the highlighted text. A box with no area would be stored and never seen, so it is refused. */
   rects: z.array(PageRect.refine((rect) => rect.width > 0 && rect.height > 0, "A highlight box needs an area")).min(1),
@@ -122,6 +122,13 @@ export type Highlight = z.infer<typeof Highlight>;
 export const Annotation = z.discriminatedUnion("kind", [TextBox, Ink, Highlight]);
 export type Annotation = z.infer<typeof Annotation>;
 export type AnnotationDraft = DistributiveOmit<z.input<typeof Annotation>, "id">;
+
+/** The note on each page of a material, keyed by page number. A page with no note has no key. */
+export const PageNotes = z.object({
+  version: z.literal(1),
+  pages: z.record(z.string().regex(/^[1-9]\d*$/), z.string()),
+});
+export type PageNotes = z.infer<typeof PageNotes>;
 
 export const PlannerCard = z
   .object({
