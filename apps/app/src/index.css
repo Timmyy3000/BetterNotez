@@ -12,39 +12,43 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
+  --color-overlay: var(--overlay);
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 }
 
+/* The theme is set on <html> by src/theme.ts and by the script in index.html. */
 :root {
+  color-scheme: light;
   --background: #fafaf9;
   --sidebar: #f2f2f0;
   --surface: #ffffff;
   --foreground: #1c1917;
   --muted: #efeeec;
-  --muted-foreground: #78716c;
+  --muted-foreground: #6b6560;
   --border: #e7e5e4;
   --accent: #4f46e5;
   --accent-foreground: #ffffff;
   --accent-soft: #eef2ff;
   --danger: #dc2626;
+  --overlay: rgb(0 0 0 / 0.25);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --sidebar: #141210;
-    --surface: #1c1917;
-    --foreground: #fafaf9;
-    --muted: #262221;
-    --muted-foreground: #a8a29e;
-    --border: #2c2826;
-    --accent: #818cf8;
-    --accent-foreground: #0c0a09;
-    --accent-soft: #1e1b4b;
-    --danger: #f87171;
-  }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0c0a09;
+  --sidebar: #141210;
+  --surface: #1c1917;
+  --foreground: #fafaf9;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --border: #3a3431;
+  --accent: #818cf8;
+  --accent-foreground: #0c0a09;
+  --accent-soft: #1e1b4b;
+  --danger: #f87171;
+  --overlay: rgb(0 0 0 / 0.6);
 }
 
 @keyframes fade-in {

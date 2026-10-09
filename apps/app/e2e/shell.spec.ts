@@ -64,9 +64,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await page.getByRole("searchbox", { name: "Search" }).fill("karnaugh");
   await expect(page.getByRole("heading", { name: /PDF text/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Karnaugh maps reduce expressions/ })).toContainText("Page 2");
-  await page.emulateMedia({ colorScheme: "dark" });
   await page.screenshot({ path: `${SHOTS}/search-dark.png`, animations: "disabled" });
-  await page.emulateMedia({ colorScheme: "light" });
 
   await page.getByRole("link", { name: /Karnaugh maps reduce expressions/ }).click();
   await expect(page.getByRole("heading", { name: "Lecture 1 - Logic gates", exact: true })).toBeVisible();

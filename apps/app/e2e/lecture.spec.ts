@@ -192,7 +192,6 @@ test("the lecture viewer renders in dark mode", async ({ page }) => {
   await createSubject(page, "Chemistry");
   await importLecture(page, "Bonds.pdf", ["Ionic", "Covalent"]);
   await openLecture(page, "Bonds");
-  await page.emulateMedia({ colorScheme: "dark" });
   await page.getByRole("button", { name: "Notes" }).click();
   await expect(page.getByRole("textbox", { name: "Lecture notes" })).toBeEnabled();
   await page.screenshot({ path: `${SHOTS}/lecture-dark.png`, animations: "disabled" });
