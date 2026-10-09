@@ -1,4 +1,11 @@
-import { InvalidError, type Library, NotFoundError } from "@betternotez/core";
+import {
+  HIGHLIGHT_COLOR_NAMES,
+  HIGHLIGHT_COLORS,
+  highlightColorOf,
+  InvalidError,
+  type Library,
+  NotFoundError,
+} from "@betternotez/core";
 import { z } from "zod";
 import { readPageGlyphs } from "../pdf.js";
 import type { ToolRegistry } from "../registry.js";
@@ -15,8 +22,6 @@ import {
 
 const TEXT_BOX_ONLY: readonly string[] = ["x", "y", "width", "height", "text", "fontSize"];
 const INK_ONLY: readonly string[] = ["points", "size"];
-/** Ochre, the palette colour that reads as a highlighter over paper. */
-const HIGHLIGHT_COLOR = "#a8701b";
 
 const annotationPatch = z
   .object({
@@ -74,7 +79,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
 
   tools.tool(
     "add_highlight",
-    "Highlight text on a page of a PDF in the library. Pass the text exactly as it appears on the page, with the same capitals and punctuation. Line breaks and spacing do not matter. If the text appears more than once on the page, pass occurrence to choose one. The annotation author is ai, and the student can change or remove the highlight in the app.",
+    "Highlight text on a page of a PDF in the library. Pass the text exactly as it appears on the page, with the same capitals and punctuation. Line breaks and spacing do not matter. If the text appears more than once on the page, pass occurrence to choose one. The colour is one of the highlight colours, yellow by default. The annotation author is ai, and the student can change or remove the highlight in the app.",
     {
       lectureId: lectureRef,
       page: pageRef,
@@ -85,7 +90,10 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
         .min(1)
         .optional()
         .describe("Which match to highlight when the text appears more than once on the page, counting from 1."),
-      color: hexColor.default(HIGHLIGHT_COLOR),
+      color: z
+        .enum(HIGHLIGHT_COLOR_NAMES)
+        .default(HIGHLIGHT_COLORS[0].name)
+        .describe("The highlight colour: yellow, green, pink, blue, or orange."),
     },
     async ({ lectureId, page, text, occurrence, color }) => {
       const { pageCount } = await library.getLecture(lectureId);
@@ -100,7 +108,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
         page,
         rects,
         text: text.replace(/\s+/g, " ").trim(),
-        color,
+        color: highlightColorOf(color),
       });
     },
   );
