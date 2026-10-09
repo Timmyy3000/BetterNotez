@@ -71,7 +71,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
                 aria-pressed={color === hex}
                 onClick={() => setColor(hex)}
                 className={cn(
-                  "size-8 rounded-full outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+                  "size-8 rounded-full outline-none transition-transform hover:scale-110",
                   color === hex && "ring-2 ring-foreground ring-offset-2 ring-offset-surface",
                 )}
                 style={{ backgroundColor: subjectTone(hex) }}
