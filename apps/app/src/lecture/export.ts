@@ -5,6 +5,10 @@ import { HIGHLIGHT_OPACITY } from "./highlight";
 import { outlinePath, strokeOutline } from "./ink";
 import { BASELINE_RATIO, LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
 
+/** Helvetica's underline sits 0.1 em under the baseline and is 0.05 em thick, in every Helvetica variant. */
+const UNDERLINE_OFFSET_EM = 0.1;
+const UNDERLINE_THICKNESS_EM = 0.05;
+
 /**
  * Returns a copy of the PDF with the annotations drawn onto their pages. Text boxes become
  * Helvetica text and ink becomes filled paths, so any PDF viewer shows them. The source bytes
@@ -12,7 +16,7 @@ import { BASELINE_RATIO, LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
  */
 export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: readonly Annotation[]): Promise<Uint8Array> {
   const document = await PDFDocument.load(pdfBytes);
-  const font = await document.embedFont(StandardFonts.Helvetica);
+  const fonts = new Map<StandardFonts, PDFFont>();
   const pages = document.getPages();
 
   for (const annotation of paintOrder(annotations)) {
@@ -20,7 +24,7 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
     if (page === undefined) continue;
     const geometry = pageGeometry(page);
     if (annotation.kind === "text") {
-      drawTextBox(page, geometry, annotation, font);
+      await drawTextBox(document, fonts, page, geometry, annotation);
     } else if (annotation.kind === "ink") {
       drawInk(page, geometry, annotation);
     } else {
@@ -50,20 +54,66 @@ function pageGeometry(page: PDFPage): PageGeometry {
   };
 }
 
-function drawTextBox(page: PDFPage, geometry: PageGeometry, box: TextBox, font: PDFFont): void {
+async function drawTextBox(
+  document: PDFDocument,
+  fonts: Map<StandardFonts, PDFFont>,
+  page: PDFPage,
+  geometry: PageGeometry,
+  box: TextBox,
+): Promise<void> {
+  const style = textBoxStyle(box);
+  const font = await embedVariant(document, fonts, style.bold, style.italic);
   const display = displaySize(geometry);
   const left = box.x * display.width;
   const top = box.y * display.height;
   const maxWidth = box.width * display.width - 2 * TEXT_PADDING_PT;
-  const { fontSize } = textBoxStyle(box);
   const color = hexToRgb(box.color);
+  const size = style.fontSize;
+  // Text runs along the reading direction of the rotated page, so its underline is turned to match.
+  const radians = (geometry.rotation * Math.PI) / 180;
+  const along = { x: Math.cos(radians), y: Math.sin(radians) };
+  const below = { x: along.y, y: -along.x };
 
-  wrapLines(font, box.text, fontSize, maxWidth).forEach((line, index) => {
-    const baseline = top + TEXT_PADDING_PT + fontSize * BASELINE_RATIO + index * fontSize * LINE_HEIGHT;
+  wrapLines(font, box.text, size, maxWidth).forEach((line, index) => {
+    const baseline = top + TEXT_PADDING_PT + size * BASELINE_RATIO + index * size * LINE_HEIGHT;
     const origin = displayToUser(geometry, (left + TEXT_PADDING_PT) / display.width, baseline / display.height);
-    // Text runs along the reading direction of the rotated page, so it is turned to match.
-    page.drawText(line, { x: origin.x, y: origin.y, font, size: fontSize, color, rotate: degrees(geometry.rotation) });
+    page.drawText(line, { x: origin.x, y: origin.y, font, size, color, rotate: degrees(geometry.rotation) });
+    if (style.underline && line !== "") {
+      const offset = size * UNDERLINE_OFFSET_EM;
+      const start = { x: origin.x + below.x * offset, y: origin.y + below.y * offset };
+      const width = font.widthOfTextAtSize(line, size);
+      page.drawLine({
+        start,
+        end: { x: start.x + along.x * width, y: start.y + along.y * width },
+        thickness: size * UNDERLINE_THICKNESS_EM,
+        color,
+      });
+    }
   });
+}
+
+/**
+ * Helvetica, the face the export has always drawn, in the box's weight and slant. The screen's serif face
+ * has no standard PDF equivalent without embedding a font file, so the export does not match it.
+ */
+async function embedVariant(
+  document: PDFDocument,
+  fonts: Map<StandardFonts, PDFFont>,
+  bold: boolean,
+  italic: boolean,
+): Promise<PDFFont> {
+  const name = bold
+    ? italic
+      ? StandardFonts.HelveticaBoldOblique
+      : StandardFonts.HelveticaBold
+    : italic
+      ? StandardFonts.HelveticaOblique
+      : StandardFonts.Helvetica;
+  const cached = fonts.get(name);
+  if (cached !== undefined) return cached;
+  const font = await document.embedFont(name);
+  fonts.set(name, font);
+  return font;
 }
 
 function drawInk(page: PDFPage, geometry: PageGeometry, ink: Ink): void {
@@ -142,6 +192,10 @@ function printable(font: PDFFont, text: string): string {
       return "?";
     }
   }).join("");
+}
+
+function toRadians(degreesValue: number): number {
+  return (degreesValue * Math.PI) / 180;
 }
 
 function hexToRgb(hex: string): RGB {
