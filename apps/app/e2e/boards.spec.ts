@@ -30,6 +30,13 @@ async function dragBetween(page: Page, from: Locator, to: Locator, { keepHeight 
   await page.mouse.up();
 }
 
+/** Opens a styled select and picks one of the options in the list that opens. */
+async function pick(page: Page, control: Locator, option: string): Promise<void> {
+  await control.click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+  await expect(control).toContainText(option);
+}
+
 test("planner: add classes, drag one to another day, and keep the timetable after reload", async ({ page }) => {
   mkdirSync(SHOTS, { recursive: true });
   const pageErrors: string[] = [];
@@ -60,8 +67,8 @@ test("planner: add classes, drag one to another day, and keep the timetable afte
 
   await page.getByRole("button", { name: "Add class" }).click();
   const overlapping = page.getByRole("dialog", { name: "Add class" });
-  await overlapping.getByLabel("Subject").selectOption("Linear Algebra");
-  await overlapping.getByLabel("Day").selectOption("Tuesday");
+  await pick(page, overlapping.getByRole("combobox", { name: "Subject" }), "Linear Algebra");
+  await pick(page, overlapping.getByRole("combobox", { name: "Day" }), "Tuesday");
   await overlapping.getByLabel("Start").fill("10:00");
   await overlapping.getByLabel("End").fill("11:30");
   await overlapping.getByRole("button", { name: "Add class" }).click();
@@ -123,8 +130,8 @@ async function addTuesdayClass(page: Page, subject: string, start: string, end: 
   await page.getByRole("button", { name: /^Add (your first )?class$/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "Add class" });
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel("Subject").selectOption(subject);
-  await dialog.getByLabel("Day").selectOption("Tuesday");
+  await pick(page, dialog.getByRole("combobox", { name: "Subject" }), subject);
+  await pick(page, dialog.getByRole("combobox", { name: "Day" }), "Tuesday");
   await dialog.getByLabel("Start").fill(start);
   await dialog.getByLabel("End").fill(end);
   if (location !== undefined) await dialog.getByLabel("Location").fill(location);
@@ -274,18 +281,18 @@ test("tasks: filter by subject and mark overdue dates", async ({ page }) => {
   const todo = page.getByRole("region", { name: "To do" });
   await todo.getByText("Lab report", { exact: true }).click();
   const editTask = page.getByRole("dialog", { name: "Edit task" });
-  await editTask.getByLabel("Subject").selectOption("Chemistry");
+  await pick(page, editTask.getByRole("combobox", { name: "Subject" }), "Chemistry");
   await editTask.getByLabel("Due date").fill("2000-01-01");
   await editTask.getByRole("button", { name: "Save changes" }).click();
   // Overdue is set in the ink colour, so red stays for errors. The spine on the card marks it.
   await expect(todo.getByText("Jan 1, 2000")).toHaveCSS("color", "rgb(241, 234, 219)");
 
   const filter = page.getByRole("combobox", { name: "Filter by subject" });
-  await filter.selectOption("Chemistry");
+  await pick(page, filter, "Chemistry");
   await expect(todo.getByText("Lab report", { exact: true })).toBeVisible();
   await expect(todo.getByText("Errands", { exact: true })).toHaveCount(0);
 
-  await filter.selectOption("No subject");
+  await pick(page, filter, "No subject");
   await expect(todo.getByText("Errands", { exact: true })).toBeVisible();
   await expect(todo.getByText("Lab report", { exact: true })).toHaveCount(0);
 });

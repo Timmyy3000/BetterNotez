@@ -414,11 +414,17 @@ async function openNotes(page) {
   });
 }
 
+/** Opens a styled select and picks one of the options in the list that opens. */
+async function pick(page, control, option) {
+  await control.click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
 async function addClass(page, cls) {
   await page.getByRole("button", { name: /^Add (your first )?class$/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "Add class" });
-  await dialog.getByLabel("Subject").selectOption(cls.subject);
-  await dialog.getByLabel("Day").selectOption(cls.day);
+  await pick(page, dialog.getByRole("combobox", { name: "Subject" }), cls.subject);
+  await pick(page, dialog.getByRole("combobox", { name: "Day" }), cls.day);
   await dialog.getByLabel("Start").fill(cls.start);
   await dialog.getByLabel("End").fill(cls.end);
   await dialog.getByLabel("Location").fill(cls.location);
@@ -437,7 +443,7 @@ async function editTask(page, task) {
   const column = page.getByRole("region", { name: task.column ?? "To do" });
   await column.getByText(task.title, { exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Edit task" });
-  if (task.subject !== undefined) await dialog.getByLabel("Subject").selectOption(task.subject);
+  if (task.subject !== undefined) await pick(page, dialog.getByRole("combobox", { name: "Subject" }), task.subject);
   if (task.due !== undefined) await dialog.getByLabel("Due date").fill(task.due);
   await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
