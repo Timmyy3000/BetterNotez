@@ -63,7 +63,7 @@ export function FormatBar({
       ref={bar}
       role="group"
       aria-label="Format text box"
-      className="raised-edge absolute z-10 flex w-max animate-[fade-in_140ms_ease-out] cursor-default items-center rounded-md border border-border bg-raised p-1 shadow-(--lift)"
+      className="raised-edge absolute z-10 flex w-max animate-[fade-in_140ms_ease-out] cursor-default items-center gap-0.5 rounded-md border border-border bg-raised p-1 shadow-(--lift)"
       style={{
         left: place.left,
         ...(place.above ? { bottom: `calc(100% + ${GAP_PX}px)` } : { top: `calc(100% + ${GAP_PX}px)` }),
