@@ -1,5 +1,5 @@
 import { InvalidError, mergeLineRects, type PageRect } from "@betternotez/core";
-import type { Glyph } from "./text-layout.js";
+import type { Glyph } from "./glyphs.js";
 
 /**
  * Every place the query appears on the page, as the boxes of its text, one list per place in
@@ -25,7 +25,9 @@ export function findTextMatches(glyphs: readonly Glyph[], query: string): PageRe
   let start = haystack.indexOf(needle);
   while (start !== -1) {
     const glyphIndexes = new Set(letters.slice(start, start + needle.length).map((letter) => letter.glyph));
-    matches.push(mergeLineRects([...glyphIndexes].map((index) => glyphs[index]?.rect ?? EMPTY)));
+    // A box with no area is off the page or empty. It is left out, so a match with none is refused by chooseMatch.
+    const boxes = [...glyphIndexes].map((index) => glyphs[index]?.rect ?? EMPTY).filter(hasArea);
+    matches.push(mergeLineRects(boxes));
     start = haystack.indexOf(needle, start + needle.length);
   }
   return matches;
@@ -46,17 +48,29 @@ export function chooseMatch(matches: readonly PageRect[][], query: string, page:
         `"${query}" appears ${count} times on page ${page}. Pass occurrence from 1 to ${count} to choose one.`,
       );
     }
-    return matches[0] ?? [];
+    return visible(matches[0] ?? [], query, page);
   }
   const match = matches[occurrence - 1];
   if (match === undefined) {
     const times = count === 1 ? "once" : `${count} times`;
     throw new InvalidError(`"${query}" appears ${times} on page ${page}, so occurrence ${occurrence} does not exist.`);
   }
+  return visible(match, query, page);
+}
+
+/** A match with no visible box lies off the page. A highlight of it would be stored and never seen, so it is refused. */
+function visible(match: PageRect[], query: string, page: number): PageRect[] {
+  if (match.length === 0) {
+    throw new InvalidError(`"${query}" is on page ${page}, but outside the visible page, so it cannot be highlighted.`);
+  }
   return match;
 }
 
 const EMPTY: PageRect = { x: 0, y: 0, width: 0, height: 0 };
+
+function hasArea(rect: PageRect): boolean {
+  return rect.width > 0 && rect.height > 0;
+}
 
 /** Letters only: compatibility forms unfolded, and every kind of whitespace removed. */
 function squash(text: string): string {

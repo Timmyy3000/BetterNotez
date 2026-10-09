@@ -61,9 +61,9 @@ async function seedLecture(): Promise<{ subject: Subject; lecture: Lecture }> {
   return { subject, lecture };
 }
 
-async function makePdf(pages: string[]): Promise<Uint8Array> {
+async function makePdf(pages: string[], family: StandardFonts = StandardFonts.Helvetica): Promise<Uint8Array> {
   const document = await PDFDocument.create();
-  const font = await document.embedFont(StandardFonts.Helvetica);
+  const font = await document.embedFont(family);
   for (const text of pages) {
     document.addPage([300, 200]).drawText(text, { x: 20, y: 100, size: 18, font });
   }
@@ -232,9 +232,9 @@ describe("Lecture 1 in Digital Systems", () => {
 
 describe("highlighting text", () => {
   /** A lecture whose PDF is real, so its text has positions for the highlight to use. */
-  async function seedPdfLecture(pages: string[]) {
+  async function seedPdfLecture(pages: string[], family?: StandardFonts) {
     const subject = await library.createSubject({ name: "Digital Systems" });
-    const lecture = await library.importLecture(subject.id, "Gates", await makePdf(pages), pages.length);
+    const lecture = await library.importLecture(subject.id, "Gates", await makePdf(pages, family), pages.length);
     return { subject, lecture };
   }
 
@@ -256,7 +256,9 @@ describe("highlighting text", () => {
     expect(highlight.rects).toHaveLength(1);
     const [box] = highlight.rects as Array<{ x: number; y: number; width: number; height: number }>;
     expect(box?.x).toBeCloseTo(20 / 300, 3);
-    expect(box?.width).toBeCloseTo(48.02 / 300, 3);
+    // Helvetica's "Gates" is 48 points wide. The five characters share the run's 177 points by count, so the box is
+    // an estimate of 40 points. Within a run, a box is only as exact as its share of the run's length.
+    expect(box?.width).toBeCloseTo(40.25 / 300, 2);
     // The line sits on a baseline at 100 points of a 200 point page, so its box runs from 114.4 to 96.4 points.
     expect(box?.y).toBeCloseTo((200 - 114.4) / 200, 3);
     expect(box?.height).toBeCloseTo(18 / 200, 3);
@@ -275,9 +277,51 @@ describe("highlighting text", () => {
       text: "truth",
     });
 
-    // "Gates and " is 88 points wide, so "truth" starts 108 points in and is 36 points wide.
-    expect(highlight.rects[0]?.x).toBeCloseTo((20 + 88.06) / 300, 3);
-    expect(highlight.rects[0]?.width).toBeCloseTo(36.02 / 300, 3);
+    // "truth" starts after 10 of the run's 22 characters. Counting characters puts it 80 points in, where the
+    // font's widths put it 88 points in, so the start is an estimate within a run.
+    expect(highlight.rects[0]?.x).toBeCloseTo((20 + 80.5) / 300, 2);
+    expect(highlight.rects[0]?.width).toBeCloseTo(40.25 / 300, 2);
+  });
+
+  it("boxes a fixed-width phrase exactly, because each character takes the same share of its run", async () => {
+    const { lecture } = await seedPdfLecture(["Gates and truth tables"], StandardFonts.Courier);
+
+    const highlight = await callJson<{ rects: Array<{ x: number; width: number }> }>("add_highlight", {
+      lectureId: lecture.id,
+      page: 1,
+      text: "truth",
+    });
+
+    // Courier's characters are 10.8 points wide at 18 points, so "truth" starts 108 points in and is 54 points wide.
+    expect(highlight.rects[0]?.x).toBeCloseTo((20 + 108) / 300, 6);
+    expect(highlight.rects[0]?.width).toBeCloseTo(54 / 300, 6);
+  });
+
+  it("refuses a letter that sits on the page's edge and stores nothing, since none of it is visible", async () => {
+    // At the edge, pdf.js keeps only the "G", and its box has no width on the page.
+    const document = await PDFDocument.create();
+    const font = await document.embedFont(StandardFonts.Helvetica);
+    document.addPage([300, 200]).drawText("Gates", { x: 300, y: 100, size: 18, font });
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const lecture = await library.importLecture(subject.id, "Gates", await document.save(), 1);
+
+    const result = await call("add_highlight", { lectureId: lecture.id, page: 1, text: "G" });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe('"G" is on page 1, but outside the visible page, so it cannot be highlighted.');
+    expect(await library.listAnnotations(lecture.id)).toEqual([]);
+  });
+
+  it("explains a phrase drawn beyond the page's edge as not on the page", async () => {
+    const document = await PDFDocument.create();
+    const font = await document.embedFont(StandardFonts.Helvetica);
+    document.addPage([300, 200]).drawText("Gates", { x: 320, y: 100, size: 18, font });
+    const subject = await library.createSubject({ name: "Digital Systems" });
+    const lecture = await library.importLecture(subject.id, "Gates", await document.save(), 1);
+
+    const result = await call("add_highlight", { lectureId: lecture.id, page: 1, text: "Gates" });
+
+    expect(textOf(result)).toBe('"Gates" is not on page 1. Check the spelling and capitals against the page text.');
   });
 
   it("asks which occurrence to take when the phrase appears more than once", async () => {
@@ -295,7 +339,8 @@ describe("highlighting text", () => {
       text: "Gates",
       occurrence: 2,
     });
-    expect(second.rects[0]?.x).toBeCloseTo((20 + 88.06) / 300, 3);
+    // The second "Gates" starts after 10 of the line's 15 characters, which is 91 points in by counting characters.
+    expect(second.rects[0]?.x).toBeCloseTo((20 + 90.72) / 300, 2);
   });
 
   it("explains a phrase that is not on the page and a page the PDF does not have", async () => {

@@ -6,8 +6,9 @@ import {
   InvalidPDFException,
   PasswordException,
   type PDFDocumentProxy,
+  Util,
 } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { layoutGlyphs, type Glyph } from "./text-layout.js";
+import { glyphsOf, type Glyph, type PlacedRun } from "./glyphs.js";
 
 const NOT_PDF = "This file is not a valid PDF. It may be corrupt, or it may not be a PDF at all.";
 const PASSWORD_PROTECTED =
@@ -46,11 +47,28 @@ export async function extractPdfText(bytes: Uint8Array): Promise<string[]> {
   });
 }
 
-/** Boxes every character of one page, with the page as the reader sees it. */
+/**
+ * Boxes every character of one page, with the page as the reader sees it. The text runs are placed with
+ * the same matrices pdf.js's text layer uses, at one pixel per point, so the boxes match the letters on screen.
+ */
 export async function readPageGlyphs(bytes: Uint8Array, pageNumber: number): Promise<Glyph[]> {
   return withDocument(bytes, async (document) => {
     const page = await document.getPage(pageNumber);
-    return layoutGlyphs(await page.getOperatorList(), { view: page.view, rotate: page.rotate });
+    const viewport = page.getViewport({ scale: 1 });
+    const content = await page.getTextContent();
+    const runs: PlacedRun[] = [];
+    for (const item of content.items) {
+      // Marked-content markers carry no text, so only the runs with a `str` are placed.
+      if (!("str" in item)) continue;
+      const vertical = content.styles[item.fontName]?.vertical ?? false;
+      runs.push({
+        str: item.str,
+        transform: Util.transform(viewport.transform, item.transform),
+        length: vertical ? item.height : item.width,
+        vertical,
+      });
+    }
+    return glyphsOf(runs, viewport.width, viewport.height);
   });
 }
 
