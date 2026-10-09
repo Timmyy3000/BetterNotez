@@ -1,6 +1,8 @@
 import { InvalidError, type Library, NotFoundError } from "@betternotez/core";
 import { z } from "zod";
+import { readPageGlyphs } from "../pdf.js";
 import type { ToolRegistry } from "../registry.js";
+import { chooseMatch, findTextMatches } from "../text-match.js";
 import {
   annotationRef,
   hexColor,
@@ -13,6 +15,8 @@ import {
 
 const TEXT_BOX_ONLY: readonly string[] = ["x", "y", "width", "height", "text", "fontSize"];
 const INK_ONLY: readonly string[] = ["points", "size"];
+/** Ochre, the palette colour that reads as a highlighter over paper. */
+const HIGHLIGHT_COLOR = "#a8701b";
 
 const annotationPatch = z
   .object({
@@ -69,8 +73,41 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
   );
 
   tools.tool(
+    "add_highlight",
+    "Highlight text on a page of a PDF in the library. Pass the text exactly as it appears on the page, with the same capitals and punctuation. Line breaks and spacing do not matter. If the text appears more than once on the page, pass occurrence to choose one. The annotation author is ai, and the student can change or remove the highlight in the app.",
+    {
+      lectureId: lectureRef,
+      page: pageRef,
+      text: z.string().min(1).describe("The text to highlight, exactly as it appears on the page."),
+      occurrence: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe("Which match to highlight when the text appears more than once on the page, counting from 1."),
+      color: hexColor.default(HIGHLIGHT_COLOR),
+    },
+    async ({ lectureId, page, text, occurrence, color }) => {
+      const { pageCount } = await library.getLecture(lectureId);
+      if (page > pageCount) {
+        throw new InvalidError(`Page ${page} is outside the ${pageCount} pages of this PDF.`);
+      }
+      const glyphs = await readPageGlyphs(await library.getPdf(lectureId), page);
+      const rects = chooseMatch(findTextMatches(glyphs, text), text, page, occurrence);
+      return library.addAnnotation(lectureId, {
+        kind: "highlight",
+        author: "ai",
+        page,
+        rects,
+        text: text.replace(/\s+/g, " ").trim(),
+        color,
+      });
+    },
+  );
+
+  tools.tool(
     "update_annotation",
-    "Change a text box or ink stroke on a piece of material. Send only the fields that apply to that annotation's kind. The author cannot change.",
+    "Change a text box or ink stroke on a piece of material. Send only the fields that apply to that annotation's kind. The author cannot change. Highlights cannot be changed here.",
     {
       lectureId: lectureRef,
       annotationId: annotationRef,
@@ -82,6 +119,9 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       );
       if (current === undefined) {
         throw new NotFoundError("Annotation", annotationId);
+      }
+      if (current.kind === "highlight") {
+        throw new InvalidError("An assistant cannot change a highlight. The student can change or remove it in the app.");
       }
 
       const changed = Object.entries(patch)
