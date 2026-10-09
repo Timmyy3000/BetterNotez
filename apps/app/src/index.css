@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Ink & Paper. Dark is the default. Light is its own designed set, not an inversion. */
+/* Ink & Paper. Warm is the default. Dark and Light are their own designed sets, not inversions. */
 @theme inline {
   --color-background: var(--background);
   --color-sidebar: var(--sidebar);
@@ -94,7 +94,7 @@
   --grain: var(--speck-light);
 }
 
-/* Dark, neutral: the same layout, fonts, grain, and vermilion, on charcoal with at most a whisper of warmth. The accent, the highlight, and the subject inks are shared with warm. */
+/* Dark, neutral: the same layout, fonts, grain, and vermilion, on charcoal with at most a whisper of warmth. The accent and the subject inks are shared with warm. */
 [data-theme="dark"] {
   color-scheme: dark;
   --shade: 0 0 0;

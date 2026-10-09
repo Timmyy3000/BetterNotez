@@ -3,7 +3,7 @@ import { cn } from "../lib/cn";
 
 /**
  * A boxed field. Its border meets the 3:1 contrast needed for a control. Focus is ink, not the accent,
- * because the accent red means an error or an overdue date, and a focus ring must not read as one.
+ * because red means an error, and a focus ring must not read as one.
  */
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return (
