@@ -55,7 +55,7 @@ export function SearchPage() {
           aria-label="Search"
           autoFocus
           className="h-11 pl-10"
-          placeholder="Search lectures, notes, text boxes, or PDF text"
+          placeholder="Search subjects, lectures, notes, text boxes, or PDF text"
           value={query}
           onChange={(event) => setParams({ q: event.target.value }, { replace: true })}
         />

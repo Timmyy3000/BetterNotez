@@ -115,7 +115,7 @@ export function PlannerPage() {
               </Button>
             }
           >
-            Every class belongs to a subject. Create one, then come back to add classes.
+            Each class belongs to a subject. Create a subject first, then come back to add its classes.
           </EmptyState>
         ) : (
           <>
@@ -131,7 +131,7 @@ export function PlannerPage() {
                     </Button>
                   }
                 >
-                  Click an empty time slot, or drag across it, to place a class on the week.
+                  Click an empty time slot, or drag across it, to add a class.
                 </EmptyState>
               </div>
             )}
