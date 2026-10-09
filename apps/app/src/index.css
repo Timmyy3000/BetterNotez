@@ -13,7 +13,7 @@
   --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
   --color-overlay: var(--overlay);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 }
