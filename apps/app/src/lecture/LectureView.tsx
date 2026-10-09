@@ -1,4 +1,4 @@
-import type { Lecture, Subject } from "@betternotez/core";
+import { DEFAULT_HIGHLIGHT_COLOR, type Lecture, type Subject } from "@betternotez/core";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ChevronLeft, FileDown, NotebookPen } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -17,6 +17,7 @@ import { Notepad } from "./Notepad";
 import { NotesResizeHandle } from "./NotesResizeHandle";
 import { PdfPages, type PdfPagesHandle } from "./PdfPages";
 import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
+import { usePendingText } from "./text-selection";
 import { useNotesWidth } from "./use-notes-width";
 import { useRefreshWhileVisible } from "./use-refresh";
 
@@ -39,6 +40,9 @@ export function LectureView({
 
   const [tool, setTool] = useState<Tool>("select");
   const [color, setColor] = useState<string>(DEFAULT_INK);
+  // The highlighter has its own marker palette, so its colour is kept apart from the pen's.
+  const [markColor, setMarkColor] = useState<string>(DEFAULT_HIGHLIGHT_COLOR);
+  const activeColor = tool === "highlighter" ? markColor : color;
   const [size, setSize] = useState<number>(PEN_SIZES[1].value);
   const [selectedId, setSelectedId] = useState<string>();
   const [editing, setEditing] = useState<EditSession>();
@@ -52,6 +56,7 @@ export function LectureView({
   const rowRef = useRef<HTMLDivElement>(null);
   const notesId = useId();
   const notes = useNotesWidth(rowRef);
+  const pendingText = usePendingText(tool === "select");
 
   const canUndo = useStore(store, (state) => state.history.past.length > 0);
   const canRedo = useStore(store, (state) => state.history.future.length > 0);
@@ -60,6 +65,12 @@ export function LectureView({
   useRefreshWhileVisible(() => store.getState().sync());
 
   const select = useCallback((id: string | undefined) => setSelectedId(id), []);
+  // A selection belongs to the tool that made it, so a different tool leaves nothing selected.
+  const chooseTool = useCallback((next: Tool) => {
+    setTool(next);
+    setSelectedId(undefined);
+    window.getSelection()?.removeAllRanges();
+  }, []);
 
   const endEdit = useCallback(
     (id: string) => {
@@ -85,9 +96,26 @@ export function LectureView({
     [store, endEdit],
   );
 
+  // Each message gets a new id, so a message that repeats is still read out.
+  const [announcement, setAnnouncement] = useState({ text: "", id: 0 });
+  const announce = useCallback((text: string) => setAnnouncement((previous) => ({ text, id: previous.id + 1 })), []);
+
   const editor = useMemo<EditorValue>(
-    () => ({ store, tool, color, size, selectedId, editing, scrollRef, select, beginEdit, endEdit }),
-    [store, tool, color, size, selectedId, editing, select, beginEdit, endEdit],
+    () => ({
+      store,
+      tool,
+      color: activeColor,
+      size,
+      selectedId,
+      editing,
+      pendingText,
+      scrollRef,
+      select,
+      beginEdit,
+      endEdit,
+      announce,
+    }),
+    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce],
   );
 
   function deleteSelected() {
@@ -119,6 +147,7 @@ export function LectureView({
       } else if (event.key === "Escape") {
         setSelectedId(undefined);
         setTool("select");
+        window.getSelection()?.removeAllRanges();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -170,9 +199,9 @@ export function LectureView({
             />
             <Toolbar
               tool={tool}
-              onTool={setTool}
-              color={color}
-              onColor={setColor}
+              onTool={chooseTool}
+              color={activeColor}
+              onColor={tool === "highlighter" ? setMarkColor : setColor}
               size={size}
               onSize={setSize}
               canUndo={canUndo}
@@ -189,6 +218,15 @@ export function LectureView({
               onPage={(next) => pages.current?.goToPage(next)}
               onZoom={(next) => setZoom(Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next)) * 100) / 100)}
             />
+            {pendingText?.complete === false && (
+              // Shown rather than stored: a highlight of the pages between is not whole until they are laid out again.
+              <p
+                role="status"
+                className="raised-edge absolute top-[72px] left-1/2 z-20 -translate-x-1/2 rounded-md border border-border bg-raised px-3 py-1.5 text-[13px] whitespace-nowrap text-muted-foreground shadow-(--lift)"
+              >
+                Scroll so the whole selection is loaded, then try again
+              </p>
+            )}
           </div>
           {notesOpen && (
             <>
@@ -206,6 +244,10 @@ export function LectureView({
               <Notepad id={notesId} lectureId={lecture.id} width={notes.width} />
             </>
           )}
+        </div>
+        {/* A live region needs no role. A role of status would collide with the notes' "Saved" indicator. */}
+        <div aria-live="polite" className="sr-only">
+          <span key={announcement.id}>{announcement.text}</span>
         </div>
       </div>
     </EditorContext>

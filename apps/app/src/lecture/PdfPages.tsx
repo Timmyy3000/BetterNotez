@@ -13,6 +13,8 @@ import {
 } from "react";
 import { displaySize, normalizeRotation, pageAtOffset, pageTops, scrollTopForPage, type PageGeometry } from "./geometry";
 import { PageOverlay } from "./PageOverlay";
+import { PageText } from "./PageText";
+import { useNearViewport } from "./use-near-viewport";
 
 /** Space above the first page, under the floating toolbar. */
 const PAGE_TOP = 80;
@@ -150,15 +152,20 @@ const PageSlot = memo(function PageSlot({
   readonly drawWidth: number;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
 }) {
+  // CSS pixels per PDF point. Annotation sizes are stored in points, so they scale with the page.
+  const scale = width / displaySize(geometry).width;
   return (
     <section
       data-page-number={pageNumber}
       aria-label={`Page ${pageNumber}`}
+      tabIndex={-1}
       className="pdf-sheet relative shrink-0"
       style={{ width, height }}
     >
       <PdfCanvas doc={doc} pageNumber={pageNumber} drawWidth={drawWidth} scrollRef={scrollRef} />
-      <PageOverlay pageNumber={pageNumber} width={width} height={height} scale={width / displaySize(geometry).width} />
+      <PageOverlay pageNumber={pageNumber} width={width} height={height} scale={scale}>
+        <PageText doc={doc} pageNumber={pageNumber} width={width} scale={scale} scrollRef={scrollRef} />
+      </PageOverlay>
     </section>
   );
 });
@@ -244,21 +251,6 @@ function useSettled(value: number, delay: number): number {
     return () => window.clearTimeout(timer);
   }, [value, settled, delay]);
   return settled;
-}
-
-function useNearViewport(target: RefObject<HTMLElement | null>, root: RefObject<HTMLElement | null>): boolean {
-  const [near, setNear] = useState(false);
-  useEffect(() => {
-    const element = target.current;
-    if (element === null) return;
-    const observer = new IntersectionObserver(
-      (entries) => setNear(entries.some((entry) => entry.isIntersecting)),
-      { root: root.current, rootMargin: "100% 0px" },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [target, root]);
-  return near;
 }
 
 async function readGeometries(doc: PDFDocumentProxy): Promise<PageGeometry[]> {

@@ -1,18 +1,20 @@
-import { AnnotationId, newId, type Ink, type TextBox } from "@betternotez/core";
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { AnnotationId, newId, type Highlight, type Ink, type TextBox } from "@betternotez/core";
+import { useMemo, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "../lib/cn";
+import { commitHighlights } from "./annotation-store";
 import { useEditor } from "./editor";
 import { distanceToPolyline, strokePath, type StrokePoint } from "./ink";
 import { type Command } from "./history";
+import { HIGHLIGHT_OPACITY, highlightAt } from "./highlight";
+import { HighlightPopover } from "./HighlightPopover";
 import { TextBoxView } from "./TextBox";
 
 const ERASER_RADIUS_PX = 10;
 /** A touch this soon after pen contact is the palm resting on the screen. */
 const PALM_WINDOW_MS = 1500;
 const HIGHLIGHTER_WIDTH = 4;
-const HIGHLIGHTER_OPACITY = 0.35;
 const NEW_TEXT_BOX = { width: 0.28, height: 0.07, fontSize: 14 } as const;
 
 let lastPenAt = Number.NEGATIVE_INFINITY;
@@ -29,6 +31,7 @@ export function PageOverlay({
   width,
   height,
   scale,
+  children,
 }: {
   readonly pageNumber: number;
   /** Size of the page on screen, in CSS pixels. */
@@ -36,8 +39,10 @@ export function PageOverlay({
   readonly height: number;
   /** CSS pixels per PDF point. Font sizes and stroke widths are stored in points. */
   readonly scale: number;
+  /** Drawn beneath the annotations, so text boxes and strokes stay on top of the page's text. */
+  readonly children?: ReactNode;
 }) {
-  const { store, tool, color, size, editing, select, beginEdit, scrollRef } = useEditor();
+  const { store, tool, color, size, editing, selectedId, pendingText, select, beginEdit, scrollRef, announce } = useEditor();
   const onPage = useStore(
     store,
     useShallow((state) => state.annotations.filter((annotation) => annotation.page === pageNumber)),
@@ -54,7 +59,56 @@ export function PageOverlay({
     [onPage, erased],
   );
   const texts = onPage.filter((annotation): annotation is TextBox => annotation.kind === "text");
+  const highlights = onPage.filter((annotation): annotation is Highlight => annotation.kind === "highlight");
   const hoveredAi = inks.find((ink) => ink.id === hovered && ink.author === "ai");
+  // The popover for a selection points at its last piece, which sits on the page the selection ends on.
+  const pendingPiece = pendingText?.pieces.at(-1);
+  const selectedHighlight = tool === "select" ? highlights.find((highlight) => highlight.id === selectedId) : undefined;
+
+  function highlightPendingText(picked: string) {
+    if (pendingText !== undefined) commitHighlights(store, pendingText.pieces, picked);
+    window.getSelection()?.removeAllRanges();
+    announce("Highlighted");
+    focusPage();
+  }
+
+  function recolorHighlight(highlight: Highlight, picked: string) {
+    if (highlight.color === picked) return;
+    store.getState().apply([{ type: "put", next: { ...highlight, color: picked }, prev: highlight }], { record: true });
+    announce("Highlighted");
+  }
+
+  function removeHighlight(highlight: Highlight) {
+    store.getState().apply([{ type: "delete", prev: highlight }], { record: true });
+    select(undefined);
+    announce("Highlight removed");
+    focusPage();
+  }
+
+  /**
+   * Moves focus to this page once its popover closes. The popover held the focus, and without this it falls to the
+   * body. The page takes focus without joining the tab order, so Tab still goes to the next control.
+   */
+  function focusPage() {
+    scrollRef.current?.querySelector<HTMLElement>(`section[data-page-number="${pageNumber}"]`)?.focus({ preventScroll: true });
+  }
+
+  function dismissPopover() {
+    window.getSelection()?.removeAllRanges();
+    select(undefined);
+    focusPage();
+  }
+
+  // A click on text, or on the page between runs of text, selects the highlight under it. Clicks on a
+  // text box or a stroke belong to that annotation, so they are ignored here.
+  function selectHighlightAt(event: MouseEvent<HTMLDivElement>) {
+    if (tool !== "select" || highlights.length === 0) return;
+    if (event.target !== event.currentTarget && !isOnText(event.target)) return;
+    if (window.getSelection()?.isCollapsed === false) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    const hit = highlightAt(highlights, (event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height);
+    if (hit !== undefined) select(hit.id);
+  }
   const draftWidth = tool === "highlighter" ? size * HIGHLIGHTER_WIDTH : size;
 
   function eraseAt(current: Extract<Gesture, { kind: "erase" }>, rect: DOMRect, sample: PointerEvent | ReactPointerEvent) {
@@ -84,7 +138,8 @@ export function PageOverlay({
 
     if (tool === "select") {
       select(undefined);
-      if (event.pointerType === "mouse") {
+      // A mouse drag on text selects it, so only a drag on the bare page scrolls.
+      if (event.pointerType === "mouse" && !isOnText(event.target)) {
         gesture.current = { kind: "pan", pointerId: event.pointerId, x: event.clientX, y: event.clientY };
         capture();
       }
@@ -172,7 +227,7 @@ export function PageOverlay({
         points: current.points.map(([x, y, pressure]) => [x, y, pressure]),
         color,
         size: current.highlighter ? size * HIGHLIGHTER_WIDTH : size,
-        ...(current.highlighter ? { opacity: HIGHLIGHTER_OPACITY } : {}),
+        ...(current.highlighter ? { opacity: HIGHLIGHT_OPACITY } : {}),
       };
       store.getState().apply([{ type: "put", next: ink }], { record: true });
     } else if (current.kind === "erase") {
@@ -202,7 +257,30 @@ export function PageOverlay({
       onPointerMove={handlePointerMove}
       onPointerUp={finishGesture}
       onPointerCancel={finishGesture}
+      onClick={selectHighlightAt}
     >
+      {highlights.flatMap((highlight) =>
+        highlight.rects.map((rect, index) => (
+          <span
+            key={`${highlight.id}-${index}`}
+            data-kind="highlight"
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute rounded-[2px] mix-blend-multiply",
+              tool === "select" && selectedId === highlight.id && "shadow-[0_0_0_1px_var(--accent)]",
+            )}
+            style={{
+              left: `${rect.x * 100}%`,
+              top: `${rect.y * 100}%`,
+              width: `${rect.width * 100}%`,
+              height: `${rect.height * 100}%`,
+              backgroundColor: highlight.color,
+              opacity: HIGHLIGHT_OPACITY,
+            }}
+          />
+        )),
+      )}
+      {children}
       <svg className="pointer-events-none absolute inset-0" width={width} height={height} aria-hidden>
         {inks.map((ink) => (
           <path
@@ -212,7 +290,11 @@ export function PageOverlay({
             d={strokePath(toPixels(ink.points, width, height), ink.size * scale)}
             fill={ink.color}
             opacity={ink.opacity}
-            className={cn(tool === "select" || tool === "eraser" ? "pointer-events-auto" : "pointer-events-none")}
+            className={cn(
+              tool === "select" || tool === "eraser" ? "pointer-events-auto" : "pointer-events-none",
+              // A translucent stroke is the highlighter's. It multiplies onto the page, as a text highlight does.
+              ink.opacity !== undefined && "mix-blend-multiply",
+            )}
             onPointerEnter={() => setHovered(ink.id)}
             onPointerLeave={() => setHovered(undefined)}
           />
@@ -221,7 +303,8 @@ export function PageOverlay({
           <path
             d={strokePath(toPixels(draft, width, height), draftWidth * scale)}
             fill={color}
-            opacity={tool === "highlighter" ? HIGHLIGHTER_OPACITY : undefined}
+            opacity={tool === "highlighter" ? HIGHLIGHT_OPACITY : undefined}
+            className={tool === "highlighter" ? "mix-blend-multiply" : undefined}
           />
         )}
       </svg>
@@ -240,6 +323,27 @@ export function PageOverlay({
         >
           AI
         </span>
+      )}
+
+      {pendingPiece?.page === pageNumber && (
+        <HighlightPopover
+          rects={pendingPiece.rects}
+          pageWidth={width}
+          pageHeight={height}
+          onPick={highlightPendingText}
+          onDismiss={dismissPopover}
+        />
+      )}
+      {selectedHighlight !== undefined && (
+        <HighlightPopover
+          rects={selectedHighlight.rects}
+          pageWidth={width}
+          pageHeight={height}
+          color={selectedHighlight.color}
+          onPick={(picked) => recolorHighlight(selectedHighlight, picked)}
+          onDelete={() => removeHighlight(selectedHighlight)}
+          onDismiss={dismissPopover}
+        />
       )}
     </div>
   );
@@ -260,6 +364,10 @@ function pressureOf(event: { readonly pressure: number }): number {
 
 function isPalm(pointerType: string): boolean {
   return pointerType === "touch" && performance.now() - lastPenAt < PALM_WINDOW_MS;
+}
+
+function isOnText(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(".textLayer") !== null;
 }
 
 function coalesced(event: ReactPointerEvent<HTMLDivElement>): PointerEvent[] {

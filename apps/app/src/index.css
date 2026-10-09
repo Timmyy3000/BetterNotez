@@ -264,13 +264,75 @@
       radial-gradient(900px 520px at 50% -10%, var(--lamp), transparent 70%), var(--grain), var(--desk);
   }
 
-  /* A PDF page lies on the desk as a sheet. The canvas paints over it once the page is drawn. */
+  /* A PDF page lies on the desk as a sheet. The canvas paints over it once the page is drawn. The sheet is its own blending group, so multiply blends (warm canvas, text highlights) meet the paper and nothing beyond it. */
   .pdf-sheet {
     background-color: var(--sheet);
+    isolation: isolate;
     box-shadow:
       0 0 0 1px rgb(var(--shade) / 0.06),
       0 2px 3px rgb(var(--shade) / 0.12),
       0 26px 46px -16px rgb(var(--shade) / 0.55);
+  }
+
+  /* pdf.js sets each span's size and place inline. These rules follow the pdf.js viewer stylesheet, which the app does not load whole. */
+  .textLayer {
+    position: absolute;
+    inset: 0;
+    overflow: clip;
+    z-index: 0;
+    line-height: 1;
+    text-align: initial;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+    transform-origin: 0 0;
+    caret-color: CanvasText;
+    --min-font-size-inv: calc(1 / var(--min-font-size));
+    --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  }
+
+  .textLayer :is(span, br) {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+  }
+
+  .textLayer > :not(.markedContent),
+  .textLayer .markedContent span:not(.markedContent) {
+    z-index: 1;
+    --font-height: 0;
+    --scale-x: 1;
+    --rotate: 0deg;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+
+  .textLayer .markedContent {
+    display: contents;
+  }
+
+  /* pdf.js's end marker: it covers the layer below the text while a press is held, so a drag past the last line keeps selecting. */
+  .textLayer .endOfContent {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
+
+  .textLayer.selecting .endOfContent {
+    top: 0;
+  }
+
+  /* A selected run of a PDF is a neutral wash of the page's ink, which no highlight colour is, so a selection never reads as a marker. */
+  .textLayer ::selection {
+    background: color-mix(in srgb, var(--sheet-ink) 18%, transparent);
+  }
+
+  .textLayer br::selection {
+    background: transparent;
   }
 
   /* Ruled notes: 28px lines under 28px of text, with one vermilion margin. Local attachment keeps the rules with the text as it scrolls. */
@@ -302,10 +364,6 @@
 /* A real PDF keeps its own colours. Dark dims the white paper a little to cut glare. Warm multiplies the page onto the cream sheet, so white paper becomes cream and black ink stays black. Sepia cannot reach cream: on white it only lowers blue. The ink overlay is not a canvas, so it keeps its colour. */
 :root[data-theme="dark"] section[data-page-number] canvas {
   filter: brightness(0.9);
-}
-
-:root[data-theme="warm"] .pdf-sheet {
-  isolation: isolate;
 }
 
 :root[data-theme="warm"] section[data-page-number] canvas {

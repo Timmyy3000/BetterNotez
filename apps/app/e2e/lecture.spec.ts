@@ -30,12 +30,17 @@ async function createSubject(page: Page, name: string): Promise<void> {
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
 
-async function importLecture(page: Page, fileName: string, pageTexts: readonly string[]): Promise<void> {
+async function importLecture(
+  page: Page,
+  fileName: string,
+  pageTexts: readonly string[],
+  bytes?: Buffer,
+): Promise<void> {
   await page.getByRole("button", { name: "Import PDF" }).click();
   await page.locator('input[type="file"]').setInputFiles({
     name: fileName,
     mimeType: "application/pdf",
-    buffer: await makePdf(pageTexts),
+    buffer: bytes ?? (await makePdf(pageTexts)),
   });
   await page.getByRole("button", { name: "Import 1 PDF" }).click();
   // The list shows the title with an en dash. The file name keeps its hyphen.
@@ -512,3 +517,240 @@ test("the annotation toolbar stays whole when the notes are as wide as they go",
   expect(toolbar.x).toBeGreaterThanOrEqual(pdfColumn.x);
   expect(toolbar.x + toolbar.width).toBeLessThanOrEqual(pdfColumn.x + pdfColumn.width);
 });
+
+test("selected text becomes a highlight that survives a reload, and can be recoloured, removed, and undone", async ({
+  page,
+}) => {
+  mkdirSync(SHOTS, { recursive: true });
+  await createSubject(page, "Highlights");
+  await importLecture(page, "Marking.pdf", ["Boolean algebra and Karnaugh maps", "Timing diagrams"]);
+  await openLecture(page, "Marking");
+  const pageOne = page.locator('[data-page-number="1"]');
+  await pageOne.locator(".textLayer span").first().waitFor({ state: "attached" });
+  const popover = page.getByRole("toolbar", { name: "Highlight color" });
+  const highlights = pageOne.locator('[data-kind="highlight"]');
+
+  // Drag across "algebra and Karnaugh", which starts and ends inside one run of text.
+  const selected = await runCharacters(page, 8, 30);
+  await page.mouse.move(selected.startX, selected.y);
+  await page.mouse.down();
+  await page.mouse.move(selected.endX, selected.y, { steps: 12 });
+  await page.mouse.up();
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Highlight in Pink" }).click();
+  await expect(popover).toBeHidden();
+  await expect(highlights).toHaveCount(1);
+  await expect(highlights).toHaveCSS("background-color", "rgb(255, 95, 160)");
+
+  await page.reload();
+  await expect(highlights).toHaveCount(1);
+
+  // A click on the highlighted words opens the popover for that highlight, with its colour pressed.
+  const word = await runCharacters(page, 18, 22);
+  await page.mouse.click(word.startX, word.y);
+  await expect(popover).toBeVisible();
+  await expect(page.getByRole("button", { name: "Highlight in Pink" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Highlight in Green" }).click();
+  await expect(highlights).toHaveCSS("background-color", "rgb(92, 207, 110)");
+
+  await page.reload();
+  await expect(highlights).toHaveCSS("background-color", "rgb(92, 207, 110)");
+
+  await page.mouse.click(word.startX, word.y);
+  await page.getByRole("button", { name: "Delete highlight" }).click();
+  await expect(highlights).toHaveCount(0);
+
+  await page.keyboard.press("Control+z");
+  await expect(highlights).toHaveCount(1);
+});
+
+test("the popover closes on Escape and the colour choice is announced, with focus kept on the page", async ({ page }) => {
+  await createSubject(page, "Keyboard");
+  await importLecture(page, "Popover.pdf", ["Boolean algebra and Karnaugh maps"]);
+  await openLecture(page, "Popover");
+  const pageOne = page.locator('[data-page-number="1"]');
+  await pageOne.locator(".textLayer span").first().waitFor({ state: "attached" });
+  const popover = page.getByRole("toolbar", { name: "Highlight color" });
+  const announced = page.locator('[aria-live="polite"].sr-only');
+  const selectFirstRun = () =>
+    selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="1"] .textLayer span');
+
+  // A keyboard user reaches a swatch and presses Escape: the popover closes and focus stays on the page.
+  await selectFirstRun();
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Highlight in Pink" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(pageOne).toBeFocused();
+
+  // Choosing a colour announces it, and leaves the focus on the page rather than on nothing.
+  await selectFirstRun();
+  await page.getByRole("button", { name: "Highlight in Pink" }).click();
+  await expect(announced).toHaveText("Highlighted");
+  await expect(pageOne).toBeFocused();
+  await expect(pageOne.locator('[data-kind="highlight"]')).toHaveCount(1);
+
+  // A different tool leaves nothing selected, so the popover for a highlight closes with it.
+  const word = await runCharacters(page, 2, 6);
+  await page.mouse.click(word.startX, word.y);
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Pen" }).click();
+  await expect(popover).toBeHidden();
+  await page.getByRole("button", { name: "Select and move" }).click();
+
+  // Deleting a highlight announces its removal and keeps the focus on the page.
+  await page.mouse.click(word.startX, word.y);
+  await page.getByRole("button", { name: "Delete highlight" }).click();
+  await expect(announced).toHaveText("Highlight removed");
+  await expect(pageOne).toBeFocused();
+  await expect(pageOne.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+test("a text selection survives a zoom, because the text is laid out again in place", async ({ page }) => {
+  await createSubject(page, "Zooming");
+  await importLecture(page, "Zoom.pdf", ["Boolean algebra and Karnaugh maps"]);
+  await openLecture(page, "Zoom");
+  await page.locator('[data-page-number="1"] .textLayer span').first().waitFor({ state: "attached" });
+
+  await selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="1"] .textLayer span');
+  await expect(page.getByRole("toolbar", { name: "Highlight color" })).toBeVisible();
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByRole("button", { name: "125%" })).toBeVisible();
+
+  // The spans were moved, not rebuilt, so the selection made in them is still there.
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString() ?? "")).toContain("Karnaugh");
+});
+
+test("a selection across two pages highlights each page, and one undo takes both back", async ({ page }) => {
+  await createSubject(page, "Karnaugh");
+  await importLecture(page, "Two pages.pdf", ["Karnaugh maps group adjacent cells", "Timing diagrams show signal changes"]);
+  await openLecture(page, "Two pages");
+  await page.locator('[data-page-number="2"] .textLayer span').first().waitFor({ state: "attached" });
+
+  await selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="2"] .textLayer span');
+  await expect(page.getByRole("toolbar", { name: "Highlight color" })).toBeVisible();
+  await page.getByRole("button", { name: "Highlight in Green" }).click();
+
+  await expect(page.locator('[data-page-number="1"] [data-kind="highlight"]')).toHaveCount(1);
+  await expect(page.locator('[data-page-number="2"] [data-kind="highlight"]')).toHaveCount(1);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+test("a selection that reaches a page whose text is not laid out is refused, and stores nothing", async ({ page }) => {
+  await createSubject(page, "Long reading");
+  await importLecture(page, "Three pages.pdf", ["First page text", "Second page text", "Third page text"]);
+  await openLecture(page, "Three pages");
+  await page.locator('[data-page-number="1"] .textLayer span').first().waitFor({ state: "attached" });
+
+  // Page 3 lies beyond the viewport's margin, so its text is not laid out and the selection cannot include it.
+  await selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="3"] .textLayer');
+  await expect(page.getByText("Scroll so the whole selection is loaded, then try again")).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Highlight color" })).toHaveCount(0);
+  await expect(page.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+/**
+ * A page whose first line is two runs with a word space between them, and whose second line is two runs that
+ * touch, as a word split across two draws does.
+ */
+async function makeSpacedPdf(): Promise<Buffer> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const size = 18;
+  const page = pdf.addPage([420, 300]);
+  page.drawText("Karnaugh", { x: 40, y: 200, size, font });
+  page.drawText("maps", { x: 40 + font.widthOfTextAtSize("Karnaugh", size) + 8, y: 200, size, font });
+  page.drawText("Gray", { x: 40, y: 150, size, font });
+  page.drawText("code", { x: 40 + font.widthOfTextAtSize("Gray", size), y: 150, size, font });
+  return Buffer.from(await pdf.save());
+}
+
+/** The highlights stored in the library, read from the browser's IndexedDB as the app wrote them. */
+async function storedHighlights(page: Page): Promise<Array<{ page: number; text: string }>> {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("betternotez");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const files = await new Promise<Array<[IDBValidKey, unknown]>>((resolve, reject) => {
+      const found: Array<[IDBValidKey, unknown]> = [];
+      const cursor = database.transaction("files").objectStore("files").openCursor();
+      cursor.onsuccess = () => {
+        const next = cursor.result;
+        if (next === null) {
+          resolve(found);
+          return;
+        }
+        found.push([next.key, next.value]);
+        next.continue();
+      };
+      cursor.onerror = () => reject(cursor.error);
+    });
+    database.close();
+
+    const highlights: Array<{ page: number; text: string }> = [];
+    for (const [key, value] of files) {
+      if (typeof key !== "string" || !key.endsWith("/annotations.json") || !(value instanceof Uint8Array)) continue;
+      const stored = JSON.parse(new TextDecoder().decode(value)) as Array<{ kind: string; page: number; text?: string }>;
+      for (const annotation of stored) {
+        if (annotation.kind === "highlight") highlights.push({ page: annotation.page, text: annotation.text ?? "" });
+      }
+    }
+    return highlights;
+  });
+}
+
+test("a highlight reads as the page does: a word space where the page has one, and none where two runs touch", async ({
+  page,
+}) => {
+  await createSubject(page, "Typesetting");
+  await importLecture(page, "Word spacing.pdf", [], await makeSpacedPdf());
+  await openLecture(page, "Word spacing");
+  await page.locator('[data-page-number="1"] .textLayer span').first().waitFor({ state: "attached" });
+
+  // From the start of "Karnaugh" to the end of "code": every run on both lines, as a drag over them would take.
+  await page.evaluate(() => {
+    const spans = Array.from(document.querySelectorAll<HTMLElement>('[data-page-number="1"] .textLayer span'));
+    const first = spans[0]?.firstChild;
+    const last = spans.at(-1)?.firstChild;
+    if (!(first instanceof Text) || !(last instanceof Text)) throw new Error("the page has no text runs");
+    window.getSelection()?.setBaseAndExtent(first, 0, last, last.length);
+  });
+  await page.getByRole("button", { name: "Highlight in Yellow" }).click();
+
+  await expect.poll(() => storedHighlights(page)).toEqual([{ page: 1, text: "Karnaugh maps Graycode" }]);
+});
+
+/** Selects from the start of the first run to the end of the second, as a drag across pages would. */
+async function selectAcrossPages(page: Page, from: string, to: string): Promise<void> {
+  await page.evaluate(
+    ({ fromSelector, toSelector }) => {
+      const start = document.querySelector(fromSelector)?.firstChild;
+      if (!(start instanceof Text)) throw new Error("no text at the start of the selection");
+      const end = document.querySelector(toSelector);
+      if (end === null) throw new Error("no place at the end of the selection");
+      const endNode = end.firstChild instanceof Text ? end.firstChild : end;
+      const endOffset = endNode instanceof Text ? endNode.length : 0;
+      window.getSelection()?.setBaseAndExtent(start, 0, endNode, endOffset);
+    },
+    { fromSelector: from, toSelector: to },
+  );
+}
+
+/** Where the characters from `from` to `to` of the page's first text run sit on screen, for a mouse drag over them. */
+async function runCharacters(page: Page, from: number, to: number): Promise<{ startX: number; endX: number; y: number }> {
+  return page.evaluate(
+    (bounds) => {
+      const node = document.querySelector('[data-page-number="1"] .textLayer span')?.firstChild;
+      if (!(node instanceof Text)) throw new Error("page 1 has no text run");
+      const range = document.createRange();
+      range.setStart(node, bounds.from);
+      range.setEnd(node, bounds.to);
+      const box = range.getBoundingClientRect();
+      return { startX: box.left + 1, endX: box.right - 1, y: box.top + box.height / 2 };
+    },
+    { from, to },
+  );
+}
