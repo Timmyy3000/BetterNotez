@@ -83,6 +83,22 @@ test("planner: add classes, drag one to another day, and keep the timetable afte
   expect(pageErrors).toEqual([]);
 });
 
+test("planner: arrow keys move and resize a focused class", async ({ page }) => {
+  await createSubject(page, "Keyboard class");
+  await page.getByRole("complementary").getByRole("link", { name: "Planner" }).click();
+  await addTuesdayClass(page, "Keyboard class", "09:00", "10:00");
+
+  const block = page.locator("[data-block-id]").first();
+  await block.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(block).toHaveAttribute("aria-label", /09:15–10:15/);
+  await page.keyboard.press("Shift+ArrowDown");
+  await expect(block).toHaveAttribute("aria-label", /09:15–10:30/);
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("group", { name: "Monday" }).locator("[data-block-id]")).toHaveCount(1);
+  await expect(block).toBeFocused();
+});
+
 /** Adds a class on Tuesday through the dialog. */
 async function addTuesdayClass(page: Page, subject: string, start: string, end: string, location?: string): Promise<void> {
   await page.getByRole("button", { name: /^Add (your first )?class$/ }).first().click();
