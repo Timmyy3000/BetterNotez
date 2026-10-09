@@ -510,7 +510,6 @@ function screensFor(routes) {
       route: `search?q=${SEARCH_QUERY}`,
       ready: (page) => page.getByRole("searchbox", { name: "Search" }).waitFor(),
     },
-    { name: "about", route: "about", ready: waitForMain },
     { name: "settings", route: "settings", ready: waitForMain },
   ];
 }
@@ -538,12 +537,68 @@ async function shoot(page, scheme, screen, captured, skipped) {
   }
 }
 
+/** Defines the Tauri bridge the app checks for, with only the two path calls the Settings page makes. */
+function stubDesktopShell() {
+  window.__TAURI_INTERNALS__ = {
+    invoke: async (command, args) => {
+      if (command === "plugin:path|resolve_directory") return "/home/student";
+      if (command === "plugin:path|join") return args.paths.join("/");
+      throw new Error(`not available in the screenshot stub: ${command}`);
+    },
+  };
+}
+
+/** The New subject dialog, opened from the sidebar. */
+async function shootDialog(page, scheme, captured, skipped) {
+  const file = `${scheme}-dialog-new-subject.png`;
+  try {
+    await page.goto(`${BASE_URL}/#/`);
+    await settle(page);
+    await page.getByRole("button", { name: "New subject", exact: true }).click();
+    await page.getByRole("dialog", { name: "New subject", exact: true }).waitFor();
+    await settle(page);
+    await page.screenshot({ path: join(outDir, file), animations: "disabled", caret: "hide" });
+    captured.push({ file, scheme, screen: "dialog-new-subject", route: "#/" });
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "detached" });
+  } catch (error) {
+    skipped.push({ file, reason: firstLine(error) });
+  }
+}
+
+/**
+ * The Settings page as the desktop app shows it, then the toast from copying the library folder.
+ * The stub only changes the page's own platform check. Storage was chosen at startup and stays in the browser.
+ */
+async function shootDesktopSettings(page, scheme, captured, skipped) {
+  const file = `${scheme}-settings-desktop.png`;
+  const toastFile = `${scheme}-toast-copied.png`;
+  const copyFolder = page.getByRole("button", { name: "Copy Library folder", exact: true });
+  try {
+    await page.evaluate(stubDesktopShell);
+    await page.goto(`${BASE_URL}/#/settings`);
+    await settle(page);
+    await copyFolder.waitFor();
+    await page.screenshot({ path: join(outDir, file), animations: "disabled", caret: "hide" });
+    captured.push({ file, scheme, screen: "settings-desktop", route: "#/settings" });
+    await copyFolder.click();
+    await page.getByText("Library folder copied", { exact: true }).waitFor();
+    await settle(page);
+    await page.screenshot({ path: join(outDir, toastFile), animations: "disabled", caret: "hide" });
+    captured.push({ file: toastFile, scheme, screen: "toast-copied", route: "#/settings" });
+  } catch (error) {
+    skipped.push({ file, reason: firstLine(error) });
+  }
+}
+
 const captured = [];
 const skipped = [];
 const routes = { subjects: {}, lecture: undefined };
 const browser = await chromium.launch({ args: ["--no-sandbox"] });
 try {
   const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+  // The copy button needs clipboard access to show its success toast.
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE_URL });
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
   page.on("pageerror", (error) => pageErrors.add(error.message));
@@ -554,6 +609,8 @@ try {
     for (const screen of screensFor(routes)) {
       await shoot(page, scheme, screen, captured, skipped);
     }
+    await shootDialog(page, scheme, captured, skipped);
+    await shootDesktopSettings(page, scheme, captured, skipped);
   }
 } finally {
   await browser.close();
