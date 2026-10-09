@@ -101,7 +101,7 @@ export function HomePage() {
               return (
                 <li key={task.id} className="border-t border-border">
                   <Link
-                    to="/tasks"
+                    to={`/tasks?task=${task.id}`}
                     className="grid grid-cols-[178px_minmax(0,1fr)_200px] items-baseline gap-5 py-3 transition-colors hover:text-accent"
                   >
                     <span className={cn("text-sm tabular-nums", overdue ? "font-semibold text-foreground" : "text-muted-foreground")}>

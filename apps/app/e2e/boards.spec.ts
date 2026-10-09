@@ -83,6 +83,25 @@ test("planner: add classes, drag one to another day, and keep the timetable afte
   expect(pageErrors).toEqual([]);
 });
 
+test("home: a due row opens its task", async ({ page }) => {
+  // The Due ledger shows only once a subject exists.
+  await createSubject(page, "Due subject");
+  await page.getByRole("complementary").getByRole("link", { name: "Tasks" }).click();
+  const todoInput = page.getByRole("textbox", { name: "Add a task to To do" });
+  await todoInput.fill("Ledger task");
+  await todoInput.press("Enter");
+  await page.getByText("Ledger task", { exact: true }).click();
+  const editTask = page.getByRole("dialog", { name: "Edit task" });
+  await editTask.getByLabel("Due date").fill("2026-10-12");
+  await editTask.getByRole("button", { name: "Save changes" }).click();
+  await expect(editTask).toHaveCount(0);
+
+  await page.goto("/");
+  await page.getByRole("link", { name: /Ledger task/ }).click();
+  await expect(page.getByRole("dialog", { name: "Edit task" })).toBeVisible();
+  await expect(page).toHaveURL(/\/tasks$/);
+});
+
 test("planner: arrow keys move and resize a focused class", async ({ page }) => {
   await createSubject(page, "Keyboard class");
   await page.getByRole("complementary").getByRole("link", { name: "Planner" }).click();
