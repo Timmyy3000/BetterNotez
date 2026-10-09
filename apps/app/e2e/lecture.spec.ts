@@ -318,11 +318,14 @@ test("the keyboard moves the notes edge in steps and to its limits, and a double
   await expect(edge).toHaveAttribute("aria-orientation", "vertical");
   await expect(edge).toHaveAttribute("aria-valuemin", "280");
   await expect(edge).toHaveAttribute("aria-valuenow", "340");
-  await edge.focus();
+  // At rest the edge is only the panel's hairline, so its accent line and grip are hidden.
+  await expect(edge.locator("span").first()).toHaveCSS("opacity", "0");
 
-  // Left moves the edge left, which gives the notes more room, as dragging does.
-  await page.keyboard.press("ArrowLeft");
+  // Left moves the edge left, which gives the notes more room, as dragging does. Pressing a key also focuses it
+  // from the keyboard, which is when the accent line shows.
+  await edge.press("ArrowLeft");
   await expect(edge).toHaveAttribute("aria-valuenow", "356");
+  await expect(edge.locator("span").first()).toHaveCSS("opacity", "1");
   expect(await notesWidth(page)).toBeCloseTo(356, 0);
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
