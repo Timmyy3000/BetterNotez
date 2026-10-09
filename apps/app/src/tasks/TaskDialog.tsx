@@ -65,7 +65,7 @@ export function TaskDialog({
 
   if (confirmingDelete) {
     return (
-      <ModalDialog title={`Delete ${task.title}?`} description="There is no trash, so this cannot be undone." onClose={onClose}>
+      <ModalDialog title={`Delete ${task.title}?`} description="This can't be undone." onClose={onClose}>
         <DialogActions>
           <Button onClick={() => setConfirmingDelete(false)} disabled={saving}>
             Cancel
