@@ -51,11 +51,11 @@ function notesHeading(page: Page): Locator {
 }
 
 function notesField(page: Page): Locator {
-  return page.getByRole("textbox", { name: "Material notes" });
+  return page.getByRole("textbox", { name: /^Notes for page \d+$/ });
 }
 
 function notesStatus(page: Page): Locator {
-  return page.getByRole("status");
+  return page.getByRole("complementary", { name: "Notes" }).getByText(/^(Saved|Saving…|Loading…)$/);
 }
 
 /** The text of a file in the web library, found by its name. The test library holds one material. */
@@ -97,6 +97,8 @@ async function writeNote(page: Page, text: string): Promise<void> {
 async function scrollToPage(page: Page, number: number): Promise<void> {
   const column = await page.locator(".desk").boundingBox();
   if (column === null) throw new Error("the PDF column is not on screen");
+  // While the notes field has focus the panel stays on its page, so leave the field first.
+  await notesField(page).blur();
   await page.mouse.move(column.x + column.width / 2, column.y + column.height / 2);
   await expect
     .poll(

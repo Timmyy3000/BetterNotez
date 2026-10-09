@@ -119,11 +119,11 @@ test("text box, pen stroke, notes, and export survive a reload, and undo works",
   // Notes belong to a page. The pen work above left the view on page 2, so this note goes on page 1, which a reload opens.
   await page.getByRole("button", { name: "Previous page" }).click();
   await page.getByRole("button", { name: "Notes" }).click();
-  await page.getByRole("textbox", { name: "Material notes" }).fill("Remember the truth table");
-  await expect(page.getByRole("status")).toHaveText("Saved");
+  await page.getByRole("textbox", { name: /^Notes for page \d+$/ }).fill("Remember the truth table");
+  await expect(page.getByRole("complementary", { name: "Notes" }).getByText("Saved", { exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Notes" }).click();
-  await expect(page.getByRole("textbox", { name: "Material notes" })).toHaveValue("Remember the truth table");
+  await expect(page.getByRole("textbox", { name: /^Notes for page \d+$/ })).toHaveValue("Remember the truth table");
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -204,7 +204,7 @@ test("the lecture viewer renders in dark mode", async ({ page }) => {
   await importLecture(page, "Bonds.pdf", ["Ionic", "Covalent"]);
   await openLecture(page, "Bonds");
   await page.getByRole("button", { name: "Notes" }).click();
-  await expect(page.getByRole("textbox", { name: "Material notes" })).toBeEnabled();
+  await expect(page.getByRole("textbox", { name: /^Notes for page \d+$/ })).toBeEnabled();
   await page.screenshot({ path: `${SHOTS}/lecture-dark.png`, animations: "disabled" });
 });
 
