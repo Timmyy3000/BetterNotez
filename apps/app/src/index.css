@@ -351,6 +351,10 @@
   animation-delay: calc(var(--i, 0) * 70ms);
 }
 
+:root[data-played] .rise {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
