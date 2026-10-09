@@ -58,7 +58,7 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
         )}
         <p
           className={cn(
-            "min-w-0 flex-1 font-serif text-[23px] leading-[1.16] break-words",
+            "min-w-0 flex-1 font-serif text-[23px] leading-[1.16] break-words text-pretty",
             done && "text-muted-foreground",
           )}
         >

@@ -323,7 +323,7 @@ function AddTaskForm({ label, onAdd }: { readonly label: string; readonly onAdd:
         maxLength={200}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        className="min-w-0 flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:font-serif placeholder:text-xl placeholder:text-faint placeholder:italic"
+        className="min-w-0 flex-1 bg-transparent text-[15px] text-foreground placeholder:text-faint"
       />
     </form>
   );
