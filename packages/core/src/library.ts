@@ -4,6 +4,7 @@ import { LectureId, SubjectId, newId, type AnnotationId } from "./ids.js";
 import {
   Annotation,
   type AnnotationDraft,
+  type Highlight,
   type Ink,
   Lecture,
   LibraryFile,
@@ -39,7 +40,10 @@ export interface LecturePatch {
   readonly date?: string | null;
 }
 
-export type AnnotationPatch = Partial<Omit<TextBox, "id" | "kind">> | Partial<Omit<Ink, "id" | "kind">>;
+export type AnnotationPatch =
+  | Partial<Omit<TextBox, "id" | "kind">>
+  | Partial<Omit<Ink, "id" | "kind">>
+  | Partial<Omit<Highlight, "id" | "kind">>;
 
 export interface PlannerCardInput {
   readonly subjectId: string;

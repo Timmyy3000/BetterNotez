@@ -370,6 +370,87 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       const reopened = new Library(env.open(), { now: () => CLOCK });
       expect(await reopened.listAnnotations(lecture.id)).toEqual([stroke]);
     });
+
+    it("keeps a highlight's boxes, text, and colour", async () => {
+      const lecture = await importSampleLecture();
+      const highlight = await library.addAnnotation(lecture.id, {
+        kind: "highlight",
+        page: 2,
+        author: "user",
+        rects: [
+          { x: 0.1, y: 0.2, width: 0.4, height: 0.03 },
+          { x: 0.1, y: 0.24, width: 0.25, height: 0.03 },
+        ],
+        text: "Full adder circuit",
+        color: "#a8701b",
+      });
+
+      const reopened = new Library(env.open(), { now: () => CLOCK });
+      expect(await reopened.listAnnotations(lecture.id)).toEqual([highlight]);
+      expect(highlight).toMatchObject({ kind: "highlight", text: "Full adder circuit", rects: expect.any(Array) });
+    });
+
+    it("rejects a highlight with no boxes or no text", async () => {
+      const lecture = await importSampleLecture();
+      const highlight = {
+        kind: "highlight" as const,
+        page: 1,
+        author: "user" as const,
+        rects: [{ x: 0, y: 0, width: 0.1, height: 0.1 }],
+        text: "Gates",
+        color: "#a8701b",
+      };
+
+      await expect(library.addAnnotation(lecture.id, { ...highlight, rects: [] })).rejects.toBeInstanceOf(ZodError);
+      await expect(library.addAnnotation(lecture.id, { ...highlight, text: "  " })).rejects.toBeInstanceOf(ZodError);
+    });
+
+    it("rejects a highlight on a page the lecture does not have", async () => {
+      const lecture = await importSampleLecture();
+      await expect(
+        library.addAnnotation(lecture.id, {
+          kind: "highlight",
+          page: 4,
+          author: "user",
+          rects: [{ x: 0, y: 0, width: 0.1, height: 0.1 }],
+          text: "too far",
+          color: "#a8701b",
+        }),
+      ).rejects.toBeInstanceOf(InvalidError);
+    });
+
+    it("reads annotations written before highlights existed", async () => {
+      const lecture = await importSampleLecture();
+      const [subject] = await library.listSubjects();
+      if (subject === undefined) throw new Error("the sample lecture has no subject");
+      const text = {
+        id: "01OLDTEXTBOX0000000000000",
+        kind: "text",
+        page: 1,
+        author: "user",
+        x: 0.1,
+        y: 0.1,
+        width: 0.2,
+        height: 0.1,
+        text: "Written by an older version",
+        fontSize: 12,
+        color: "#111111",
+      };
+      const stroke = {
+        id: "01OLDINK00000000000000000",
+        kind: "ink",
+        page: 2,
+        author: "user",
+        points: [[0.2, 0.2, 0.5]],
+        color: "#2b4b78",
+        size: 2,
+      };
+      await env
+        .open()
+        .writeText(`subjects/${subject.id}/lectures/${lecture.id}/annotations.json`, JSON.stringify([text, stroke]));
+
+      expect(await library.listAnnotations(lecture.id)).toEqual([text, stroke]);
+    });
   });
 
   describe("notes", () => {
