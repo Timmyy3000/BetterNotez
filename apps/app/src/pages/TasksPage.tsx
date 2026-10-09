@@ -227,7 +227,7 @@ export function TasksPage() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="mt-8 grid items-start gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           {TaskStatus.options.map((status) => (
             <BoardColumn
               key={status}
