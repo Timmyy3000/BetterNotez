@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { cn } from "../lib/cn";
 import { clampNotesWidth, NOTES_DEFAULT_WIDTH, NOTES_KEY_STEP, type NotesWidthBounds } from "./notes-width";
 
@@ -36,6 +36,12 @@ export function NotesResizeHandle({
   readonly onResizeEnd: (width: number) => void;
 }) {
   const drag = useRef<Drag | undefined>(undefined);
+
+  // The edge can unmount mid-drag, as when the window narrows, and then no pointer-up reaches it. Ending the drag
+  // here keeps the parent from being left in the dragging state.
+  useEffect(() => {
+    return () => onDraggingChange(false);
+  }, [onDraggingChange]);
 
   function change(next: number) {
     const clamped = clampNotesWidth(next, bounds);
