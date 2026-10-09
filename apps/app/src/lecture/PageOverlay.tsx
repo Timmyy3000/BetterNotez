@@ -42,7 +42,7 @@ export function PageOverlay({
   /** Drawn beneath the annotations, so text boxes and strokes stay on top of the page's text. */
   readonly children?: ReactNode;
 }) {
-  const { store, tool, color, size, editing, selectedId, pendingText, select, beginEdit, scrollRef } = useEditor();
+  const { store, tool, color, size, editing, selectedId, pendingText, select, beginEdit, scrollRef, announce } = useEditor();
   const onPage = useStore(
     store,
     useShallow((state) => state.annotations.filter((annotation) => annotation.page === pageNumber)),
@@ -68,16 +68,35 @@ export function PageOverlay({
   function highlightPendingText(picked: string) {
     if (pendingText !== undefined) commitHighlights(store, pendingText.pieces, picked);
     window.getSelection()?.removeAllRanges();
+    announce("Highlighted");
+    focusPage();
   }
 
   function recolorHighlight(highlight: Highlight, picked: string) {
     if (highlight.color === picked) return;
     store.getState().apply([{ type: "put", next: { ...highlight, color: picked }, prev: highlight }], { record: true });
+    announce("Highlighted");
   }
 
   function removeHighlight(highlight: Highlight) {
     store.getState().apply([{ type: "delete", prev: highlight }], { record: true });
     select(undefined);
+    announce("Highlight removed");
+    focusPage();
+  }
+
+  /**
+   * Moves focus to this page once its popover closes. The popover held the focus, and without this it falls to the
+   * body. The page takes focus without joining the tab order, so Tab still goes to the next control.
+   */
+  function focusPage() {
+    scrollRef.current?.querySelector<HTMLElement>(`section[data-page-number="${pageNumber}"]`)?.focus({ preventScroll: true });
+  }
+
+  function dismissPopover() {
+    window.getSelection()?.removeAllRanges();
+    select(undefined);
+    focusPage();
   }
 
   // A click on text, or on the page between runs of text, selects the highlight under it. Clicks on a
@@ -312,6 +331,7 @@ export function PageOverlay({
           pageWidth={width}
           pageHeight={height}
           onPick={highlightPendingText}
+          onDismiss={dismissPopover}
         />
       )}
       {selectedHighlight !== undefined && (
@@ -322,6 +342,7 @@ export function PageOverlay({
           color={selectedHighlight.color}
           onPick={(picked) => recolorHighlight(selectedHighlight, picked)}
           onDelete={() => removeHighlight(selectedHighlight)}
+          onDismiss={dismissPopover}
         />
       )}
     </div>

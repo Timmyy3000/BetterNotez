@@ -23,6 +23,8 @@ export interface EditorValue {
   readonly select: (id: string | undefined) => void;
   readonly beginEdit: (session: EditSession) => void;
   readonly endEdit: (id: string) => void;
+  /** Says a change to assistive technology, in the page's live region. */
+  readonly announce: (message: string) => void;
   /** Text the student has selected with the select tool and not yet given a highlight colour. */
   readonly pendingText?: TextSelection;
 }

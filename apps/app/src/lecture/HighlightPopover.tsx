@@ -1,6 +1,6 @@
 import { HIGHLIGHT_COLORS, type PageRect } from "@betternotez/core";
 import { Trash2 } from "lucide-react";
-import { useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { cn } from "../lib/cn";
 import { anchorOf, popoverBelow } from "./highlight";
 import { ColorSwatch, Divider, IconToggle } from "./Toolbar";
@@ -20,6 +20,7 @@ export function HighlightPopover({
   color,
   onPick,
   onDelete,
+  onDismiss,
 }: {
   /** The boxes the popover points at, in page fractions. */
   readonly rects: readonly PageRect[];
@@ -30,6 +31,8 @@ export function HighlightPopover({
   readonly color?: string;
   readonly onPick: (color: string) => void;
   readonly onDelete?: () => void;
+  /** Closes the popover when Escape is pressed while its controls have the focus. */
+  readonly onDismiss?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const anchor = anchorOf(rects);
@@ -57,6 +60,12 @@ export function HighlightPopover({
       // A press on a swatch is for the popover alone. Left to bubble, the page would clear the selection it is for.
       onPointerDown={(event: PointerEvent) => event.stopPropagation()}
       onMouseDown={(event: MouseEvent) => event.preventDefault()}
+      onKeyDown={(event: KeyboardEvent) => {
+        if (event.key !== "Escape" || onDismiss === undefined) return;
+        // Escape here closes the popover alone, so the tool the student chose stays as it is.
+        event.stopPropagation();
+        onDismiss();
+      }}
       className={cn(
         "raised-edge absolute z-10 flex items-center gap-0.5 rounded-md border border-border bg-raised p-[5px] shadow-(--lift) animate-[fade-in_160ms_ease-out]",
         place === undefined && "invisible",

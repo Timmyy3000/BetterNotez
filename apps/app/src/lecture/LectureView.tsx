@@ -95,9 +95,26 @@ export function LectureView({
     [store, endEdit],
   );
 
+  // Each message gets a new id, so a message that repeats is still read out.
+  const [announcement, setAnnouncement] = useState({ text: "", id: 0 });
+  const announce = useCallback((text: string) => setAnnouncement((previous) => ({ text, id: previous.id + 1 })), []);
+
   const editor = useMemo<EditorValue>(
-    () => ({ store, tool, color: activeColor, size, selectedId, editing, pendingText, scrollRef, select, beginEdit, endEdit }),
-    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit],
+    () => ({
+      store,
+      tool,
+      color: activeColor,
+      size,
+      selectedId,
+      editing,
+      pendingText,
+      scrollRef,
+      select,
+      beginEdit,
+      endEdit,
+      announce,
+    }),
+    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce],
   );
 
   function deleteSelected() {
@@ -226,6 +243,9 @@ export function LectureView({
               <Notepad id={notesId} lectureId={lecture.id} width={notes.width} />
             </>
           )}
+        </div>
+        <div role="status" aria-live="polite" className="sr-only">
+          <span key={announcement.id}>{announcement.text}</span>
         </div>
       </div>
     </EditorContext>

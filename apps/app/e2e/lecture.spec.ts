@@ -564,6 +564,41 @@ test("selected text becomes a highlight that survives a reload, and can be recol
   await expect(highlights).toHaveCount(1);
 });
 
+test("the popover closes on Escape and the colour choice is announced, with focus kept on the page", async ({ page }) => {
+  await createSubject(page, "Keyboard");
+  await importLecture(page, "Popover.pdf", ["Boolean algebra and Karnaugh maps"]);
+  await openLecture(page, "Popover");
+  const pageOne = page.locator('[data-page-number="1"]');
+  await pageOne.locator(".textLayer span").first().waitFor({ state: "attached" });
+  const popover = page.getByRole("toolbar", { name: "Highlight color" });
+  const announced = page.locator('[aria-live="polite"].sr-only');
+  const selectFirstRun = () =>
+    selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="1"] .textLayer span');
+
+  // A keyboard user reaches a swatch and presses Escape: the popover closes and focus stays on the page.
+  await selectFirstRun();
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Highlight in Pink" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(pageOne).toBeFocused();
+
+  // Choosing a colour announces it, and leaves the focus on the page rather than on nothing.
+  await selectFirstRun();
+  await page.getByRole("button", { name: "Highlight in Pink" }).click();
+  await expect(announced).toHaveText("Highlighted");
+  await expect(pageOne).toBeFocused();
+  await expect(pageOne.locator('[data-kind="highlight"]')).toHaveCount(1);
+
+  // Deleting a highlight announces its removal and keeps the focus on the page.
+  const word = await runCharacters(page, 2, 6);
+  await page.mouse.click(word.startX, word.y);
+  await page.getByRole("button", { name: "Delete highlight" }).click();
+  await expect(announced).toHaveText("Highlight removed");
+  await expect(pageOne).toBeFocused();
+  await expect(pageOne.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
 test("a selection across two pages highlights each page, and one undo takes both back", async ({ page }) => {
   await createSubject(page, "Karnaugh");
   await importLecture(page, "Two pages.pdf", ["Karnaugh maps group adjacent cells", "Timing diagrams show signal changes"]);
