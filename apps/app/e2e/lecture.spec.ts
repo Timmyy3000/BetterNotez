@@ -256,3 +256,106 @@ test("a change made in another window appears here without a reload", async ({ p
   await expect(page.getByRole("textbox", { name: "Text box" })).toHaveValue("Written elsewhere", { timeout: 10_000 });
   await other.close();
 });
+
+function notesPanel(page: Page): Locator {
+  return page.getByRole("complementary", { name: "Notes" });
+}
+
+function notesEdge(page: Page): Locator {
+  return page.getByRole("separator", { name: "Resize notes" });
+}
+
+async function notesWidth(page: Page): Promise<number> {
+  const box = await notesPanel(page).boundingBox();
+  if (box === null) throw new Error("notes panel is not on screen");
+  return box.width;
+}
+
+/** Drags the notes edge by a number of pixels. Negative is left, which widens the notes. */
+async function dragNotesEdge(page: Page, dx: number): Promise<void> {
+  const box = await notesEdge(page).boundingBox();
+  if (box === null) throw new Error("notes edge is not on screen");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y, { steps: 8 });
+  await page.mouse.up();
+}
+
+test("the notes edge drags wider and narrower, the PDF refits, and the width survives a reload", async ({ page }) => {
+  await createSubject(page, "Markets");
+  await importLecture(page, "Supply curves.pdf", ["Supply", "Demand"]);
+  await openLecture(page, "Supply curves");
+  await page.getByRole("button", { name: "Notes" }).click();
+  await expect(notesEdge(page)).toBeVisible();
+  const before = await notesWidth(page);
+  expect(before).toBeCloseTo(340, 0);
+
+  const pdfPage = page.locator('[data-page-number="1"]');
+  const pageBefore = (await pdfPage.boundingBox())?.width ?? 0;
+
+  await dragNotesEdge(page, -120);
+  expect(await notesWidth(page)).toBeCloseTo(before + 120, 0);
+  await expect.poll(async () => (await pdfPage.boundingBox())?.width ?? 0).toBeCloseTo(pageBefore - 120, 0);
+
+  await dragNotesEdge(page, 60);
+  expect(await notesWidth(page)).toBeCloseTo(before + 60, 0);
+
+  expect(await page.evaluate(() => localStorage.getItem("betternotez.notesWidth"))).toBe(String(before + 60));
+  await page.reload();
+  await page.getByRole("button", { name: "Notes" }).click();
+  expect(await notesWidth(page)).toBeCloseTo(before + 60, 0);
+});
+
+test("the keyboard moves the notes edge in steps and to its limits, and a double click resets it", async ({ page }) => {
+  await createSubject(page, "Statistics");
+  await importLecture(page, "Sampling.pdf", ["Sampling"]);
+  await openLecture(page, "Sampling");
+  await page.getByRole("button", { name: "Notes" }).click();
+
+  const edge = notesEdge(page);
+  await expect(edge).toHaveAttribute("aria-orientation", "vertical");
+  await expect(edge).toHaveAttribute("aria-valuemin", "280");
+  await expect(edge).toHaveAttribute("aria-valuenow", "340");
+  await edge.focus();
+
+  // Left moves the edge left, which gives the notes more room, as dragging does.
+  await page.keyboard.press("ArrowLeft");
+  await expect(edge).toHaveAttribute("aria-valuenow", "356");
+  expect(await notesWidth(page)).toBeCloseTo(356, 0);
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(edge).toHaveAttribute("aria-valuenow", "324");
+
+  // 60% of the 1216px lecture area at the 1280px desktop viewport, less the rail.
+  await page.keyboard.press("End");
+  await expect(edge).toHaveAttribute("aria-valuenow", "729");
+  expect(await notesWidth(page)).toBeCloseTo(729, 0);
+  await page.keyboard.press("Home");
+  await expect(edge).toHaveAttribute("aria-valuenow", "280");
+  expect(await notesWidth(page)).toBeCloseTo(280, 0);
+
+  await edge.dblclick();
+  await expect(edge).toHaveAttribute("aria-valuenow", "340");
+  expect(await notesWidth(page)).toBeCloseTo(340, 0);
+});
+
+test("the notes edge is not offered in a window too narrow for both panels, and the chosen width returns when it fits", async ({
+  page,
+}) => {
+  await createSubject(page, "Geometry");
+  await importLecture(page, "Triangles.pdf", ["Triangles"]);
+  await openLecture(page, "Triangles");
+  await page.getByRole("button", { name: "Notes" }).click();
+  await dragNotesEdge(page, -120);
+  expect(await notesWidth(page)).toBeCloseTo(460, 0);
+
+  await page.setViewportSize({ width: 600, height: 800 });
+  await expect(notesEdge(page)).toHaveCount(0);
+  expect(await notesWidth(page)).toBeCloseTo(340, 0);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(notesEdge(page)).toBeVisible();
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(460, 0);
+});
