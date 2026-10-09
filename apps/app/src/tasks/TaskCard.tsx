@@ -1,13 +1,12 @@
 import type { Subject, Task } from "@betternotez/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, Pencil } from "lucide-react";
+import { CalendarDays, Check, Pencil } from "lucide-react";
 import type { PointerEvent, KeyboardEvent } from "react";
 import { cn } from "../lib/cn";
 import { formatLectureDate } from "../lib/format";
 import { subjectTone } from "../lib/subject-colors";
 import { iconButtonClass } from "../ui/button";
-import { cardClass } from "../ui/card";
 
 export interface TaskCardInfo {
   readonly task: Task;
@@ -34,20 +33,42 @@ export function SortableTaskCard({ info, onEdit }: { readonly info: TaskCardInfo
   );
 }
 
-/** The card's look without drag behavior, so the drag overlay can show a copy of it. */
+/**
+ * The card's look without drag behavior, so the drag overlay can show a copy of it.
+ * It is an index card: paper, a fine rule, and a vermilion spine when the task is overdue.
+ */
 export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; readonly onEdit?: () => void }) {
   const { task, subject, lectureTitle, overdue } = info;
+  const done = task.status === "done";
   const stop = (event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>) => event.stopPropagation();
 
   return (
-    <div className={cn(cardClass, "p-3 shadow-sm hover:shadow-md")}>
-      <div className="flex items-start gap-2">
-        <p className="min-w-0 flex-1 text-sm leading-snug font-medium break-words">{task.title}</p>
+    <div
+      className={cn(
+        "grain relative flex flex-col gap-3 rounded-lg border border-rule bg-surface py-4 pr-4 pl-[18px] shadow-[0_1px_0_var(--rule)] transition-[border-color] duration-200 hover:border-rule-strong",
+        overdue &&
+          "before:absolute before:-top-px before:-bottom-px before:-left-px before:w-[3px] before:rounded-l-sm before:bg-accent before:content-['']",
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        {done && (
+          <span aria-hidden className="mt-1 grid size-[18px] shrink-0 place-items-center rounded-full bg-faint text-surface [&_svg]:size-3 [&_svg]:stroke-[2.2px]">
+            <Check />
+          </span>
+        )}
+        <p
+          className={cn(
+            "min-w-0 flex-1 font-serif text-[23px] leading-[1.16] break-words",
+            done && "text-muted-foreground",
+          )}
+        >
+          {task.title}
+        </p>
         {onEdit !== undefined && (
           <button
             type="button"
             aria-label={`Edit ${task.title}`}
-            className={cn(iconButtonClass, "-mt-1 -mr-1")}
+            className={cn(iconButtonClass, "-mt-1 -mr-1.5")}
             onPointerDown={stop}
             onKeyDown={stop}
             onClick={(event) => {
@@ -60,16 +81,16 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
         )}
       </div>
       {(subject !== undefined || lectureTitle !== undefined || task.due !== undefined) && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted-foreground">
           {subject !== undefined && (
-            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-muted px-2 py-0.5">
-              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: subjectTone(subject.color) }} aria-hidden />
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <span className="ink-dot" style={{ backgroundColor: subjectTone(subject.color) }} aria-hidden />
               <span className="truncate">{subject.name}</span>
             </span>
           )}
           {lectureTitle !== undefined && <span className="min-w-0 truncate">{lectureTitle}</span>}
           {task.due !== undefined && (
-            <span className={cn("inline-flex items-center gap-1", overdue && "font-medium text-danger")}>
+            <span className={cn("inline-flex items-center gap-1.5 tabular-nums", overdue && "font-semibold text-danger")}>
               <CalendarDays className="size-3.5" />
               {formatLectureDate(task.due)}
             </span>
