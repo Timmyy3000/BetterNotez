@@ -1,7 +1,7 @@
 import type { Lecture, Subject } from "@betternotez/core";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ChevronLeft, FileDown, NotebookPen } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link, useSearchParams } from "react-router";
 import { useStore } from "zustand";
@@ -50,6 +50,7 @@ export function LectureView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const pages = useRef<PdfPagesHandle>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const notesId = useId();
   const notes = useNotesWidth(rowRef);
 
   const canUndo = useStore(store, (state) => state.history.past.length > 0);
@@ -164,6 +165,7 @@ export function LectureView({
               zoom={zoom}
               scrollRef={scrollRef}
               startPage={startPage}
+              settleRedraw={notes.dragging}
               onPageChange={setPage}
             />
             <Toolbar
@@ -192,13 +194,16 @@ export function LectureView({
             <>
               {notes.bounds !== undefined && (
                 <NotesResizeHandle
+                  panelId={notesId}
                   width={notes.width}
                   bounds={notes.bounds}
+                  dragging={notes.dragging}
+                  onDraggingChange={notes.setDragging}
                   onResize={notes.resize}
                   onResizeEnd={notes.commit}
                 />
               )}
-              <Notepad lectureId={lecture.id} width={notes.width} />
+              <Notepad id={notesId} lectureId={lecture.id} width={notes.width} />
             </>
           )}
         </div>

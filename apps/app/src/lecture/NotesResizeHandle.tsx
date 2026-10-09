@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { cn } from "../lib/cn";
 import { clampNotesWidth, NOTES_DEFAULT_WIDTH, NOTES_KEY_STEP, type NotesWidthBounds } from "./notes-width";
 
@@ -11,25 +11,31 @@ interface Drag {
 }
 
 /**
- * The edge between the PDF and the notes. At rest it is only the panel's existing hairline divider. Hover, keyboard
- * focus, and dragging bring up an accent line and a grip. The focus ring is replaced by that accent, since the
- * accent is what shows where the focus is.
+ * The edge between the PDF and the notes. At rest it is only the panel's existing hairline divider. Hover shows a
+ * neutral grip. Holding the edge, or keyboard focus, adds the accent line and turns the grip to the accent, which is
+ * what shows where the focus is, so the focus ring is not drawn.
  */
 export function NotesResizeHandle({
+  panelId,
   width,
   bounds,
+  dragging,
+  onDraggingChange,
   onResize,
   onResizeEnd,
 }: {
+  /** The id of the notes panel this edge sizes. */
+  readonly panelId: string;
   readonly width: number;
   readonly bounds: NotesWidthBounds;
+  readonly dragging: boolean;
+  readonly onDraggingChange: (dragging: boolean) => void;
   /** Called on every change, so the PDF refits while the edge moves. */
   readonly onResize: (width: number) => void;
   /** Called once a change is final, so the width is stored once per gesture rather than on every move. */
   readonly onResizeEnd: (width: number) => void;
 }) {
   const drag = useRef<Drag | undefined>(undefined);
-  const [dragging, setDragging] = useState(false);
 
   function change(next: number) {
     const clamped = clampNotesWidth(next, bounds);
@@ -41,7 +47,7 @@ export function NotesResizeHandle({
     if (event.button !== 0) return;
     drag.current = { pointerId: event.pointerId, startX: event.clientX, startWidth: width };
     event.currentTarget.setPointerCapture(event.pointerId);
-    setDragging(true);
+    onDraggingChange(true);
   }
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
@@ -57,7 +63,7 @@ export function NotesResizeHandle({
     const current = drag.current;
     if (current === undefined || current.pointerId !== event.pointerId) return;
     drag.current = undefined;
-    setDragging(false);
+    onDraggingChange(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -87,8 +93,7 @@ export function NotesResizeHandle({
     change(next);
   }
 
-  const reveal = dragging ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100";
-  const fade = "motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out";
+  const fade = "motion-safe:transition-[opacity,background-color] motion-safe:duration-150 motion-safe:ease-out";
 
   return (
     <div className="relative w-0 shrink-0">
@@ -96,9 +101,11 @@ export function NotesResizeHandle({
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize notes"
+        aria-controls={panelId}
         aria-valuenow={width}
         aria-valuemin={bounds.min}
         aria-valuemax={bounds.max}
+        aria-valuetext={`Notes ${width} pixels wide`}
         tabIndex={0}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -108,13 +115,22 @@ export function NotesResizeHandle({
         onDoubleClick={() => change(NOTES_DEFAULT_WIDTH)}
         className="group absolute inset-y-0 -left-1 z-10 w-2 touch-none cursor-col-resize select-none outline-none"
       >
-        <span aria-hidden className={cn("absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent/60", fade, reveal)} />
         <span
           aria-hidden
           className={cn(
-            "absolute top-1/2 left-1/2 h-10 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent",
+            "absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent/60",
             fade,
-            reveal,
+            dragging ? "opacity-100" : "opacity-0 group-focus-visible:opacity-100",
+          )}
+        />
+        <span
+          aria-hidden
+          className={cn(
+            "absolute top-1/2 left-1/2 h-10 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full",
+            fade,
+            dragging
+              ? "bg-accent opacity-100"
+              : "bg-foreground/30 opacity-0 group-hover:opacity-100 group-focus-visible:bg-accent group-focus-visible:opacity-100",
           )}
         />
       </div>
