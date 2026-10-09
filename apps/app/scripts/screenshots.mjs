@@ -355,7 +355,12 @@ async function importLecture(page, subjectName, lecture) {
   });
   await page.getByLabel("Lecture date").fill(lecture.date);
   await page.getByRole("button", { name: "Import 1 PDF", exact: true }).click();
-  await page.getByRole("link", { name: lecture.title, exact: true }).waitFor();
+  await page.getByRole("link", { name: shownTitle(lecture.title), exact: true }).waitFor();
+}
+
+/** The title as the app displays it: a spaced hyphen reads as an en dash. The stored title keeps the hyphen. */
+function shownTitle(title) {
+  return title.replace(" - ", " – ");
 }
 
 async function openSection(page, name) {
@@ -363,8 +368,8 @@ async function openSection(page, name) {
 }
 
 async function openLecture(page, title) {
-  await page.getByRole("link", { name: title, exact: true }).click();
-  await page.getByRole("heading", { name: title, exact: true }).waitFor();
+  await page.getByRole("link", { name: shownTitle(title), exact: true }).click();
+  await page.getByRole("heading", { name: shownTitle(title), exact: true }).waitFor();
 }
 
 async function addTextBox(page, text) {
