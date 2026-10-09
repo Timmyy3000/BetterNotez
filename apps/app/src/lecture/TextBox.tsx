@@ -1,7 +1,7 @@
 import { textBoxStyle, type TextBox as TextBoxModel } from "@betternotez/core";
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { cn } from "../lib/cn";
-import { useEditor } from "./editor";
+import { useEditor, type TextStylePatch } from "./editor";
 import { FormatBar } from "./FormatBar";
 import { sameAnnotation } from "./history";
 import { LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
@@ -167,6 +167,13 @@ export function TextBoxView({
     beginEdit({ id: box.id, before: currentBox() ?? box });
   }
 
+  /** A restyle records the text typed so far, so a save still waiting would only write that text again. */
+  function restyleBox(patch: TextStylePatch) {
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = undefined;
+    restyle(box.id, patch);
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Escape") {
       event.currentTarget.blur();
@@ -174,9 +181,9 @@ export function TextBoxView({
     }
     const key = event.key.toLowerCase();
     if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey) {
-      if (key === "b") restyle(box.id, { bold: !style.bold });
-      else if (key === "i") restyle(box.id, { italic: !style.italic });
-      else if (key === "u") restyle(box.id, { underline: !style.underline });
+      if (key === "b") restyleBox({ bold: !style.bold });
+      else if (key === "i") restyleBox({ italic: !style.italic });
+      else if (key === "u") restyleBox({ underline: !style.underline });
       else return;
       event.preventDefault();
     }
@@ -250,7 +257,7 @@ export function TextBoxView({
           style={style}
           frame={{ left: shown.x * width, top: shown.y * height, width: shown.width * width, height: shown.height * height }}
           pageWidth={width}
-          onChange={(patch) => restyle(box.id, patch)}
+          onChange={restyleBox}
           onEscape={openForTyping}
         />
       )}
