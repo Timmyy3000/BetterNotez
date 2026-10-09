@@ -33,6 +33,7 @@
 @theme {
   --font-sans: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root {
