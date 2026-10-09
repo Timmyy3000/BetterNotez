@@ -13,7 +13,15 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   failed: "Couldn't save",
 };
 
-export function Notepad({ lectureId, width }: { readonly lectureId: string; readonly width: number }) {
+export function Notepad({
+  id,
+  lectureId,
+  width,
+}: {
+  readonly id: string;
+  readonly lectureId: string;
+  readonly width: number;
+}) {
   const library = useLibrary();
   const [text, setText] = useState<string>();
   const [status, setStatus] = useState<SaveStatus>("saved");
@@ -95,6 +103,7 @@ export function Notepad({ lectureId, width }: { readonly lectureId: string; read
 
   return (
     <aside
+      id={id}
       aria-label="Notes"
       style={{ width }}
       className="grain flex shrink-0 flex-col border-l border-border bg-surface"

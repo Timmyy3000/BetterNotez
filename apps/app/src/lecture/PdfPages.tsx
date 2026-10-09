@@ -20,7 +20,7 @@ const PAGE_GAP = 16;
 const GUTTER = 56;
 /** Caps the canvas size so zooming in on a large page does not exhaust memory. */
 const MAX_CANVAS_PIXELS = 16_000_000;
-/** A page is redrawn once its size has held this long. Until then it is stretched, which keeps a drag responsive. */
+/** While the notes edge is held, a page is redrawn once its width has held this long. Until then it is stretched. */
 const REDRAW_SETTLE_MS = 150;
 
 export interface PdfPagesHandle {
@@ -33,6 +33,7 @@ export function PdfPages({
   zoom,
   scrollRef,
   startPage,
+  settleRedraw,
   onPageChange,
 }: {
   readonly ref?: Ref<PdfPagesHandle>;
@@ -41,6 +42,8 @@ export function PdfPages({
   readonly scrollRef: RefObject<HTMLDivElement | null>;
   /** The page to show when the viewer opens. */
   readonly startPage: number;
+  /** True while the notes edge is held, so the pages redraw once it settles. Zoom and window resizes redraw at once. */
+  readonly settleRedraw: boolean;
   readonly onPageChange: (page: number) => void;
 }) {
   const [geometries, setGeometries] = useState<readonly PageGeometry[]>();
@@ -48,6 +51,8 @@ export function PdfPages({
   // The page at the top of the view. It stays at the top when the page size changes.
   const anchor = useRef(startPage);
   const pageWidth = Math.max(0, viewportWidth - 2 * GUTTER) * zoom;
+  // The sections stretch to each new width at once. Only the drawing waits.
+  const drawWidth = useSettled(pageWidth, settleRedraw ? REDRAW_SETTLE_MS : 0);
 
   useEffect(() => {
     let live = true;
@@ -118,6 +123,7 @@ export function PdfPages({
               geometry={geometry}
               width={size.width}
               height={size.height}
+              drawWidth={drawWidth}
               scrollRef={scrollRef}
             />
           );
@@ -133,6 +139,7 @@ const PageSlot = memo(function PageSlot({
   geometry,
   width,
   height,
+  drawWidth,
   scrollRef,
 }: {
   readonly doc: PDFDocumentProxy;
@@ -140,6 +147,7 @@ const PageSlot = memo(function PageSlot({
   readonly geometry: PageGeometry;
   readonly width: number;
   readonly height: number;
+  readonly drawWidth: number;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
@@ -149,7 +157,7 @@ const PageSlot = memo(function PageSlot({
       className="pdf-sheet relative shrink-0"
       style={{ width, height }}
     >
-      <PdfCanvas doc={doc} pageNumber={pageNumber} width={width} height={height} scrollRef={scrollRef} />
+      <PdfCanvas doc={doc} pageNumber={pageNumber} drawWidth={drawWidth} scrollRef={scrollRef} />
       <PageOverlay pageNumber={pageNumber} width={width} height={height} scale={width / displaySize(geometry).width} />
     </section>
   );
@@ -159,22 +167,18 @@ const PageSlot = memo(function PageSlot({
 function PdfCanvas({
   doc,
   pageNumber,
-  width,
-  height,
+  drawWidth,
   scrollRef,
 }: {
   readonly doc: PDFDocumentProxy;
   readonly pageNumber: number;
-  readonly width: number;
-  readonly height: number;
+  /** The width the page is drawn at. The canvas is stretched to its section until this catches up. */
+  readonly drawWidth: number;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
 }) {
   const holder = useRef<HTMLDivElement>(null);
   const near = useNearViewport(holder, scrollRef);
   const canvas = useRef<HTMLCanvasElement>(null);
-  // The canvas is sized by its section, so it stretches to each new width at once. Only the drawing waits.
-  const drawWidth = useSettled(width, REDRAW_SETTLE_MS);
-  const drawHeight = useSettled(height, REDRAW_SETTLE_MS);
 
   useEffect(() => {
     const element = canvas.current;
@@ -190,15 +194,26 @@ function PdfCanvas({
         if (context === null) return;
         const base = page.getViewport({ scale: 1 });
         const cssScale = drawWidth / base.width;
+        const drawHeight = base.height * cssScale;
         const resolution = Math.min(
           window.devicePixelRatio || 1,
           Math.sqrt(MAX_CANVAS_PIXELS / (drawWidth * drawHeight)),
         );
         const viewport = page.getViewport({ scale: cssScale * resolution });
-        element.width = Math.floor(viewport.width);
-        element.height = Math.floor(viewport.height);
-        task = page.render({ canvas: element, canvasContext: context, viewport, intent: "display" });
-        return task.promise;
+        // The new page is drawn off screen and copied over once it is complete, so the stretched page stays visible
+        // until then instead of flashing blank.
+        const drawn = document.createElement("canvas");
+        drawn.width = Math.floor(viewport.width);
+        drawn.height = Math.floor(viewport.height);
+        const drawnContext = drawn.getContext("2d");
+        if (drawnContext === null) return;
+        task = page.render({ canvas: drawn, canvasContext: drawnContext, viewport, intent: "display" });
+        return task.promise.then(() => {
+          if (!live) return;
+          element.width = drawn.width;
+          element.height = drawn.height;
+          context.drawImage(drawn, 0, 0);
+        });
       })
       .catch((error: unknown) => {
         // Scrolling away, zooming, or closing the lecture cancels a render on purpose.
@@ -211,7 +226,7 @@ function PdfCanvas({
       live = false;
       task?.cancel();
     };
-  }, [near, doc, pageNumber, drawWidth, drawHeight]);
+  }, [near, doc, pageNumber, drawWidth]);
 
   return (
     <div ref={holder} className="absolute inset-0">
