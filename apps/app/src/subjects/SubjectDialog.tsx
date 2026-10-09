@@ -50,7 +50,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <label className="block space-y-2">
+        <label className="block space-y-2.5">
           <span className="text-sm font-medium">Name</span>
           <Input
             autoFocus
@@ -72,7 +72,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
                 onClick={() => setColor(hex)}
                 className={cn(
                   "size-8 rounded-full transition-transform hover:scale-110",
-                  color === hex && "ring-2 ring-foreground ring-offset-2 ring-offset-surface",
+                  color === hex && "ring-2 ring-foreground ring-offset-2 ring-offset-raised",
                 )}
                 style={{ backgroundColor: subjectTone(hex) }}
               />
