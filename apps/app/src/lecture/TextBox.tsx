@@ -2,6 +2,7 @@ import { textBoxStyle, type TextBox as TextBoxModel } from "@betternotez/core";
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { cn } from "../lib/cn";
 import { useEditor } from "./editor";
+import { FormatBar } from "./FormatBar";
 import { sameAnnotation } from "./history";
 import { LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
 
@@ -34,14 +35,16 @@ export function TextBoxView({
   readonly width: number;
   readonly height: number;
 }) {
-  const { store, tool, selectedId, editing, select, beginEdit, endEdit } = useEditor();
+  const { store, tool, selectedId, editing, select, beginEdit, endEdit, restyle } = useEditor();
   const isEditing = editing?.id === box.id;
   const isSelected = selectedId === box.id;
+  const style = textBoxStyle(box);
   const field = useRef<HTMLTextAreaElement>(null);
   const gesture = useRef<Gesture | undefined>(undefined);
   const saveTimer = useRef<number | undefined>(undefined);
   const [moving, setMoving] = useState<Geometry>();
   const shown = moving ?? box;
+  const showBar = isSelected && (tool === "select" || tool === "text");
 
   useEffect(() => {
     if (isEditing) field.current?.focus();
@@ -129,16 +132,28 @@ export function TextBoxView({
     }
   }
 
-  function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
-    const next: TextBoxModel = { ...box, text: event.target.value };
-    store.getState().preview([{ type: "put", next }]);
+  /** The box as the store holds it now, which includes any text typed since the last render. */
+  function currentBox(): TextBoxModel | undefined {
+    const current = store.getState().annotations.find((annotation) => annotation.id === box.id);
+    return current?.kind === "text" ? current : undefined;
+  }
+
+  function scheduleSave() {
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
       saveTimer.current = undefined;
-      if (next.text.trim() !== "") {
-        store.getState().apply([{ type: "put", next }]);
+      const current = currentBox();
+      if (current !== undefined && current.text.trim() !== "") {
+        store.getState().apply([{ type: "put", next: current }]);
       }
     }, SAVE_DELAY_MS);
+  }
+
+  function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    const current = currentBox();
+    if (current === undefined) return;
+    store.getState().preview([{ type: "put", next: { ...current, text: event.target.value } }]);
+    scheduleSave();
   }
 
   function finishEditing() {
@@ -147,12 +162,27 @@ export function TextBoxView({
     endEdit(box.id);
   }
 
+  /** Opens the box for typing, as a click on it does. Focus moves into the box, and the bar stays where it is. */
+  function openForTyping() {
+    beginEdit({ id: box.id, before: currentBox() ?? box });
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Escape") event.currentTarget.blur();
+    if (event.key === "Escape") {
+      event.currentTarget.blur();
+      return;
+    }
+    const key = event.key.toLowerCase();
+    if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey) {
+      if (key === "b") restyle(box.id, { bold: !style.bold });
+      else if (key === "i") restyle(box.id, { italic: !style.italic });
+      else if (key === "u") restyle(box.id, { underline: !style.underline });
+      else return;
+      event.preventDefault();
+    }
   }
 
   // The box sits on the PDF page, which is paper in every theme. It takes the paper and the annotation's own ink, never a theme surface.
-  const fontPx = textBoxStyle(box).fontSize * scale;
   return (
     <div
       data-kind="text"
@@ -186,10 +216,18 @@ export function TextBoxView({
         onBlur={finishEditing}
         onKeyDown={handleKeyDown}
         className={cn(
-          "block size-full resize-none overflow-hidden bg-transparent font-serif italic outline-none",
+          "block size-full resize-none overflow-hidden bg-transparent font-serif outline-none",
           isEditing ? "pointer-events-auto" : "pointer-events-none",
         )}
-        style={{ padding: TEXT_PADDING_PT * scale, fontSize: fontPx, lineHeight: LINE_HEIGHT, color: box.color }}
+        style={{
+          padding: TEXT_PADDING_PT * scale,
+          fontSize: style.fontSize * scale,
+          fontStyle: style.italic ? "italic" : "normal",
+          fontWeight: style.bold ? 700 : 400,
+          textDecoration: style.underline ? "underline" : "none",
+          lineHeight: LINE_HEIGHT,
+          color: style.color,
+        }}
       />
       {isSelected && (
         <span
@@ -206,6 +244,15 @@ export function TextBoxView({
         >
           AI
         </span>
+      )}
+      {showBar && (
+        <FormatBar
+          style={style}
+          frame={{ left: shown.x * width, top: shown.y * height, width: shown.width * width, height: shown.height * height }}
+          pageWidth={width}
+          onChange={(patch) => restyle(box.id, patch)}
+          onEscape={openForTyping}
+        />
       )}
     </div>
   );

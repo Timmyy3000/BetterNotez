@@ -10,8 +10,8 @@ import { errorMessage } from "../lib/errors";
 import { displayTitle } from "../lib/format";
 import { savePdf } from "../lib/save-pdf";
 import { Button, iconButtonClass } from "../ui/button";
-import { commitTextEdit, createAnnotationStore } from "./annotation-store";
-import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type Tool } from "./editor";
+import { commitTextEdit, createAnnotationStore, restyleTextBox } from "./annotation-store";
+import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type TextStylePatch, type Tool } from "./editor";
 import { exportAnnotatedPdf } from "./export";
 import { Notepad } from "./Notepad";
 import { NotesResizeHandle } from "./NotesResizeHandle";
@@ -100,6 +100,18 @@ export function LectureView({
   const [announcement, setAnnouncement] = useState({ text: "", id: 0 });
   const announce = useCallback((text: string) => setAnnouncement((previous) => ({ text, id: previous.id + 1 })), []);
 
+  const restyle = useCallback(
+    (id: string, patch: TextStylePatch) => {
+      const session = editingRef.current;
+      const carriedOn = restyleTextBox(store, id, patch, session);
+      if (carriedOn !== session) {
+        editingRef.current = carriedOn;
+        setEditing(carriedOn);
+      }
+    },
+    [store],
+  );
+
   const editor = useMemo<EditorValue>(
     () => ({
       store,
@@ -114,8 +126,9 @@ export function LectureView({
       beginEdit,
       endEdit,
       announce,
+      restyle,
     }),
-    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce],
+    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce, restyle],
   );
 
   function deleteSelected() {
