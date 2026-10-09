@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
-import { InvalidError, NotFoundError } from "./errors.js";
+import { InvalidError, NotFoundError, UnreadableNotesError } from "./errors.js";
 import { AnnotationId } from "./ids.js";
 import { Library } from "./library.js";
 import { CLOCK, decodeText, pdfBytes, storageBackends, type StorageEnv } from "./test/backends.js";
@@ -692,6 +692,76 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       const reopened = new Library(env.open(), { now: () => CLOCK });
       expect(await reopened.listPageNotes(lecture.id)).toEqual([]);
       expect(await env.open().readText(`${dir}/notes.md`)).toBe("Old single note");
+    });
+
+    it("treats a note of only spaces and line breaks as no note, and keeps none", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      await library.setPageNote(lecture.id, 2, "  \n\t ");
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+      expect(await env.open().readText(`${dir}/notes.json`)).toBeUndefined();
+
+      await library.setPageNote(lecture.id, 1, "Gates");
+      await library.setPageNote(lecture.id, 1, " \n ");
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+
+      await env.open().writeText(`${dir}/notes.md`, "\n  ");
+      expect(await library.listPageNotes(lecture.id)).toEqual([]);
+    });
+
+    it("does not rewrite notes.json when an edit changes nothing", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      await library.setPageNote(lecture.id, 1, "Gates");
+      const before = await env.open().readText(`${dir}/notes.json`);
+
+      await library.appendPageNote(lecture.id, 1, "");
+      await library.setPageNote(lecture.id, 1, "Gates");
+
+      expect(await env.open().readText(`${dir}/notes.json`)).toBe(before);
+      expect(await library.getPageNote(lecture.id, 1)).toBe("Gates");
+    });
+
+    it("keeps an append of nothing to a legacy note from creating notes.json", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      await env.open().writeText(`${dir}/notes.md`, "Old single note");
+
+      await library.appendPageNote(lecture.id, 2, "");
+
+      expect(await env.open().readText(`${dir}/notes.json`)).toBeUndefined();
+      expect(await library.getPageNote(lecture.id, 1)).toBe("Old single note");
+    });
+
+    it("refuses to read a notes.json that is damaged, and never writes over it", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      const damaged = "{ not json";
+      await env.open().writeText(`${dir}/notes.json`, damaged);
+
+      await expect(library.listPageNotes(lecture.id)).rejects.toBeInstanceOf(UnreadableNotesError);
+      await expect(library.setPageNote(lecture.id, 2, "New")).rejects.toBeInstanceOf(UnreadableNotesError);
+      await expect(library.appendPageNote(lecture.id, 2, "New")).rejects.toBeInstanceOf(UnreadableNotesError);
+      expect(await env.open().readText(`${dir}/notes.json`)).toBe(damaged);
+    });
+
+    it("refuses a notes.json written by a newer version, and leaves it as it is", async () => {
+      const { lecture, dir } = await importThreePageLecture();
+      const newer = JSON.stringify({ version: 2, pages: { "1": "From the future" }, layout: "grid" });
+      await env.open().writeText(`${dir}/notes.json`, newer);
+
+      await expect(library.getPageNote(lecture.id, 1)).rejects.toBeInstanceOf(UnreadableNotesError);
+      await expect(library.setPageNote(lecture.id, 1, "Overwritten?")).rejects.toBeInstanceOf(UnreadableNotesError);
+      expect(await env.open().readText(`${dir}/notes.json`)).toBe(newer);
+    });
+
+    it("searches the rest of a material when its notes.json cannot be read", async () => {
+      const subject = await library.createSubject({ name: "Digital Systems" });
+      const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 2);
+      await library.setPdfText(lecture.id, ["Full adder circuit", "Flip-flops"]);
+      await env.open().writeText(`subjects/${subject.id}/lectures/${lecture.id}/notes.json`, "{ not json");
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const hits = await library.search("full adder");
+
+      expect(hits).toEqual([expect.objectContaining({ kind: "pdf", lectureId: lecture.id, page: 1 })]);
+      warn.mockRestore();
     });
 
     it("keeps every note when edits to different pages arrive together", async () => {
