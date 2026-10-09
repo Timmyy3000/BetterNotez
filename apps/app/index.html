@@ -8,15 +8,16 @@
     <!-- Sets the theme before first paint. The rules are the ones in src/theme.ts, which cannot run this early. -->
     <script>
       (function () {
-        var preference = "dark";
+        var preference = "warm";
         try {
           var stored = localStorage.getItem("betternotez.theme");
-          if (stored === "system" || stored === "light" || stored === "dark") preference = stored;
+          if (stored === "system" || stored === "light" || stored === "dark" || stored === "warm") preference = stored;
         } catch (error) {
           // Storage can be blocked. The default applies.
         }
-        var dark = preference === "dark" || (preference === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        var resolved = preference;
+        if (preference === "system") resolved = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = resolved;
       })();
     </script>
   </head>

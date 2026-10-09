@@ -10,7 +10,7 @@ import { SearchPage } from "./pages/SearchPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SubjectPage } from "./pages/SubjectPage";
 import { TasksPage } from "./pages/TasksPage";
-import { useAppTheme } from "./theme";
+import { toasterTheme, useAppTheme } from "./theme";
 import { TooltipProvider } from "./ui/tooltip";
 
 const router = createHashRouter([
@@ -36,7 +36,7 @@ export function App() {
     <LibraryProvider>
       <TooltipProvider delayDuration={300}>
         <RouterProvider router={router} />
-        <Toaster position="bottom-right" theme={theme} />
+        <Toaster position="bottom-right" theme={toasterTheme(theme)} />
       </TooltipProvider>
     </LibraryProvider>
   );
