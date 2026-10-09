@@ -56,7 +56,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
             autoFocus
             maxLength={80}
             value={name}
-            placeholder="e.g. Digital Systems"
+            placeholder="e.g. a course or topic"
             onChange={(event) => setName(event.target.value)}
           />
         </label>
