@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { InvalidError, NotFoundError } from "./errors.js";
+import { InvalidError, NotFoundError, UnreadableNotesError } from "./errors.js";
 import { LectureId, SubjectId, newId, type AnnotationId } from "./ids.js";
 import {
   Annotation,
@@ -365,6 +365,8 @@ export class Library {
 
   async appendPageNote(lectureId: string, page: number, markdown: string): Promise<void> {
     const target = await this.locatePage(lectureId, page);
+    // Appending nothing changes nothing, so the files are not touched.
+    if (isBlankNote(markdown)) return;
     await this.editPageNote(target, (current) => {
       const separator = current === "" || current.endsWith("\n") ? "" : "\n";
       return `${current}${separator}${markdown}`;
@@ -540,7 +542,7 @@ export class Library {
       hits.push({ kind: "lecture", ...where, snippet: titleSnippet });
     }
 
-    for (const note of await this.readPageNotes(dir)) {
+    for (const note of await this.readNotesForSearch(dir)) {
       const snippet = matchSnippet(note.text, needle);
       if (snippet !== undefined) {
         hits.push({ kind: "notes", ...where, page: note.page, snippet });
@@ -660,17 +662,36 @@ export class Library {
   /**
    * Notes are in notes.json. A material saved before per-page notes has a single notes.md, and its text is page 1.
    * That file is read only while notes.json does not exist. It is never written or removed, so older builds still find it.
+   * A notes.json that does not parse, or has a version this build does not know, throws UnreadableNotesError. Its
+   * notes are not treated as empty, and every write goes through this read, so none can overwrite it.
    */
   private async readPageNotes(dir: string): Promise<PageNote[]> {
-    const stored = await this.readJson(`${dir}/notes.json`, PageNotes);
+    let stored: PageNotes | undefined;
+    try {
+      stored = await this.readJson(`${dir}/notes.json`, PageNotes);
+    } catch (error) {
+      if (error instanceof InvalidError || error instanceof z.ZodError) throw new UnreadableNotesError();
+      throw error;
+    }
     if (stored !== undefined) {
       return Object.entries(stored.pages)
         .map(([page, text]) => ({ page: Number(page), text }))
-        .filter((note) => note.text !== "")
+        .filter((note) => !isBlankNote(note.text))
         .sort(byPage);
     }
     const legacy = await this.storage.readText(`${dir}/notes.md`);
-    return legacy === undefined || legacy === "" ? [] : [{ page: 1, text: legacy }];
+    return legacy === undefined || isBlankNote(legacy) ? [] : [{ page: 1, text: legacy }];
+  }
+
+  /** The notes a search reads. Notes that cannot be read are skipped, so the rest of the material is still searched. */
+  private async readNotesForSearch(dir: string): Promise<PageNote[]> {
+    try {
+      return await this.readPageNotes(dir);
+    } catch (error) {
+      if (!(error instanceof UnreadableNotesError)) throw error;
+      console.warn(`The notes in ${dir} were left out of the search`, error);
+      return [];
+    }
   }
 
   private async locatePage(lectureId: string, page: number): Promise<NotePage> {
@@ -689,7 +710,10 @@ export class Library {
       const notes = await this.readPageNotes(target.dir);
       const current = notes.find((note) => note.page === target.page)?.text ?? "";
       const others = notes.filter((note) => note.page !== target.page);
-      const text = change(current);
+      const edited = change(current);
+      const text = isBlankNote(edited) ? "" : edited;
+      // An edit that leaves the page as it was does not write notes.json, so a legacy notes.md is not converted by it.
+      if (text === current) return;
       const next = text === "" ? others : [...others, { page: target.page, text }];
       const pages = Object.fromEntries(next.sort(byPage).map((note) => [String(note.page), note.text]));
       await this.writeJson(`${target.dir}/notes.json`, PageNotes.parse({ version: 1, pages }));
@@ -740,6 +764,11 @@ function lookupId<S extends z.ZodType<string>>(schema: S, value: string, entity:
 
 function byId(a: { readonly id: string }, b: { readonly id: string }): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/** A note of only spaces and line breaks is no note. It is not stored, marked, or searched. */
+function isBlankNote(text: string): boolean {
+  return text.trim() === "";
 }
 
 function byPage(a: { readonly page: number }, b: { readonly page: number }): number {
