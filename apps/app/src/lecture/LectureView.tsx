@@ -139,7 +139,12 @@ export function LectureView({
             <p className="truncate text-xs text-muted-foreground">{subject.name}</p>
             <h1 className="truncate text-sm font-semibold">{lecture.title}</h1>
           </div>
-          <Button variant="ghost" aria-pressed={notesOpen} onClick={() => setNotesOpen((open) => !open)}>
+          <Button
+            variant="ghost"
+            aria-pressed={notesOpen}
+            className="aria-pressed:bg-accent-soft aria-pressed:text-accent"
+            onClick={() => setNotesOpen((open) => !open)}
+          >
             <NotebookPen />
             Notes
           </Button>
