@@ -62,7 +62,7 @@ export function Toolbar({
     <div
       role="toolbar"
       aria-label="Annotate"
-      className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border bg-surface/95 p-1.5 shadow-lg backdrop-blur"
+      className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border raised-edge bg-raised/95 p-1.5 shadow-lg backdrop-blur"
     >
       {TOOLS.map(({ tool: value, label, icon: Icon }) => (
         <IconToggle key={value} label={label} active={tool === value} onClick={() => onTool(value)}>
@@ -84,7 +84,7 @@ export function Toolbar({
             color === swatch.value && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
           )}
         >
-          <span className="size-4 rounded-full border border-foreground/20" style={{ backgroundColor: swatch.value }} />
+          <span className="size-4 rounded-full border-2 border-foreground/40" style={{ backgroundColor: swatch.value }} />
         </button>
       ))}
 
@@ -136,7 +136,7 @@ export function ViewControls({
 }) {
   const percent = Math.round(zoom * 100);
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border bg-surface/95 p-1.5 text-sm shadow-lg backdrop-blur">
+    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-border raised-edge bg-raised/95 p-1.5 text-sm shadow-lg backdrop-blur">
       <IconToggle label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)}>
         <ChevronUp />
       </IconToggle>

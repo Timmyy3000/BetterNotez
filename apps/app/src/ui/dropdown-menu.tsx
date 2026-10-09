@@ -12,7 +12,7 @@ export function DropdownMenuContent({ className, ...props }: ComponentProps<type
         align="end"
         sideOffset={6}
         className={cn(
-          "z-50 min-w-44 rounded-xl border border-border bg-surface p-1.5 shadow-lg animate-[dialog-in_120ms_ease-out]",
+          "raised-edge z-50 min-w-44 rounded-xl border border-border bg-raised p-1.5 shadow-lg animate-[dialog-in_120ms_ease-out]",
           className,
         )}
         {...props}
