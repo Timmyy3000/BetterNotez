@@ -1,4 +1,4 @@
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import { useEffect, useRef, type CSSProperties, type RefObject } from "react";
 import { TextLayer } from "../pdf/pdfjs";
 import { useEditor } from "./editor";
@@ -18,7 +18,7 @@ export function PageText({
 }: {
   readonly doc: PDFDocumentProxy;
   readonly pageNumber: number;
-  /** Width of the page on screen, in CSS pixels. The text is laid out again when it changes. */
+  /** Width of the page on screen, in CSS pixels. The spans are laid out again at a new width, not rebuilt. */
   readonly width: number;
   /** CSS pixels per PDF point. pdf.js sizes the spans from it through --total-scale-factor. */
   readonly scale: number;
@@ -27,34 +27,51 @@ export function PageText({
   const { tool } = useEditor();
   const holder = useRef<HTMLDivElement>(null);
   const near = useNearViewport(holder, scrollRef);
+  // The width the spans are laid out at. It is kept current, so a layer that finishes after a resize lands at the new width.
+  const widthRef = useRef(width);
+  // The layer once it is drawn, and the page it was drawn from. A width change re-lays it out in place.
+  const layout = useRef<{ readonly page: PDFPageProxy; readonly layer: TextLayer; ready: boolean }>(undefined);
 
   useEffect(() => {
     const container = holder.current;
     if (!near || container === null) return;
     let live = true;
-    let layer: TextLayer | undefined;
 
     void doc
       .getPage(pageNumber)
       .then((page) => {
         if (!live) return;
-        const base = page.getViewport({ scale: 1 });
-        const viewport = page.getViewport({ scale: width / base.width });
-        layer = new TextLayer({ textContentSource: page.streamTextContent(), container, viewport });
-        return layer.render();
+        const layer = new TextLayer({
+          textContentSource: page.streamTextContent(),
+          container,
+          viewport: viewportAt(page, widthRef.current),
+        });
+        layout.current = { page, layer, ready: false };
+        return layer.render().then(() => {
+          if (live && layout.current?.layer === layer) layout.current.ready = true;
+        });
       })
       .catch((error: unknown) => {
-        // Scrolling away or zooming cancels a layout on purpose. Only a real failure is worth reporting.
+        // Scrolling away cancels a layout on purpose. Only a real failure is worth reporting.
         if (live) console.error(`Page ${pageNumber} text could not be laid out`, error);
       });
 
     return () => {
       live = false;
-      layer?.cancel();
+      layout.current?.layer.cancel();
+      layout.current = undefined;
       // The spans belong to pdf.js, not React, so they are removed here rather than by a re-render.
       container.replaceChildren();
     };
-  }, [near, doc, pageNumber, width]);
+  }, [near, doc, pageNumber]);
+
+  // A new width moves the spans where they are. Rebuilding them would drop a selection made in them, and a
+  // notes drag changes the width on every frame.
+  useEffect(() => {
+    widthRef.current = width;
+    const current = layout.current;
+    if (current?.ready === true) current.layer.update({ viewport: viewportAt(current.page, width) });
+  }, [width]);
 
   // The variables are the ones the pdf.js viewer sets on each page. Its own stylesheet is not loaded, so they are set here.
   const variables = {
@@ -71,4 +88,10 @@ export function PageText({
       className={tool === "select" ? "textLayer pointer-events-none [&_span]:pointer-events-auto" : "textLayer pointer-events-none"}
     />
   );
+}
+
+/** The page at a width in CSS pixels. pdf.js lays a text layer out at this viewport. */
+function viewportAt(page: PDFPageProxy, width: number) {
+  const base = page.getViewport({ scale: 1 });
+  return page.getViewport({ scale: width / base.width });
 }

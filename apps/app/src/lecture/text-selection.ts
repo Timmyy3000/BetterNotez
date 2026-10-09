@@ -1,4 +1,4 @@
-import { mergeLineRects } from "@betternotez/core";
+import { mergeLineRects, type PageRect } from "@betternotez/core";
 import { useEffect, useState } from "react";
 import { pageRectOf, type TextPiece } from "./highlight";
 
@@ -18,7 +18,9 @@ export function usePendingText(enabled: boolean): readonly TextPiece[] | undefin
     function read() {
       frame = 0;
       const found = readTextPieces(document.getSelection());
-      setPieces(found.length > 0 ? found : undefined);
+      const next = found.length > 0 ? found : undefined;
+      // A selection that only moves within the same text reads the same, so the editor is not re-rendered for it.
+      setPieces((previous) => (sameTextPieces(previous, next) ? previous : next));
     }
     function settle() {
       if (!dragging && frame === 0) frame = requestAnimationFrame(read);
@@ -88,6 +90,26 @@ export function readTextPieces(selection: Selection | null): TextPiece[] {
     }
   }
   return pieces;
+}
+
+/** Whether two readings of a selection hold the same text in the same places. */
+export function sameTextPieces(a: readonly TextPiece[] | undefined, b: readonly TextPiece[] | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return a.length === b.length && a.every((piece, index) => samePiece(piece, b[index]));
+}
+
+function samePiece(a: TextPiece, b: TextPiece | undefined): boolean {
+  return (
+    b !== undefined &&
+    a.page === b.page &&
+    a.text === b.text &&
+    a.rects.length === b.rects.length &&
+    a.rects.every((rect, index) => sameRect(rect, b.rects[index]))
+  );
+}
+
+function sameRect(a: PageRect, b: PageRect | undefined): boolean {
+  return b !== undefined && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
 /** The part of a text node that the range covers, or undefined when the range covers none of it. */
