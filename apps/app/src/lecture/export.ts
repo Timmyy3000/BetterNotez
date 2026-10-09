@@ -194,10 +194,6 @@ function printable(font: PDFFont, text: string): string {
   }).join("");
 }
 
-function toRadians(degreesValue: number): number {
-  return (degreesValue * Math.PI) / 180;
-}
-
 function hexToRgb(hex: string): RGB {
   const value = Number.parseInt(hex.slice(1), 16);
   return rgb(((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255);
