@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 import { InvalidError, NotFoundError } from "./errors.js";
 import { AnnotationId } from "./ids.js";
@@ -405,6 +405,22 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       await expect(library.addAnnotation(lecture.id, { ...highlight, text: "  " })).rejects.toBeInstanceOf(ZodError);
     });
 
+    it("rejects a highlight box with no area, which could never be seen", async () => {
+      const lecture = await importSampleLecture();
+      const flat = { x: 0.5, y: 0.5, width: 0, height: 0.1 };
+
+      await expect(
+        library.addAnnotation(lecture.id, {
+          kind: "highlight",
+          page: 1,
+          author: "user",
+          rects: [flat],
+          text: "Gates",
+          color: "#ffd21f",
+        }),
+      ).rejects.toBeInstanceOf(ZodError);
+    });
+
     it("rejects a highlight on a page the lecture does not have", async () => {
       const lecture = await importSampleLecture();
       await expect(
@@ -450,6 +466,92 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
         .writeText(`subjects/${subject.id}/lectures/${lecture.id}/annotations.json`, JSON.stringify([text, stroke]));
 
       expect(await library.listAnnotations(lecture.id)).toEqual([text, stroke]);
+    });
+
+    it("skips an annotation of a kind it does not know, and keeps it in the file when another is added", async () => {
+      const lecture = await importSampleLecture();
+      const [subject] = await library.listSubjects();
+      if (subject === undefined) throw new Error("the sample lecture has no subject");
+      const path = `subjects/${subject.id}/lectures/${lecture.id}/annotations.json`;
+      const future = { id: "01FUTUREKIND0000000000000", kind: "shape", page: 1, author: "user", sides: 4 };
+      const stroke = {
+        id: "01KNOWNINK000000000000000",
+        kind: "ink",
+        page: 1,
+        author: "user",
+        points: [[0.2, 0.2, 0.5]],
+        color: "#2b4b78",
+        size: 2,
+      };
+      await env.open().writeText(path, JSON.stringify([future, stroke]));
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      expect(await library.listAnnotations(lecture.id)).toEqual([stroke]);
+      expect(warn).toHaveBeenCalled();
+
+      const highlight = await library.addAnnotation(lecture.id, {
+        kind: "highlight",
+        page: 1,
+        author: "ai",
+        rects: [{ x: 0.1, y: 0.1, width: 0.2, height: 0.03 }],
+        text: "Gates",
+        color: "#ffd21f",
+      });
+      const onDisk: unknown = JSON.parse((await env.open().readText(path)) ?? "[]");
+      expect(onDisk).toEqual([future, stroke, highlight]);
+      warn.mockRestore();
+    });
+
+    it("still fails the list when an annotation of a known kind is damaged", async () => {
+      const lecture = await importSampleLecture();
+      const [subject] = await library.listSubjects();
+      if (subject === undefined) throw new Error("the sample lecture has no subject");
+      const damaged = { id: "01DAMAGEDTEXT000000000000", kind: "text", page: 1, author: "user", x: 3 };
+      await env
+        .open()
+        .writeText(`subjects/${subject.id}/lectures/${lecture.id}/annotations.json`, JSON.stringify([damaged]));
+
+      await expect(library.listAnnotations(lecture.id)).rejects.toBeInstanceOf(ZodError);
+    });
+  });
+
+  describe("search", () => {
+    it("finds a phrase in notes, text boxes, and PDF text across the library", async () => {
+      const subject = await library.createSubject({ name: "Digital Systems" });
+      const lecture = await library.importLecture(subject.id, "Lecture 1", pdfBytes("a"), 2);
+      await library.setPdfText(lecture.id, ["Full adder circuit", "Flip-flops"]);
+      await library.setNotes(lecture.id, "Revise the full adder.");
+      await library.addAnnotation(lecture.id, {
+        kind: "text",
+        page: 1,
+        author: "user",
+        x: 0.1,
+        y: 0.1,
+        width: 0.2,
+        height: 0.1,
+        text: "full adder by hand",
+        fontSize: 12,
+        color: "#111111",
+      });
+
+      const hits = await library.search("full adder");
+
+      expect(hits.map((hit) => hit.kind).sort()).toEqual(["annotation", "notes", "pdf"]);
+    });
+
+    it("leaves out a lecture whose files cannot be read, and searches the rest", async () => {
+      const subject = await library.createSubject({ name: "Digital Systems" });
+      const broken = await library.importLecture(subject.id, "Broken", pdfBytes("a"), 1);
+      const sound = await library.importLecture(subject.id, "Sound", pdfBytes("b"), 1);
+      await library.setPdfText(sound.id, ["Full adder circuit"]);
+      await env.open().writeText(`subjects/${subject.id}/lectures/${broken.id}/text.json`, "not json");
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const hits = await library.search("full adder");
+
+      expect(hits).toEqual([expect.objectContaining({ kind: "pdf", lectureId: sound.id, page: 1 })]);
+      expect(warn).toHaveBeenCalled();
+      warn.mockRestore();
     });
   });
 

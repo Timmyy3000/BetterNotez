@@ -83,8 +83,8 @@ export const Highlight = z.object({
   kind: z.literal("highlight"),
   page: pageNumber,
   author,
-  /** One box per line of the highlighted text. */
-  rects: z.array(PageRect).min(1),
+  /** One box per line of the highlighted text. A box with no area would be stored and never seen, so it is refused. */
+  rects: z.array(PageRect.refine((rect) => rect.width > 0 && rect.height > 0, "A highlight box needs an area")).min(1),
   /** The highlighted text, so an assistant can read what a highlight covers without the PDF. */
   text: label,
   color: hexColor,
