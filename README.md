@@ -21,6 +21,7 @@ It is local-first. There is no account, and your library is a folder of plain fi
 
 - **Subjects and lectures.** Make a subject for each class and import lecture PDFs into it. Add a date to a lecture if you want to sort by it. Lectures without a date work too.
 - **Annotate pages.** Add text boxes and type into them, or draw freehand ink for diagrams with a mouse, touch, or stylus. Select text to highlight it in a colour, then click a highlight to change or remove it. Undo and redo cover your edits during a session.
+- **Format text boxes.** Select a text box to get a small bar above it for its size, bold, italic, underline, and color. Ctrl+B, Ctrl+I, and Ctrl+U work while you type.
 - **A notepad per lecture.** Each lecture has its own notes, saved as you type.
 - **Search.** Find text in subject names, lecture titles, notepads, text boxes, and the PDF text itself.
 - **Export.** Save a lecture as a PDF with your annotations drawn on its pages. Any PDF viewer can open it.
