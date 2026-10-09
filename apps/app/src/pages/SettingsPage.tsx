@@ -170,9 +170,9 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
     return (
       <Section id="library-heading" title="Your library">
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          This web app keeps your library in this browser. Clearing site data, or opening BetterNotez in another browser,
-          removes it. To keep a copy of one lecture, use Export PDF in its viewer. For a library you can back up as a
-          folder, use the desktop app.
+          This web app keeps your library in this browser. Clearing site data removes it, and other browsers cannot see
+          it. To keep a copy of one lecture, use Export PDF in its viewer. For a library you can back up as a folder, use
+          the desktop app.
         </p>
       </Section>
     );
