@@ -111,7 +111,7 @@ export function SubjectPage() {
       <div className="mt-10">
         {ordered.length === 0 ? (
           <EmptyState icon={FileText} title="No lectures yet">
-            Drop lecture PDFs anywhere on this page, or use Import PDF.
+            Drop lecture PDFs anywhere on this page, or click Import PDF.
           </EmptyState>
         ) : (
           <ul className="space-y-2">

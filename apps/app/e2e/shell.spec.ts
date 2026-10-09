@@ -85,7 +85,7 @@ test("subject, lecture, date, persistence, search, and delete", async ({ page })
   await expect(deleteSubject).toBeVisible();
   await deleteSubject.getByRole("button", { name: "Delete subject" }).click();
   await expect(page.getByRole("heading", { name: "Welcome to BetterNotez" })).toBeVisible();
-  await expect(page.getByText("No subjects yet.")).toBeVisible();
+  await expect(page.getByText("No subjects yet", { exact: true })).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });

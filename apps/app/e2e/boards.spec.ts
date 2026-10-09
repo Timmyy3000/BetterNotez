@@ -193,7 +193,10 @@ test("tasks: move a card with the keyboard", async ({ page }) => {
   const card = page.locator('[aria-roledescription="sortable"]').filter({ hasText: "Keyboard task" });
   await card.focus();
   await page.keyboard.press("Space");
+  // The keyboard sensor picks the card up asynchronously. Arrow keys sent before that are lost.
+  await expect(card).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("status")).toContainText("was moved over droppable area");
   await page.keyboard.press("Space");
 
   await expect(doing.getByText("Keyboard task", { exact: true })).toBeVisible();

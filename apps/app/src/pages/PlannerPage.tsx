@@ -87,7 +87,7 @@ export function PlannerPage() {
       <header className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <h1 className="text-3xl font-semibold tracking-tight">Planner</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Your week, one class per time slot.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Your weekly timetable.</p>
         </div>
         {subjectList.length > 0 && (
           <div className="flex shrink-0 items-center gap-2">
@@ -114,7 +114,7 @@ export function PlannerPage() {
               </Button>
             }
           >
-            Every class in the timetable belongs to a subject. Create one, then come back to add it here.
+            Every class belongs to a subject. Create one, then come back to add classes.
           </EmptyState>
         ) : (
           <>
@@ -130,7 +130,7 @@ export function PlannerPage() {
                     </Button>
                   }
                 >
-                  Click an empty time slot, or drag across one, to place a class on the week.
+                  Click an empty time slot, or drag across it, to place a class on the week.
                 </EmptyState>
               </div>
             )}

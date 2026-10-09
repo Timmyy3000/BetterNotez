@@ -51,7 +51,7 @@ export function Sidebar() {
             </li>
           ))}
         </ul>
-        {subjects.data?.length === 0 && <p className="px-3 text-sm text-muted-foreground">No subjects yet.</p>}
+        {subjects.data?.length === 0 && <p className="px-3 text-sm text-muted-foreground">No subjects yet</p>}
       </section>
 
       <nav aria-label="Footer" className="flex flex-col gap-0.5">
