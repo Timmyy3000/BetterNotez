@@ -1,6 +1,8 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { cn } from "../lib/cn";
+import { focusRing } from "./button";
 
 /** A modal that is mounted while it is needed. Closing it calls `onClose`, and the parent unmounts it. */
 export function ModalDialog({
@@ -30,7 +32,10 @@ export function ModalDialog({
           </DialogPrimitive.Description>
           <DialogPrimitive.Close
             aria-label="Close"
-            className="absolute top-4 right-4 grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className={cn(
+              "absolute top-4 right-4 grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              focusRing,
+            )}
           >
             <X className="size-4" />
           </DialogPrimitive.Close>

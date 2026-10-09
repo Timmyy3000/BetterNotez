@@ -78,6 +78,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

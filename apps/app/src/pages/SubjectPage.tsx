@@ -13,6 +13,7 @@ import { selectPdfs } from "../pdf/import";
 import { DeleteSubjectDialog } from "../subjects/DeleteSubjectDialog";
 import { SubjectDialog } from "../subjects/SubjectDialog";
 import { Button, iconButtonClass } from "../ui/button";
+import { cardClass } from "../ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { EmptyState } from "../ui/empty-state";
 import { QueryError } from "../ui/query-error";
@@ -80,7 +81,7 @@ export function SubjectPage() {
             <span className="size-2.5 rounded-full" style={{ backgroundColor: current.color }} aria-hidden />
             Subject
           </p>
-          <h1 className="mt-2 truncate text-3xl font-semibold tracking-tight">{current.name}</h1>
+          <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight">{current.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{countLabel(ordered.length, "lecture")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -108,7 +109,7 @@ export function SubjectPage() {
         </div>
       </header>
 
-      <div className="mt-10">
+      <div className="mt-8">
         {ordered.length === 0 ? (
           <EmptyState icon={FileText} title="No lectures yet">
             Drop lecture PDFs anywhere on this page, or click Import PDF.
@@ -150,7 +151,7 @@ function LectureRow({
   readonly onDelete: () => void;
 }) {
   return (
-    <li className="relative flex items-center gap-4 rounded-xl border border-border bg-surface px-4 py-3 transition-shadow hover:shadow-sm">
+    <li className={cn(cardClass, "relative flex items-center gap-4 px-4 py-3")}>
       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
         <FileText className="size-5" />
       </span>

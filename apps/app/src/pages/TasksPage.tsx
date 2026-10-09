@@ -24,6 +24,7 @@ import { useLibrary, useLibraryQuery, useLibraryRefresh } from "../library";
 import { errorMessage } from "../lib/errors";
 import { EmptyState } from "../ui/empty-state";
 import { Input } from "../ui/input";
+import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
 import { notifyLibraryChanged } from "../store";
 import { dropOver, isOverdue, localDateKey, planDrop, statusOf, toBoard, type Board, type OrderUpdate } from "../tasks/board";
@@ -189,26 +190,26 @@ export function TasksPage() {
 
   return (
     <>
-      <header className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight">Tasks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Drag each task from To do to Doing, then to Done.</p>
-        </div>
-        <select
-          aria-label="Filter by subject"
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          className="h-9 shrink-0 rounded-lg border border-border bg-surface px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
-        >
-          <option value={ALL_SUBJECTS}>All subjects</option>
-          <option value={NO_SUBJECT}>No subject</option>
-          {subjectList.map((subject) => (
-            <option key={subject.id} value={subject.id}>
-              {subject.name}
-            </option>
-          ))}
-        </select>
-      </header>
+      <PageHeader
+        title="Tasks"
+        description="Drag each task from To do to Doing, then to Done."
+        actions={
+          <select
+            aria-label="Filter by subject"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            className="h-9 rounded-lg border border-border bg-surface px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
+          >
+            <option value={ALL_SUBJECTS}>All subjects</option>
+            <option value={NO_SUBJECT}>No subject</option>
+            {subjectList.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+        }
+      />
 
       {saved.length === 0 && (
         <div className="mt-8">
@@ -274,7 +275,9 @@ function BoardColumn({
     <section aria-label={label} className="flex min-h-72 flex-col rounded-2xl bg-muted/60 p-3">
       <header className="flex items-center justify-between px-1 pb-3">
         <h2 className="text-sm font-semibold">{label}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">{tasks.length}</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
+          {tasks.length}
+        </span>
       </header>
       <AddTaskForm label={label} onAdd={onAdd} />
       <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>

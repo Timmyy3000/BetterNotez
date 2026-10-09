@@ -6,6 +6,7 @@ import type { PointerEvent, KeyboardEvent } from "react";
 import { cn } from "../lib/cn";
 import { formatLectureDate } from "../lib/format";
 import { iconButtonClass } from "../ui/button";
+import { cardClass } from "../ui/card";
 
 export interface TaskCardInfo {
   readonly task: Task;
@@ -38,7 +39,7 @@ export function TaskCardFace({ info, onEdit }: { readonly info: TaskCardInfo; re
   const stop = (event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>) => event.stopPropagation();
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-3 shadow-sm transition-shadow hover:shadow-md">
+    <div className={cn(cardClass, "p-3 shadow-sm hover:shadow-md")}>
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-sm leading-snug font-medium break-words">{task.title}</p>
         {onEdit !== undefined && (

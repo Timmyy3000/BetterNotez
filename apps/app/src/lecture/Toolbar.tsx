@@ -84,7 +84,7 @@ export function Toolbar({
             color === swatch.value && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
           )}
         >
-          <span className="size-4 rounded-full border border-black/10" style={{ backgroundColor: swatch.value }} />
+          <span className="size-4 rounded-full border border-foreground/20" style={{ backgroundColor: swatch.value }} />
         </button>
       ))}
 
