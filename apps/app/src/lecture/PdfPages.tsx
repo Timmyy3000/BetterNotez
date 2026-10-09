@@ -158,6 +158,7 @@ const PageSlot = memo(function PageSlot({
     <section
       data-page-number={pageNumber}
       aria-label={`Page ${pageNumber}`}
+      tabIndex={-1}
       className="pdf-sheet relative shrink-0"
       style={{ width, height }}
     >
