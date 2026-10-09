@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { EmptyState } from "../ui/empty-state";
+import { displayTitle } from "../lib/format";
 import { revealAt } from "../lib/motion";
 import { iconButtonClass } from "../ui/button";
 import { PageHeader } from "../ui/page-header";
@@ -103,7 +104,7 @@ export function SearchPage() {
                       to={row.to}
                       className="block py-4 transition-colors duration-150 hover:bg-foreground/[0.025]"
                     >
-                      <p className="font-serif text-[26px] leading-tight">{row.title}</p>
+                      <p className="font-serif text-[26px] leading-tight">{displayTitle(row.title)}</p>
                       <p className="mt-1 text-[13px] text-muted-foreground">{row.detail}</p>
                       <p className="mt-2 line-clamp-2 text-[15px] leading-relaxed text-muted-foreground">
                         <Highlight text={row.hit.snippet} query={needle} />

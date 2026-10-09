@@ -67,7 +67,7 @@ test("text box, pen stroke, notes, and export survive a reload, and undo works",
 
   await createSubject(page, "Digital Systems");
   await importLecture(page, "Lecture 1 - Logic gates.pdf", ["Boolean algebra", "Karnaugh maps", "Timing diagrams"]);
-  await openLecture(page, "Lecture 1 - Logic gates");
+  await openLecture(page, "Lecture 1 – Logic gates");
   await expect(page.getByText("Page 1 of 3")).toBeVisible();
   await expect(page.locator('[data-page-number="1"] canvas')).toBeAttached();
 

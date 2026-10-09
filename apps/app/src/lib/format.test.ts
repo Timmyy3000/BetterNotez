@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { countLabel, isoWeek, romanNumeral } from "./format";
+import { countLabel, displayTitle, isoWeek, romanNumeral } from "./format";
+
+describe("displayTitle", () => {
+  it("sets a spaced hyphen as an en dash", () => {
+    expect(displayTitle("Lecture 1 - Vectors and spans")).toBe("Lecture 1 – Vectors and spans");
+  });
+
+  it("leaves a hyphen inside a word alone", () => {
+    expect(displayTitle("Well-known results")).toBe("Well-known results");
+  });
+});
 
 describe("countLabel", () => {
   it("adds an s for other counts", () => {

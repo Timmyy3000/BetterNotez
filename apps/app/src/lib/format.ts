@@ -17,6 +17,11 @@ export function lectureMeta(lecture: Pick<Lecture, "date" | "pageCount">): strin
   return `${date} · ${countLabel(lecture.pageCount, "page")}`;
 }
 
+/** Sets a spaced hyphen between a lecture's number and its name as an en dash. The stored title keeps the hyphen. */
+export function displayTitle(title: string): string {
+  return title.replace(/ - /g, " – ");
+}
+
 export function formatFileSize(bytes: number): string {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
