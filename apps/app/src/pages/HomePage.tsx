@@ -81,7 +81,7 @@ export function HomePage() {
         ))}
       </ul>
 
-      <section aria-labelledby="due-heading" className="rise mt-14 max-w-[780px]" style={revealAt(subjects.length + 2)}>
+      <section aria-labelledby="due-heading" className="rise mt-14" style={revealAt(subjects.length + 2)}>
         <div className="flex items-baseline justify-between">
           <h2 id="due-heading" className="label">
             Due
@@ -144,7 +144,7 @@ function Folio({
         className="group grain flex min-h-60 w-full flex-col rounded-lg border border-border bg-surface p-[22px_26px_24px] transition-transform duration-300 ease-out hover:-translate-y-[3px] active:scale-[0.985]"
         style={{ boxShadow: pageEdges(lectures.length) }}
       >
-        <span className="mb-auto flex items-center justify-between">
+        <span className="flex items-center justify-between">
           <span className="font-serif text-[21px] text-faint italic">{numeral}.</span>
           <span
             aria-hidden
@@ -153,9 +153,9 @@ function Folio({
           />
         </span>
         <h2 className="mb-3 text-[42px] leading-none tracking-[-0.01em] text-balance">{subject.name}</h2>
-        <p className="text-sm text-muted-foreground tabular-nums">{countLabel(lectures.length, "lecture")}</p>
+        <p className="mb-5 text-sm text-muted-foreground tabular-nums">{countLabel(lectures.length, "lecture")}</p>
         {latest !== undefined && (
-          <p className="mt-5 border-t border-border pt-3.5 font-serif text-xl leading-snug text-muted-foreground italic">
+          <p className="mt-auto border-t border-border pt-3.5 text-[15px] leading-snug text-muted-foreground">
             Latest: {latest.title}
           </p>
         )}
