@@ -133,7 +133,7 @@ export function ImportDialog({
           Cancel
         </Button>
         <Button variant="primary" onClick={handleImport} disabled={files.length === 0 || importing}>
-          {importing ? "Importing…" : `Import ${countLabel(files.length, "PDF")}`}
+          {importing ? "Importing…" : files.length === 0 ? "Import PDFs" : `Import ${countLabel(files.length, "PDF")}`}
         </Button>
       </DialogActions>
     </ModalDialog>
