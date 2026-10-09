@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { ListChecks, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { TaskStatus, type Task } from "@betternotez/core";
 import { useLibrary, useLibraryQuery, useLibraryRefresh } from "../library";
@@ -55,6 +56,7 @@ export function TasksPage() {
   const [filter, setFilter] = useState(ALL_SUBJECTS);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   // A pointer drag ends with a click on the card it started from. Opening the editor there would be wrong.
   const justDragged = useRef(false);
   useLibraryRefresh();
@@ -80,6 +82,14 @@ export function TasksPage() {
       }),
     );
     if (Object.keys(next).length !== Object.keys(previous).length) updatePlanned(next);
+  }, [tasks.data]);
+
+  // A ledger link opens its task. The parameter is cleared so a reload does not reopen the editor.
+  useEffect(() => {
+    const requested = searchParams.get("task");
+    if (requested === null || tasks.data === undefined) return;
+    if (tasks.data.some((task) => task.id === requested)) setEditingId(requested);
+    setSearchParams({}, { replace: true });
   }, [tasks.data]);
 
   if (tasks.error !== undefined) return <QueryError error={tasks.error} />;
