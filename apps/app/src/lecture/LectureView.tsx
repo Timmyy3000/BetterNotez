@@ -96,6 +96,13 @@ export function LectureView({
     [store, endEdit],
   );
 
+  // A toolbar action ends the typing session first, so the text typed so far is one step, and a save still waiting
+  // cannot write over what the action did.
+  const endTyping = useCallback(() => {
+    const session = editingRef.current;
+    if (session !== undefined) endEdit(session.id);
+  }, [endEdit]);
+
   // Each message gets a new id, so a message that repeats is still read out.
   const [announcement, setAnnouncement] = useState({ text: "", id: 0 });
   const announce = useCallback((text: string) => setAnnouncement((previous) => ({ text, id: previous.id + 1 })), []);
@@ -219,10 +226,19 @@ export function LectureView({
               onSize={setSize}
               canUndo={canUndo}
               canRedo={canRedo}
-              onUndo={() => store.getState().undo()}
-              onRedo={() => store.getState().redo()}
+              onUndo={() => {
+                endTyping();
+                store.getState().undo();
+              }}
+              onRedo={() => {
+                endTyping();
+                store.getState().redo();
+              }}
               canDelete={selectedId !== undefined}
-              onDelete={deleteSelected}
+              onDelete={() => {
+                endTyping();
+                deleteSelected();
+              }}
             />
             <ViewControls
               page={page}
