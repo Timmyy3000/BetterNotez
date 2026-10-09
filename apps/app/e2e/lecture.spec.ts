@@ -590,13 +590,35 @@ test("the popover closes on Escape and the colour choice is announced, with focu
   await expect(pageOne).toBeFocused();
   await expect(pageOne.locator('[data-kind="highlight"]')).toHaveCount(1);
 
-  // Deleting a highlight announces its removal and keeps the focus on the page.
+  // A different tool leaves nothing selected, so the popover for a highlight closes with it.
   const word = await runCharacters(page, 2, 6);
+  await page.mouse.click(word.startX, word.y);
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Pen" }).click();
+  await expect(popover).toBeHidden();
+  await page.getByRole("button", { name: "Select and move" }).click();
+
+  // Deleting a highlight announces its removal and keeps the focus on the page.
   await page.mouse.click(word.startX, word.y);
   await page.getByRole("button", { name: "Delete highlight" }).click();
   await expect(announced).toHaveText("Highlight removed");
   await expect(pageOne).toBeFocused();
   await expect(pageOne.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+test("a text selection survives a zoom, because the text is laid out again in place", async ({ page }) => {
+  await createSubject(page, "Zooming");
+  await importLecture(page, "Zoom.pdf", ["Boolean algebra and Karnaugh maps"]);
+  await openLecture(page, "Zoom");
+  await page.locator('[data-page-number="1"] .textLayer span').first().waitFor({ state: "attached" });
+
+  await selectAcrossPages(page, '[data-page-number="1"] .textLayer span', '[data-page-number="1"] .textLayer span');
+  await expect(page.getByRole("toolbar", { name: "Highlight color" })).toBeVisible();
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByRole("button", { name: "125%" })).toBeVisible();
+
+  // The spans were moved, not rebuilt, so the selection made in them is still there.
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString() ?? "")).toContain("Karnaugh");
 });
 
 test("a selection across two pages highlights each page, and one undo takes both back", async ({ page }) => {
