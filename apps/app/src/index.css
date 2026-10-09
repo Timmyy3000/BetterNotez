@@ -82,6 +82,13 @@ body {
   background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
+/* Sonner paints toasts from these variables. Its dark theme would otherwise use pure black. */
+[data-sonner-toast] {
+  --normal-bg: var(--surface);
+  --normal-border: var(--border);
+  --normal-text: var(--foreground);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
