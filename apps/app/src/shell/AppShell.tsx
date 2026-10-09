@@ -12,7 +12,7 @@ export function AppShell() {
       <main className={cn("min-w-0 flex-1", immersive ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
         <div
           className={cn(
-            immersive ? "flex min-h-0 flex-1 flex-col" : "mx-auto w-full max-w-[1040px] px-8 pt-14 pb-20 sm:px-12 xl:px-16",
+            immersive ? "flex min-h-0 flex-1 flex-col" : "mx-auto w-full max-w-[1200px] px-8 pt-14 pb-20 sm:px-12 xl:px-20",
           )}
         >
           <Outlet />
