@@ -135,14 +135,16 @@ export function PlannerPage() {
                 </EmptyState>
               </div>
             )}
-            <PlannerGrid
-              days={showWeekend ? ALL_DAYS : WEEKDAYS}
-              blocks={blocks}
-              range={gridRange(blocks)}
-              onCreate={(slot) => setDialog({ kind: "new", slot })}
-              onOpen={(id) => setDialog({ kind: "edit", id })}
-              onChange={handleChange}
-            />
+            <div className="grain rounded-lg border border-border bg-surface px-6 pt-6 pb-4">
+              <PlannerGrid
+                days={showWeekend ? ALL_DAYS : WEEKDAYS}
+                blocks={blocks}
+                range={gridRange(blocks)}
+                onCreate={(slot) => setDialog({ kind: "new", slot })}
+                onOpen={(id) => setDialog({ kind: "edit", id })}
+                onChange={handleChange}
+              />
+            </div>
           </>
         )}
       </div>
