@@ -1,8 +1,8 @@
 import type { Highlight, PageRect } from "@betternotez/core";
 
 /**
- * How much of the page shows through a highlight. The freehand highlighter uses the same value, so a
- * drawn highlight and a text highlight read as one marker.
+ * How strongly a highlight's colour is multiplied onto the page. The freehand highlighter uses the same opacity
+ * and the same multiply blend, so a drawn highlight and a text highlight read as one marker.
  */
 export const HIGHLIGHT_OPACITY = 0.35;
 

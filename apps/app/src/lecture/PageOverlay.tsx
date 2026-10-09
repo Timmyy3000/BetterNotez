@@ -271,7 +271,11 @@ export function PageOverlay({
             d={strokePath(toPixels(ink.points, width, height), ink.size * scale)}
             fill={ink.color}
             opacity={ink.opacity}
-            className={cn(tool === "select" || tool === "eraser" ? "pointer-events-auto" : "pointer-events-none")}
+            className={cn(
+              tool === "select" || tool === "eraser" ? "pointer-events-auto" : "pointer-events-none",
+              // A translucent stroke is the highlighter's. It multiplies onto the page, as a text highlight does.
+              ink.opacity !== undefined && "mix-blend-multiply",
+            )}
             onPointerEnter={() => setHovered(ink.id)}
             onPointerLeave={() => setHovered(undefined)}
           />
@@ -281,6 +285,7 @@ export function PageOverlay({
             d={strokePath(toPixels(draft, width, height), draftWidth * scale)}
             fill={color}
             opacity={tool === "highlighter" ? HIGHLIGHT_OPACITY : undefined}
+            className={tool === "highlighter" ? "mix-blend-multiply" : undefined}
           />
         )}
       </svg>
