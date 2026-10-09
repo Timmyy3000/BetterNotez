@@ -7,7 +7,7 @@ import { cn } from "../lib/cn";
 import { isDesktop } from "../lib/platform";
 import { libraryFolder } from "../storage";
 import { type ThemePreference, useThemeStore } from "../theme";
-import { Button, focusRing } from "../ui/button";
+import { Button } from "../ui/button";
 import { Copyable } from "../ui/copyable";
 import { PageHeader } from "../ui/page-header";
 
@@ -66,7 +66,6 @@ function AppearanceSection() {
               onClick={() => setPreference(value)}
               className={cn(
                 "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors [&_svg]:size-4",
-                focusRing,
                 selected
                   ? "raised-edge bg-raised text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"
                   : "text-muted-foreground hover:text-foreground",

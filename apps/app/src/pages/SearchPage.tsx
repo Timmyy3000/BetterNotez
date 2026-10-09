@@ -3,7 +3,6 @@ import { Search, SearchX } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
-import { focusRing } from "../ui/button";
 import { cardClass } from "../ui/card";
 import { Input } from "../ui/input";
 import { EmptyState } from "../ui/empty-state";
@@ -87,7 +86,7 @@ export function SearchPage() {
               <ul className="space-y-2">
                 {rows.map((row, index) => (
                   <li key={index}>
-                    <Link to={row.to} className={cn(cardClass, "block px-4 py-3", focusRing)}>
+                    <Link to={row.to} className={cn(cardClass, "block px-4 py-3")}>
                       <p className="font-medium">{row.title}</p>
                       <p className="text-xs text-muted-foreground">{row.detail}</p>
                       <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">

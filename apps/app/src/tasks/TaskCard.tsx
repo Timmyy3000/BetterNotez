@@ -6,7 +6,7 @@ import type { PointerEvent, KeyboardEvent } from "react";
 import { cn } from "../lib/cn";
 import { formatLectureDate } from "../lib/format";
 import { subjectTone } from "../lib/subject-colors";
-import { focusRing, iconButtonClass } from "../ui/button";
+import { iconButtonClass } from "../ui/button";
 import { cardClass } from "../ui/card";
 
 export interface TaskCardInfo {
@@ -27,7 +27,7 @@ export function SortableTaskCard({ info, onEdit }: { readonly info: TaskCardInfo
       {...listeners}
       onClick={onEdit}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("touch-none cursor-grab rounded-xl active:cursor-grabbing", focusRing, isDragging && "opacity-40")}
+      className={cn("touch-none cursor-grab rounded-lg active:cursor-grabbing", isDragging && "opacity-40")}
     >
       <TaskCardFace info={info} onEdit={onEdit} />
     </div>
