@@ -19,6 +19,7 @@ import { PdfPages, type PdfPagesHandle } from "./PdfPages";
 import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
 import { usePendingText } from "./text-selection";
 import { useNotesWidth } from "./use-notes-width";
+import { usePageNotes } from "./use-page-notes";
 import { useRefreshWhileVisible } from "./use-refresh";
 
 export function LectureView({
@@ -57,6 +58,7 @@ export function LectureView({
   const notesId = useId();
   const notes = useNotesWidth(rowRef);
   const pendingText = usePendingText(tool === "select");
+  const pageNotes = usePageNotes(lecture.id, page);
 
   const canUndo = useStore(store, (state) => state.history.past.length > 0);
   const canRedo = useStore(store, (state) => state.history.future.length > 0);
@@ -270,7 +272,7 @@ export function LectureView({
                   onResizeEnd={notes.commit}
                 />
               )}
-              <Notepad id={notesId} lectureId={lecture.id} width={notes.width} />
+              <Notepad id={notesId} page={page} notes={pageNotes} width={notes.width} />
             </>
           )}
         </div>
