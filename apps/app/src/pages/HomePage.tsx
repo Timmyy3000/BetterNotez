@@ -44,7 +44,7 @@ export function HomePage() {
             </Button>
           }
         >
-          Start with one subject, such as Digital Systems, then add its lecture PDFs.
+          Start with one subject, then add its lecture PDFs.
         </EmptyState>
         {creating && <SubjectDialog onClose={() => setCreating(false)} />}
       </>
