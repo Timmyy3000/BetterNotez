@@ -1,5 +1,5 @@
 import { AnnotationId, newId, type Ink, type TextBox } from "@betternotez/core";
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "../lib/cn";
@@ -29,6 +29,7 @@ export function PageOverlay({
   width,
   height,
   scale,
+  children,
 }: {
   readonly pageNumber: number;
   /** Size of the page on screen, in CSS pixels. */
@@ -36,6 +37,8 @@ export function PageOverlay({
   readonly height: number;
   /** CSS pixels per PDF point. Font sizes and stroke widths are stored in points. */
   readonly scale: number;
+  /** Drawn beneath the annotations, so text boxes and strokes stay on top of the page's text. */
+  readonly children?: ReactNode;
 }) {
   const { store, tool, color, size, editing, select, beginEdit, scrollRef } = useEditor();
   const onPage = useStore(
@@ -84,7 +87,8 @@ export function PageOverlay({
 
     if (tool === "select") {
       select(undefined);
-      if (event.pointerType === "mouse") {
+      // A mouse drag on text selects it, so only a drag on the bare page scrolls.
+      if (event.pointerType === "mouse" && !isOnText(event.target)) {
         gesture.current = { kind: "pan", pointerId: event.pointerId, x: event.clientX, y: event.clientY };
         capture();
       }
@@ -203,6 +207,7 @@ export function PageOverlay({
       onPointerUp={finishGesture}
       onPointerCancel={finishGesture}
     >
+      {children}
       <svg className="pointer-events-none absolute inset-0" width={width} height={height} aria-hidden>
         {inks.map((ink) => (
           <path
@@ -260,6 +265,10 @@ function pressureOf(event: { readonly pressure: number }): number {
 
 function isPalm(pointerType: string): boolean {
   return pointerType === "touch" && performance.now() - lastPenAt < PALM_WINDOW_MS;
+}
+
+function isOnText(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(".textLayer") !== null;
 }
 
 function coalesced(event: ReactPointerEvent<HTMLDivElement>): PointerEvent[] {
