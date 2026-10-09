@@ -9,7 +9,7 @@ import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
 
 const SELECT_CLASS =
-  "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] outline-none transition-colors focus:border-accent disabled:opacity-50";
+  "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] transition-colors focus:border-accent disabled:opacity-50";
 
 export function TaskDialog({
   task,

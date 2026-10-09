@@ -163,7 +163,7 @@ function LectureRow({
       <div className="min-w-0 flex-1">
         <Link
           to={`/lecture/${lecture.id}`}
-          className="block truncate font-serif text-[28px] leading-tight outline-none after:absolute after:inset-0 after:rounded-lg"
+          className="block truncate font-serif text-[28px] leading-tight after:absolute after:inset-0 after:rounded-lg"
         >
           {lecture.title}
         </Link>

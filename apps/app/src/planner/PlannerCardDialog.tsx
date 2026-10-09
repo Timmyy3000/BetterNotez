@@ -10,7 +10,7 @@ import { Input } from "../ui/input";
 import { DAY_NAMES, toMinutes, toTime, type Span } from "./time";
 
 const SELECT_CLASS =
-  "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] outline-none transition-colors focus:border-accent disabled:opacity-50";
+  "h-10 w-full rounded-lg border border-control bg-background px-3 text-[15px] transition-colors focus:border-accent disabled:opacity-50";
 
 /** Adds a class when `card` is absent, and edits or removes it otherwise. */
 export function PlannerCardDialog({

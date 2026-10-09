@@ -202,7 +202,7 @@ export function TasksPage() {
                 aria-label="Filter by subject"
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
-                className="min-w-52 cursor-pointer appearance-none border-0 border-b border-rule-strong bg-transparent py-2 pr-8 text-[17px] text-foreground outline-none transition-colors focus:border-accent"
+                className="min-w-52 cursor-pointer appearance-none border-0 border-b border-rule-strong bg-transparent py-2 pr-8 text-[17px] text-foreground transition-colors focus:border-accent"
               >
                 <option value={ALL_SUBJECTS}>All subjects</option>
                 <option value={NO_SUBJECT}>No subject</option>
