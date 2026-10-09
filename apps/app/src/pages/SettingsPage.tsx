@@ -56,8 +56,8 @@ function AppearanceSection() {
   return (
     <Section id="appearance-heading" title="Appearance" numeral={1}>
       <p className="text-[15px] leading-relaxed text-muted-foreground">
-        Choose how BetterNotez looks. System follows your computer's light or dark setting. Warm is the brown paper
-        dark, and Dark is a neutral charcoal.
+        Choose how BetterNotez looks. System follows your computer's light or dark setting. Warm is brown paper, and Dark
+        is neutral charcoal.
       </p>
       <div role="group" aria-label="Theme" className="mt-5 inline-flex gap-2">
         {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
