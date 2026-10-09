@@ -68,6 +68,8 @@ function drawInk(page: PDFPage, geometry: PageGeometry, ink: Ink): void {
     y: 0,
     color: hexToRgb(ink.color),
     opacity: ink.opacity ?? 1,
+    // A translucent stroke is the highlighter's. It multiplies onto the page, as it does on screen.
+    blendMode: ink.opacity !== undefined ? BlendMode.Multiply : undefined,
   });
 }
 
