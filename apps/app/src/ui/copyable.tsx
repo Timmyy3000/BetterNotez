@@ -23,7 +23,7 @@ export function Copyable({ label, value }: { readonly label: string; readonly va
         <code>{value}</code>
       </pre>
       <div className="absolute top-2 right-2">
-        <IconButton label={`Copy ${label.toLowerCase()}`} onClick={() => void copy()}>
+        <IconButton label={`Copy ${label}`} onClick={() => void copy()}>
           {copied ? <Check /> : <Copy />}
         </IconButton>
       </div>
