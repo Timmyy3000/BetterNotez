@@ -9,7 +9,7 @@ import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
 
 const SELECT_CLASS =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:opacity-50";
+  "h-10 w-full rounded-lg border border-control bg-background px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:opacity-50";
 
 export function TaskDialog({
   task,
@@ -65,7 +65,7 @@ export function TaskDialog({
 
   if (confirmingDelete) {
     return (
-      <ModalDialog title={`Delete ${task.title}?`} description="There is no trash, so this cannot be undone." onClose={onClose}>
+      <ModalDialog title={`Delete ${task.title}?`} description="This can't be undone." onClose={onClose}>
         <DialogActions>
           <Button onClick={() => setConfirmingDelete(false)} disabled={saving}>
             Cancel

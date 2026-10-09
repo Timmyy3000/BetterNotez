@@ -1,9 +1,10 @@
-import { BookOpen, CalendarDays, Info, ListChecks, Plus, Search } from "lucide-react";
+import { BookOpen, CalendarDays, ListChecks, Plus, Search, Settings } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink } from "react-router";
 import { useLibraryQuery } from "../library";
 import { cn } from "../lib/cn";
 import { SubjectDialog } from "../subjects/SubjectDialog";
+import { focusRing } from "../ui/button";
 import { IconButton } from "../ui/tooltip";
 
 const NAV_ITEMS = [
@@ -17,8 +18,8 @@ export function Sidebar() {
   const [creating, setCreating] = useState(false);
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-6 bg-sidebar px-3 py-5">
-      <Link to="/" className="flex items-center gap-2.5 rounded-lg px-2 font-semibold tracking-tight outline-none">
+    <aside className="flex w-60 shrink-0 flex-col gap-6 border-r border-border bg-sidebar px-3 py-5">
+      <Link to="/" className={cn("flex items-center gap-2.5 rounded-lg px-2 font-semibold tracking-tight", focusRing)}>
         <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-foreground">
           <BookOpen className="size-4" />
         </span>
@@ -51,13 +52,13 @@ export function Sidebar() {
             </li>
           ))}
         </ul>
-        {subjects.data?.length === 0 && <p className="px-3 text-sm text-muted-foreground">No subjects yet.</p>}
+        {subjects.data?.length === 0 && <p className="px-3 text-sm text-muted-foreground">No subjects yet</p>}
       </section>
 
       <nav aria-label="Footer" className="flex flex-col gap-0.5">
-        <NavLink to="/about" className={({ isActive }) => navItemClass(isActive)}>
-          <Info />
-          About &amp; AI
+        <NavLink to="/settings" className={({ isActive }) => navItemClass(isActive)}>
+          <Settings />
+          Settings
         </NavLink>
       </nav>
 
@@ -68,7 +69,10 @@ export function Sidebar() {
 
 function navItemClass(active: boolean): string {
   return cn(
-    "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent [&_svg]:size-4 [&_svg]:shrink-0",
-    active ? "bg-surface shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+    "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
+    focusRing,
+    active
+      ? "bg-surface text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"
+      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
   );
 }

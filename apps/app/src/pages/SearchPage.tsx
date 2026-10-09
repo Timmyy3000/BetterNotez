@@ -2,8 +2,12 @@ import type { Lecture, SearchHit, Subject } from "@betternotez/core";
 import { Search, SearchX } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLibraryQuery } from "../library";
+import { cn } from "../lib/cn";
+import { focusRing } from "../ui/button";
+import { cardClass } from "../ui/card";
 import { Input } from "../ui/input";
 import { EmptyState } from "../ui/empty-state";
+import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
 
 type HitKind = SearchHit["kind"];
@@ -43,7 +47,7 @@ export function SearchPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">Search</h1>
+      <PageHeader title="Search" />
       <div className="relative mt-6">
         <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -51,7 +55,7 @@ export function SearchPage() {
           aria-label="Search"
           autoFocus
           className="h-11 pl-10"
-          placeholder="Subjects, lectures, notes, text boxes, or PDF text"
+          placeholder="Search subjects, lectures, notes, text boxes, or PDF text"
           value={query}
           onChange={(event) => setParams({ q: event.target.value }, { replace: true })}
         />
@@ -60,12 +64,12 @@ export function SearchPage() {
       <div className="mt-8 space-y-8">
         {needle === "" && (
           <EmptyState icon={Search} title="Search your semester">
-            Find a subject, a lecture title, a note, a text box, or any words in a lecture PDF.
+            Find subjects, lectures, notes, text boxes, or words inside a PDF.
           </EmptyState>
         )}
         {results.error !== undefined && <QueryError error={results.error} />}
         {needle !== "" && results.data?.length === 0 && (
-          <EmptyState icon={SearchX} title={`No matches for “${needle}”`}>
+          <EmptyState icon={SearchX} title={`No matches for "${needle}"`}>
             Check the spelling, or try a shorter word.
           </EmptyState>
         )}
@@ -83,10 +87,7 @@ export function SearchPage() {
               <ul className="space-y-2">
                 {rows.map((row, index) => (
                   <li key={index}>
-                    <Link
-                      to={row.to}
-                      className="block rounded-xl border border-border bg-surface px-4 py-3 outline-none transition-shadow hover:shadow-sm focus-visible:ring-2 focus-visible:ring-accent"
-                    >
+                    <Link to={row.to} className={cn(cardClass, "block px-4 py-3", focusRing)}>
                       <p className="font-medium">{row.title}</p>
                       <p className="text-xs text-muted-foreground">{row.detail}</p>
                       <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
@@ -129,7 +130,7 @@ function Highlight({ text, query }: { readonly text: string; readonly query: str
   const parts = text.split(new RegExp(`(${escapeRegExp(query)})`, "i"));
   return parts.map((part, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded bg-accent-soft px-0.5 text-foreground">
+      <mark key={index} className="rounded bg-highlight px-0.5 text-highlight-foreground">
         {part}
       </mark>
     ) : (

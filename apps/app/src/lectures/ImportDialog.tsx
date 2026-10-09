@@ -78,7 +78,7 @@ export function ImportDialog({
         onDrop={handleDrop}
         className={cn(
           "flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-7 text-center transition-colors",
-          dragging ? "border-accent bg-accent-soft" : "border-border",
+          dragging ? "border-accent bg-accent-soft" : "border-control",
         )}
       >
         <p className="text-sm text-muted-foreground">Drop PDFs here, or</p>
@@ -133,7 +133,7 @@ export function ImportDialog({
           Cancel
         </Button>
         <Button variant="primary" onClick={handleImport} disabled={files.length === 0 || importing}>
-          {importing ? "Importing…" : `Import ${countLabel(files.length, "PDF")}`}
+          {importing ? "Importing…" : files.length === 0 ? "Import PDFs" : `Import ${countLabel(files.length, "PDF")}`}
         </Button>
       </DialogActions>
     </ModalDialog>
