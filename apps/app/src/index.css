@@ -70,7 +70,7 @@
   --lamp: rgb(255 200 130 / 0.085);
   --glow: rgb(255 205 140 / 0.05);
 
-  /* The PDF sheet stays paper in both themes. Dark dims it a little so it does not glare. */
+  /* The paper behind a PDF page. Warm prints on this cream. Dark and Light set neutral paper. */
   --sheet: #e2d8c2;
   --sheet-ink: #241e19;
   --sheet-2: #5b5044;
@@ -96,9 +96,12 @@
   --grain: var(--speck-light);
 }
 
-/* Dark, neutral: the same layout, fonts, grain, and vermilion, on charcoal with at most a whisper of warmth. The accent, the highlight, the PDF sheet, and the subject inks are shared with warm. */
+/* Dark, neutral: the same layout, fonts, grain, and vermilion, on charcoal with at most a whisper of warmth. The accent, the highlight, and the subject inks are shared with warm. */
 [data-theme="dark"] {
   color-scheme: dark;
+  --sheet: #e6e6e6;
+  --sheet-ink: #1a1a1a;
+  --sheet-rule: #d0d0d0;
   --desk: #0e0e0e;
   --paper: #161616;
   --background: #161616;
@@ -298,9 +301,17 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), var(--lift);
 }
 
-/* Dims the rendered page to cut glare and warms it a little, so a real PDF sits on the desk. Its ink overlay is not a canvas, so it keeps its colour. */
-:root:not([data-theme="light"]) section[data-page-number] canvas {
-  filter: brightness(0.9) sepia(0.08);
+/* A real PDF keeps its own colours. Dark dims the white paper a little to cut glare. Warm multiplies the page onto the cream sheet, so white paper becomes cream and black ink stays black. Sepia cannot reach cream: on white it only lowers blue. The ink overlay is not a canvas, so it keeps its colour. */
+:root[data-theme="dark"] section[data-page-number] canvas {
+  filter: brightness(0.9);
+}
+
+:root[data-theme="warm"] .pdf-sheet {
+  isolation: isolate;
+}
+
+:root[data-theme="warm"] section[data-page-number] canvas {
+  mix-blend-mode: multiply;
 }
 
 /* Sonner paints toasts from these variables. Its dark theme would otherwise use pure black. */
