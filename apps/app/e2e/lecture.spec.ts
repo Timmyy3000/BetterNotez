@@ -30,12 +30,17 @@ async function createSubject(page: Page, name: string): Promise<void> {
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
 
-async function importLecture(page: Page, fileName: string, pageTexts: readonly string[]): Promise<void> {
+async function importLecture(
+  page: Page,
+  fileName: string,
+  pageTexts: readonly string[],
+  bytes?: Buffer,
+): Promise<void> {
   await page.getByRole("button", { name: "Import PDF" }).click();
   await page.locator('input[type="file"]').setInputFiles({
     name: fileName,
     mimeType: "application/pdf",
-    buffer: await makePdf(pageTexts),
+    buffer: bytes ?? (await makePdf(pageTexts)),
   });
   await page.getByRole("button", { name: "Import 1 PDF" }).click();
   // The list shows the title with an en dash. The file name keeps its hyphen.
@@ -586,6 +591,79 @@ test("a selection that reaches a page whose text is not laid out is refused, and
   await expect(page.getByText("Scroll so the whole selection is loaded, then try again")).toBeVisible();
   await expect(page.getByRole("toolbar", { name: "Highlight color" })).toHaveCount(0);
   await expect(page.locator('[data-kind="highlight"]')).toHaveCount(0);
+});
+
+/**
+ * A page whose first line is two runs with a word space between them, and whose second line is two runs that
+ * touch, as a word split across two draws does.
+ */
+async function makeSpacedPdf(): Promise<Buffer> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const size = 18;
+  const page = pdf.addPage([420, 300]);
+  page.drawText("Karnaugh", { x: 40, y: 200, size, font });
+  page.drawText("maps", { x: 40 + font.widthOfTextAtSize("Karnaugh", size) + 8, y: 200, size, font });
+  page.drawText("Gray", { x: 40, y: 150, size, font });
+  page.drawText("code", { x: 40 + font.widthOfTextAtSize("Gray", size), y: 150, size, font });
+  return Buffer.from(await pdf.save());
+}
+
+/** The highlights stored in the library, read from the browser's IndexedDB as the app wrote them. */
+async function storedHighlights(page: Page): Promise<Array<{ page: number; text: string }>> {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("betternotez");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const files = await new Promise<Array<[IDBValidKey, unknown]>>((resolve, reject) => {
+      const found: Array<[IDBValidKey, unknown]> = [];
+      const cursor = database.transaction("files").objectStore("files").openCursor();
+      cursor.onsuccess = () => {
+        const next = cursor.result;
+        if (next === null) {
+          resolve(found);
+          return;
+        }
+        found.push([next.key, next.value]);
+        next.continue();
+      };
+      cursor.onerror = () => reject(cursor.error);
+    });
+    database.close();
+
+    const highlights: Array<{ page: number; text: string }> = [];
+    for (const [key, value] of files) {
+      if (typeof key !== "string" || !key.endsWith("/annotations.json") || !(value instanceof Uint8Array)) continue;
+      const stored = JSON.parse(new TextDecoder().decode(value)) as Array<{ kind: string; page: number; text?: string }>;
+      for (const annotation of stored) {
+        if (annotation.kind === "highlight") highlights.push({ page: annotation.page, text: annotation.text ?? "" });
+      }
+    }
+    return highlights;
+  });
+}
+
+test("a highlight reads as the page does: a word space where the page has one, and none where two runs touch", async ({
+  page,
+}) => {
+  await createSubject(page, "Typesetting");
+  await importLecture(page, "Word spacing.pdf", [], await makeSpacedPdf());
+  await openLecture(page, "Word spacing");
+  await page.locator('[data-page-number="1"] .textLayer span').first().waitFor({ state: "attached" });
+
+  // From the start of "Karnaugh" to the end of "code": every run on both lines, as a drag over them would take.
+  await page.evaluate(() => {
+    const spans = Array.from(document.querySelectorAll<HTMLElement>('[data-page-number="1"] .textLayer span'));
+    const first = spans[0]?.firstChild;
+    const last = spans.at(-1)?.firstChild;
+    if (!(first instanceof Text) || !(last instanceof Text)) throw new Error("the page has no text runs");
+    window.getSelection()?.setBaseAndExtent(first, 0, last, last.length);
+  });
+  await page.getByRole("button", { name: "Highlight in Yellow" }).click();
+
+  await expect.poll(() => storedHighlights(page)).toEqual([{ page: 1, text: "Karnaugh maps Graycode" }]);
 });
 
 /** Selects from the start of the first run to the end of the second, as a drag across pages would. */

@@ -74,7 +74,7 @@ export function readTextSelection(selection: Selection | null): TextSelection {
     const pageBox = section.getBoundingClientRect();
     const boxes = [];
     let text = "";
-    let lineTop: number | undefined;
+    let previous: DOMRect | undefined;
 
     for (const span of section.querySelectorAll<HTMLElement>(".textLayer span")) {
       const node = span.firstChild;
@@ -83,9 +83,8 @@ export function readTextSelection(selection: Selection | null): TextSelection {
       if (part === undefined) continue;
 
       const spanBox = span.getBoundingClientRect();
-      // A run on a new line of the page reads as a space, not as the end of the previous word.
-      if (lineTop !== undefined && Math.abs(spanBox.top - lineTop) > spanBox.height / 2) text += " ";
-      lineTop = spanBox.top;
+      if (previous !== undefined && isBreakBetween(previous, spanBox)) text += " ";
+      previous = spanBox;
       text += part.toString();
       for (const box of part.getClientRects()) {
         const rect = pageRectOf(box, pageBox);
@@ -127,6 +126,22 @@ function samePiece(a: TextPiece, b: TextPiece | undefined): boolean {
 function sameRect(a: PageRect, b: PageRect | undefined): boolean {
   return b !== undefined && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
+
+/**
+ * Whether a space belongs between two runs of text. A run on a new line of the page starts a new word. So does a
+ * run that starts a clear gap after the previous one on the same line. pdf.js places the words of a line as separate
+ * runs and leaves the space out, so the gap is what says the words are apart.
+ */
+export function isBreakBetween(previous: Box, next: Box): boolean {
+  if (Math.abs(next.top - previous.top) > next.height / 2) return true;
+  return next.left - previous.right > next.height * WORD_GAP_EM;
+}
+
+/** A gap wider than this share of a line's font height is a space between words. Letters within a word sit closer. */
+const WORD_GAP_EM = 0.1;
+
+/** The edges and height of a run's box on screen, as getBoundingClientRect reports them. */
+type Box = Pick<DOMRect, "top" | "left" | "right" | "height">;
 
 /** The part of a text node that the range covers, or undefined when the range covers none of it. */
 function clipToRange(range: Range, node: Text): Range | undefined {
