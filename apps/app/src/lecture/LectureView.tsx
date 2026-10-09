@@ -51,7 +51,7 @@ export function LectureView({
   const editingRef = useRef<EditSession | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [page, setPage] = useState(startPage);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(() => searchParams.has("notes"));
   const scrollRef = useRef<HTMLDivElement>(null);
   const pages = useRef<PdfPagesHandle>(null);
   const rowRef = useRef<HTMLDivElement>(null);
