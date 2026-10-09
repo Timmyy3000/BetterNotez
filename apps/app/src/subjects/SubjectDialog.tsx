@@ -50,7 +50,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <label className="block space-y-2.5">
+        <label className="grid gap-2.5">
           <span className="text-sm font-medium">Name</span>
           <Input
             autoFocus
