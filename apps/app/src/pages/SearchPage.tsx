@@ -51,7 +51,7 @@ export function SearchPage() {
           aria-label="Search"
           autoFocus
           className="h-11 pl-10"
-          placeholder="Subjects, lectures, notes, text boxes, or PDF text"
+          placeholder="Search lectures, notes, text boxes, or PDF text"
           value={query}
           onChange={(event) => setParams({ q: event.target.value }, { replace: true })}
         />
@@ -60,12 +60,12 @@ export function SearchPage() {
       <div className="mt-8 space-y-8">
         {needle === "" && (
           <EmptyState icon={Search} title="Search your semester">
-            Find a subject, a lecture title, a note, a text box, or any words in a lecture PDF.
+            Find subjects, lectures, notes, text boxes, or words inside a PDF.
           </EmptyState>
         )}
         {results.error !== undefined && <QueryError error={results.error} />}
         {needle !== "" && results.data?.length === 0 && (
-          <EmptyState icon={SearchX} title={`No matches for “${needle}”`}>
+          <EmptyState icon={SearchX} title={`No matches for "${needle}"`}>
             Check the spelling, or try a shorter word.
           </EmptyState>
         )}

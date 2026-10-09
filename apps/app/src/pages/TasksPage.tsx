@@ -192,7 +192,7 @@ export function TasksPage() {
       <header className="flex items-start justify-between gap-6">
         <div className="min-w-0">
           <h1 className="text-3xl font-semibold tracking-tight">Tasks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Move each study task from To do to Done.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Drag each task from To do to Doing, then to Done.</p>
         </div>
         <select
           aria-label="Filter by subject"
@@ -213,7 +213,7 @@ export function TasksPage() {
       {saved.length === 0 && (
         <div className="mt-8">
           <EmptyState icon={ListChecks} title="Plan your study tasks">
-            Type a task at the top of To do. Drag it to Doing when you start, and to Done when it is finished.
+            Type a task into To do. Drag it to Doing when you start, and to Done when you finish.
           </EmptyState>
         </div>
       )}

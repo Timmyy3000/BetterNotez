@@ -52,7 +52,7 @@ function AppearanceSection() {
 
   return (
     <Section id="appearance-heading" title="Appearance">
-      <p className="mt-1 text-sm text-muted-foreground">Dark is the default. System follows your computer.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Dark is the default. System matches your computer's setting.</p>
       <div role="group" aria-label="Theme" className="mt-4 inline-flex rounded-xl border border-border bg-muted p-1">
         {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
           const selected = preference === value;
@@ -131,7 +131,7 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
         </Step>
 
         <Step number={2}>
-          <p>Add the server to Claude. Put the file path from step 1 where the placeholder is.</p>
+          <p>Add the server to Claude. Replace the placeholder path below with the file path from step 1.</p>
           <h3 className="mt-4 text-sm font-medium">Claude Desktop</h3>
           <p className="mt-1 text-muted-foreground">Paste this into claude_desktop_config.json.</p>
           <Copyable label="Claude Desktop config" value={claudeDesktopConfig} />

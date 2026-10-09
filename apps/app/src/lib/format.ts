@@ -8,8 +8,8 @@ export function formatLectureDate(date: string): string {
   });
 }
 
-export function countLabel(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+export function countLabel(count: number, noun: string, plural = `${noun}s`): string {
+  return `${count} ${count === 1 ? noun : plural}`;
 }
 
 export function lectureMeta(lecture: Pick<Lecture, "date" | "pageCount">): string {

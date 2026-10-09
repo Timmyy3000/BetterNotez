@@ -14,7 +14,7 @@ export function NotFoundPage() {
         </Link>
       }
     >
-      That address does not match anything in BetterNotez.
+      This page does not exist. The link may be old or mistyped.
     </EmptyState>
   );
 }

@@ -47,7 +47,7 @@ export function DeleteSubjectDialog({
       <p className="text-sm">This removes:</p>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
         <li>{countLabel(lectureCount, "lecture")}, with their PDFs, annotations, and notes</li>
-        <li>{countLabel(cardCount, "planner card")}</li>
+        <li>{countLabel(cardCount, "timetable class", "timetable classes")}</li>
       </ul>
       <p className="mt-3 text-sm text-muted-foreground">Tasks linked to this subject stay, but lose the link.</p>
       <DialogActions>
