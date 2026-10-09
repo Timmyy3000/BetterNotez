@@ -17,7 +17,7 @@ export function QueryError({ error }: { readonly error: unknown }) {
         </Link>
       }
     >
-      {missing ? "This item no longer exists." : errorMessage(error)}
+      {errorMessage(error)}
     </EmptyState>
   );
 }
