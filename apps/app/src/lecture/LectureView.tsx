@@ -14,8 +14,10 @@ import { commitTextEdit, createAnnotationStore } from "./annotation-store";
 import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type Tool } from "./editor";
 import { exportAnnotatedPdf } from "./export";
 import { Notepad } from "./Notepad";
+import { NotesResizeHandle } from "./NotesResizeHandle";
 import { PdfPages, type PdfPagesHandle } from "./PdfPages";
 import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
+import { useNotesWidth } from "./use-notes-width";
 import { useRefreshWhileVisible } from "./use-refresh";
 
 export function LectureView({
@@ -47,6 +49,8 @@ export function LectureView({
   const [notesOpen, setNotesOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pages = useRef<PdfPagesHandle>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const notes = useNotesWidth(rowRef);
 
   const canUndo = useStore(store, (state) => state.history.past.length > 0);
   const canRedo = useStore(store, (state) => state.history.future.length > 0);
@@ -152,7 +156,7 @@ export function LectureView({
           </Button>
         </header>
 
-        <div className="flex min-h-0 flex-1">
+        <div ref={rowRef} className="flex min-h-0 flex-1">
           <div className="relative min-w-0 flex-1">
             <PdfPages
               ref={pages}
@@ -184,7 +188,19 @@ export function LectureView({
               onZoom={(next) => setZoom(Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next)) * 100) / 100)}
             />
           </div>
-          {notesOpen && <Notepad lectureId={lecture.id} />}
+          {notesOpen && (
+            <>
+              {notes.bounds !== undefined && (
+                <NotesResizeHandle
+                  width={notes.width}
+                  bounds={notes.bounds}
+                  onResize={notes.resize}
+                  onResizeEnd={notes.commit}
+                />
+              )}
+              <Notepad lectureId={lecture.id} width={notes.width} />
+            </>
+          )}
         </div>
       </div>
     </EditorContext>
