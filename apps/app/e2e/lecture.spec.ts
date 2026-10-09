@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import { INK_COLORS } from "../src/lecture/inks";
 
 const SHOTS = "/tmp/bn-shots";
 
@@ -199,6 +200,12 @@ test("the lecture viewer renders in dark mode", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/lecture-dark.png`, animations: "disabled" });
 });
 
+/** The `rgb(...)` string the browser reports for a `#rrggbb` colour. */
+function rgbOf(hex: string): string {
+  const [red, green, blue] = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
 /** WCAG 2.x contrast ratio of two `rgb(...)` colours, as the browser reports computed styles. */
 function contrastOf(first: string, second: string): number {
   const luminanceOf = (css: string): number => {
@@ -213,7 +220,7 @@ function contrastOf(first: string, second: string): number {
 }
 
 for (const theme of ["warm", "dark", "light"] as const) {
-  test(`a text box sits on the paper and its ink stays readable in ${theme}`, async ({ page }) => {
+  test(`a text box sits on the paper and every pen ink stays readable in ${theme}`, async ({ page }) => {
     await page.addInitScript((stored) => localStorage.setItem("betternotez.theme", stored), theme);
     await createSubject(page, "Labs");
     await importLecture(page, "Circuits.pdf", ["Resistors"]);
@@ -222,22 +229,32 @@ for (const theme of ["warm", "dark", "light"] as const) {
 
     const pageOne = page.locator('[data-page-number="1"]');
     const paper = await pageOne.evaluate((element) => getComputedStyle(element).backgroundColor);
-    await page.getByRole("button", { name: "Text box", exact: true }).click();
-    const pageBox = await pageOne.boundingBox();
-    if (pageBox === null) throw new Error("page 1 is not on screen");
-    await page.mouse.click(pageBox.x + pageBox.width * 0.2, pageBox.y + pageBox.height * 0.3);
-    await page.keyboard.type("Readable");
 
-    const field = page.getByRole("textbox", { name: "Text box" });
-    const container = page.locator('[data-kind="text"]');
-    await expect(field).toBeFocused();
-    await expect(container).toHaveCSS("background-color", paper);
-    const ink = await field.evaluate((element) => getComputedStyle(element).color);
-    expect(contrastOf(ink, paper)).toBeGreaterThanOrEqual(4.5);
+    // Boxes are stored in the order they are made, so the nth box on the page is the one just added.
+    for (const [index, swatch] of INK_COLORS.entries()) {
+      const word = `Readable ${swatch.name}`;
+      const swatchButton = page.getByRole("button", { name: `Color ${swatch.name}` });
+      await swatchButton.click();
+      await expect(swatchButton).toHaveAttribute("aria-pressed", "true");
 
-    await page.getByRole("button", { name: "Select and move" }).click();
-    await expect(container).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-    await expect(field).toHaveValue("Readable");
+      await page.getByRole("button", { name: "Text box", exact: true }).click();
+      const pageBox = await pageOne.boundingBox();
+      if (pageBox === null) throw new Error("page 1 is not on screen");
+      await page.mouse.click(pageBox.x + pageBox.width * 0.2, pageBox.y + pageBox.height * (0.15 + index * 0.12));
+      await page.keyboard.type(word);
+
+      const box = page.locator('[data-kind="text"]').nth(index);
+      const field = box.getByRole("textbox", { name: "Text box" });
+      await expect(field).toBeFocused();
+      await expect(box).toHaveCSS("background-color", paper);
+      await expect(field).toHaveCSS("color", rgbOf(swatch.value));
+      const ink = await field.evaluate((element) => getComputedStyle(element).color);
+      expect(contrastOf(ink, paper), `${swatch.name} on the ${theme} paper`).toBeGreaterThanOrEqual(4.5);
+
+      await page.getByRole("button", { name: "Select and move" }).click();
+      await expect(box).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(field).toHaveValue(word);
+    }
   });
 }
 
