@@ -91,8 +91,8 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
       <Section id="library-heading" title="Your library" numeral={2}>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
           This web app keeps your library in this browser only. Clearing your browser's data deletes it, and other
-          browsers or computers cannot open it. To keep one lecture, open it and click Export PDF. To back up the whole
-          library as a folder, use the desktop app.
+          browsers or computers cannot open it. To keep one piece of material, open it and click Export PDF. To back up
+          the whole library as a folder, use the desktop app.
         </p>
       </Section>
     );
@@ -101,9 +101,9 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
   return (
     <Section id="library-heading" title="Your library" numeral={2}>
       <p className="text-[15px] leading-relaxed text-muted-foreground">
-        Your library is one folder on this computer. BetterNotez saves lectures, notes, annotations, and tasks as ordinary
-        files, so you can copy or back them up without the app. The folders are named by ID, and each PDF is saved as
-        lecture.pdf, so use BetterNotez to find a lecture.
+        Your library is one folder on this computer. BetterNotez saves material, notes, annotations, and tasks as ordinary
+        files, so you can copy or back them up without the app. The folders are named by ID, so use BetterNotez to find
+        the material you need.
       </p>
       {folder !== undefined && (
         <>
@@ -142,17 +142,17 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
   return (
     <Section id="assistant-heading" title="Connect your AI" numeral={3}>
       <p className="text-[15px] leading-relaxed text-muted-foreground">
-        Claude or ChatGPT can find a lecture by name, read its PDF text and your notes, and help you write notes or add
-        text boxes and drawings to a PDF. Try asking about one of your lectures, such as &quot;Let's talk about Lecture 1
-        in Digital Systems.&quot;
+        An AI agent on your computer can find your material by name, read its PDF text and your notes, and help you
+        write notes or add text boxes and drawings to a PDF. It works with Claude Desktop, Claude Code, Codex, the ChatGPT
+        desktop app, or any other app that supports MCP. Try asking, &quot;What material do I have this week?&quot;
       </p>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
           <h3 className="font-serif text-2xl">What your AI can do</h3>
           <ul className="mt-2 list-none space-y-1.5 text-sm text-muted-foreground">
-            <li className={LIST_ITEM}>Find and read subjects, lectures, notes, text boxes, and PDF text</li>
-            <li className={LIST_ITEM}>Create and edit subjects, lectures, notes, tasks, and timetable classes</li>
+            <li className={LIST_ITEM}>Find and read subjects, material, notes, text boxes, and PDF text</li>
+            <li className={LIST_ITEM}>Create and edit subjects, material, notes, tasks, and timetable classes</li>
             <li className={LIST_ITEM}>Add text boxes and drawings to PDF pages</li>
           </ul>
         </div>
