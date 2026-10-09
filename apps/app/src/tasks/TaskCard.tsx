@@ -25,6 +25,15 @@ export function SortableTaskCard({ info, onEdit }: { readonly info: TaskCardInfo
       {...attributes}
       {...listeners}
       onClick={onEdit}
+      onKeyDown={(event) => {
+        // The dialog takes focus during this keydown. Stopping the default keeps that Enter from activating the newly focused control.
+        if (event.key === "Enter" && !isDragging) {
+          event.preventDefault();
+          onEdit();
+        } else {
+          listeners?.onKeyDown?.(event);
+        }
+      }}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn("touch-none cursor-grab rounded-lg active:cursor-grabbing", isDragging && "opacity-40")}
     >

@@ -28,6 +28,7 @@ import { QueryError } from "../ui/query-error";
 import { revealAt } from "../lib/motion";
 import { notifyLibraryChanged } from "../store";
 import { dropOver, isOverdue, localDateKey, planDrop, statusOf, toBoard, type Board, type OrderUpdate } from "../tasks/board";
+import { announce } from "../tasks/announce";
 import { SortableTaskCard, TaskCardFace, type TaskCardInfo } from "../tasks/TaskCard";
 import { TaskDialog } from "../tasks/TaskDialog";
 
@@ -60,7 +61,11 @@ export function TasksPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    // Enter opens a card, as a click does, so only Space picks one up.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space", "Tab"] },
+    }),
   );
 
   useEffect(() => {
@@ -90,6 +95,14 @@ export function TasksPage() {
   const lectureById = new Map(lectureList.map((lecture) => [lecture.id, lecture]));
   const today = localDateKey(new Date());
   const activeTask = activeId === null ? undefined : Object.values(board).flat().find((task) => task.id === activeId);
+  // Drag announcements name a task and its column. The defaults read out the ids.
+  const nameOf = (id: string | number): string =>
+    Object.values(board).flat().find((task) => task.id === String(id))?.title ?? "a task";
+  const columnOf = (id: string | number | undefined): string | undefined => {
+    if (id === undefined) return undefined;
+    const status = TaskStatus.safeParse(String(id)).success ? TaskStatus.parse(String(id)) : statusOf(board, String(id));
+    return status === undefined ? undefined : COLUMN_LABELS[status];
+  };
   const editing = editingId === null ? undefined : saved.find((task) => task.id === editingId);
 
   function infoFor(task: Task): TaskCardInfo {
@@ -236,6 +249,14 @@ export function TasksPage() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
+        accessibility={{
+          announcements: {
+            onDragStart: ({ active }) => announce.pickedUp(nameOf(active.id)),
+            onDragOver: ({ active, over }) => announce.movedOver(nameOf(active.id), columnOf(over?.id)),
+            onDragEnd: ({ active, over }) => announce.droppedIn(nameOf(active.id), columnOf(over?.id)),
+            onDragCancel: ({ active }) => announce.cancelled(nameOf(active.id)),
+          },
+        }}
       >
         <div className="rise grid md:grid-cols-3" style={revealAt(2)}>
           {TaskStatus.options.map((status) => (
