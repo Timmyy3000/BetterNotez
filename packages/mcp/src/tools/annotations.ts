@@ -20,8 +20,14 @@ import {
   unitCoordinate,
 } from "./shared.js";
 
-const TEXT_BOX_ONLY: readonly string[] = ["x", "y", "width", "height", "text", "fontSize"];
+/** The palette's Black, the ink an assistant's text and strokes get when none is given. */
+const DEFAULT_INK = "#241e19";
+const TEXT_BOX_ONLY: readonly string[] = ["x", "y", "width", "height", "text", "fontSize", "bold", "italic", "underline"];
 const INK_ONLY: readonly string[] = ["points", "size"];
+
+const fontSize = z
+  .union([z.literal(11), z.literal(14), z.literal(18), z.literal(24)])
+  .describe("Font size in points. The app's sizes are 11, 14, 18, and 24.");
 
 const annotationPatch = z
   .object({
@@ -32,16 +38,21 @@ const annotationPatch = z
     width: unitCoordinate.optional(),
     height: unitCoordinate.optional(),
     text: z.string().optional(),
-    fontSize: z.number().positive().optional(),
+    fontSize: fontSize.optional(),
+    bold: z.boolean().optional().describe("Bold text."),
+    italic: z.boolean().optional().describe("Italic text. false makes it upright."),
+    underline: z.boolean().optional().describe("Underline the text."),
     points: z.array(inkPoint).min(1).optional(),
     size: z.number().positive().optional(),
   })
-  .describe("Fields to change. Text boxes take x, y, width, height, text, fontSize. Ink takes points and size. Both take page and color.");
+  .describe(
+    "Fields to change. Text boxes take x, y, width, height, text, fontSize, bold, italic, underline. Ink takes points and size. Both take page and color.",
+  );
 
 export function registerAnnotationTools(tools: ToolRegistry, library: Library): void {
   tools.tool(
     "add_text_box",
-    "Add a text box to a PDF page. Coordinates are normalized 0 to 1 from the page's top-left corner. The annotation author is ai.",
+    "Add a text box to a PDF page. Coordinates are normalized 0 to 1 from the page's top-left corner. Text is italic unless italic is false. Bold and underline are off unless set. The annotation author is ai.",
     {
       lectureId: lectureRef,
       page: pageRef,
@@ -50,8 +61,11 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       width: unitCoordinate.default(0.3).describe("Width, 0 to 1 of the page width."),
       height: unitCoordinate.default(0.08).describe("Height, 0 to 1 of the page height."),
       text: z.string(),
-      fontSize: z.number().positive().default(14),
-      color: hexColor.default("#000000"),
+      fontSize: fontSize.default(14),
+      bold: z.boolean().optional().describe("Bold text. Off when omitted."),
+      italic: z.boolean().optional().describe("Italic text. On when omitted. Send false for upright text."),
+      underline: z.boolean().optional().describe("Underline the text. Off when omitted."),
+      color: hexColor.default(DEFAULT_INK),
     },
     ({ lectureId, ...box }) => library.addAnnotation(lectureId, { ...box, kind: "text", author: "ai" }),
   );
@@ -63,7 +77,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       lectureId: lectureRef,
       page: pageRef,
       points: z.array(inkPoint).min(1),
-      color: hexColor.default("#000000"),
+      color: hexColor.default(DEFAULT_INK),
       size: z.number().positive().default(2).describe("Stroke width."),
     },
     ({ lectureId, page, points, color, size }) =>
@@ -115,7 +129,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
 
   tools.tool(
     "update_annotation",
-    "Change a text box or ink stroke on a piece of material. Send only the fields that apply to that annotation's kind. The author cannot change. Highlights cannot be changed here.",
+    "Change a text box or ink stroke on a piece of material. Send only the fields that apply to that annotation's kind. A text box can change its size, bold, italic, underline, and color. The author cannot change. Highlights cannot be changed here.",
     {
       lectureId: lectureRef,
       annotationId: annotationRef,
@@ -142,8 +156,8 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       const wrongKind = current.kind === "text" ? INK_ONLY : TEXT_BOX_ONLY;
       const misplaced = changed.filter((key) => wrongKind.includes(key));
       if (misplaced.length > 0) {
-        const kindName = current.kind === "text" ? "text box" : "ink stroke";
-        throw new InvalidError(`${misplaced.join(", ")} does not apply to a ${kindName}.`);
+        const kindName = current.kind === "text" ? "a text box" : "an ink stroke";
+        throw new InvalidError(`${misplaced.join(", ")} does not apply to ${kindName}.`);
       }
 
       const next =

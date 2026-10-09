@@ -150,7 +150,7 @@ describe("Lecture 1 in Digital Systems", () => {
         height: 0.08,
         text: "Check the truth table",
         fontSize: 14,
-        color: "#000000",
+        color: "#241e19",
       },
       {
         id: expect.any(String),
@@ -161,7 +161,7 @@ describe("Lecture 1 in Digital Systems", () => {
           [0.1, 0.5, 0.5],
           [0.2, 0.6, 0.9],
         ],
-        color: "#000000",
+        color: "#241e19",
         size: 2,
       },
     ]);
@@ -577,6 +577,156 @@ describe("refusals and errors", () => {
     });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toBe("points does not apply to a text box.");
+  });
+});
+
+describe("formatting a text box", () => {
+  async function storedAnnotations(lectureId: string): Promise<Array<Record<string, unknown>>> {
+    const subject = (await library.listSubjects())[0];
+    if (subject === undefined) throw new Error("no subject");
+    return readJsonFile("subjects", subject.id, "lectures", lectureId, "annotations.json") as Promise<
+      Array<Record<string, unknown>>
+    >;
+  }
+
+  it("adds a text box with the style it is given and no style it is not given", async () => {
+    const { lecture } = await seedLecture();
+
+    const styled = await callJson<Record<string, unknown>>("add_text_box", {
+      lectureId: lecture.id,
+      page: 1,
+      x: 0.1,
+      y: 0.1,
+      text: "Key result",
+      fontSize: 24,
+      bold: true,
+      italic: false,
+      underline: true,
+      color: "#a3321f",
+    });
+    const plain = await callJson<Record<string, unknown>>("add_text_box", {
+      lectureId: lecture.id,
+      page: 1,
+      x: 0.1,
+      y: 0.4,
+      text: "Plain",
+    });
+
+    expect(styled).toMatchObject({ fontSize: 24, bold: true, italic: false, underline: true, color: "#a3321f" });
+    expect(plain).not.toHaveProperty("bold");
+    expect(plain).not.toHaveProperty("italic");
+    expect(plain).not.toHaveProperty("underline");
+    expect(await storedAnnotations(lecture.id)).toEqual([styled, plain]);
+  });
+
+  it("changes a text box's style and keeps its text, position, and author", async () => {
+    const { lecture } = await seedLecture();
+    const box = await callJson<{ id: string }>("add_text_box", { lectureId: lecture.id, page: 2, x: 0.2, y: 0.3, text: "Define XOR" });
+
+    const updated = await callJson<Record<string, unknown>>("update_annotation", {
+      lectureId: lecture.id,
+      annotationId: box.id,
+      patch: { fontSize: 18, bold: true, italic: false, underline: true, color: "#2f5a3a" },
+    });
+
+    expect(updated).toMatchObject({
+      text: "Define XOR",
+      x: 0.2,
+      y: 0.3,
+      author: "ai",
+      fontSize: 18,
+      bold: true,
+      italic: false,
+      underline: true,
+      color: "#2f5a3a",
+    });
+  });
+
+  it("switches bold back off by storing false, which is different from leaving the field out", async () => {
+    const { lecture } = await seedLecture();
+    const box = await callJson<{ id: string }>("add_text_box", {
+      lectureId: lecture.id,
+      page: 1,
+      x: 0.1,
+      y: 0.1,
+      text: "Loud",
+      bold: true,
+    });
+
+    const updated = await callJson<Record<string, unknown>>("update_annotation", {
+      lectureId: lecture.id,
+      annotationId: box.id,
+      patch: { bold: false },
+    });
+
+    expect(updated).toMatchObject({ bold: false });
+  });
+
+  it("refuses a style field on an ink stroke, and names the field", async () => {
+    const { lecture } = await seedLecture();
+    const stroke = await callJson<{ id: string }>("add_ink", { lectureId: lecture.id, page: 1, points: [[0.1, 0.1]] });
+
+    const result = await call("update_annotation", {
+      lectureId: lecture.id,
+      annotationId: stroke.id,
+      patch: { bold: true },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe("bold does not apply to an ink stroke.");
+  });
+
+  it("refuses a font size that is not a positive number", async () => {
+    const { lecture } = await seedLecture();
+    const result = await call("add_text_box", { lectureId: lecture.id, page: 1, x: 0.1, y: 0.1, text: "Tiny", fontSize: 0 });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("fontSize");
+  });
+
+  it("accepts only the four font sizes the app offers, for a new box and for an edit", async () => {
+    const { lecture } = await seedLecture();
+    const box = await library.addAnnotation(lecture.id, {
+      kind: "text",
+      author: "user",
+      page: 1,
+      x: 0.5,
+      y: 0.5,
+      width: 0.2,
+      height: 0.1,
+      text: "Sized",
+      fontSize: 14,
+      color: "#111111",
+    });
+
+    for (const fontSize of [1e9, 0.0001, 13]) {
+      const added = await call("add_text_box", { lectureId: lecture.id, page: 1, x: 0.1, y: 0.1, text: "Off", fontSize });
+      expect(added.isError).toBe(true);
+      expect(textOf(added)).toContain("fontSize");
+
+      const edited = await call("update_annotation", {
+        lectureId: lecture.id,
+        annotationId: box.id,
+        patch: { fontSize },
+      });
+      expect(edited.isError).toBe(true);
+    }
+
+    const resized = await callJson<{ fontSize: number }>("update_annotation", {
+      lectureId: lecture.id,
+      annotationId: box.id,
+      patch: { fontSize: 24 },
+    });
+    expect(resized.fontSize).toBe(24);
+  });
+
+  it("tells the assistant that text is italic unless it says otherwise", async () => {
+    const { tools } = await client.listTools();
+    const addTextBox = tools.find((tool) => tool.name === "add_text_box");
+
+    expect(addTextBox?.description).toContain("Text is italic unless italic is false.");
+    expect(Object.keys(addTextBox?.inputSchema.properties ?? {})).toEqual(
+      expect.arrayContaining(["fontSize", "bold", "italic", "underline", "color"]),
+    );
   });
 });
 

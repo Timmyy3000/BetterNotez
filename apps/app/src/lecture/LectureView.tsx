@@ -10,8 +10,8 @@ import { errorMessage } from "../lib/errors";
 import { displayTitle } from "../lib/format";
 import { savePdf } from "../lib/save-pdf";
 import { Button, iconButtonClass } from "../ui/button";
-import { commitTextEdit, createAnnotationStore } from "./annotation-store";
-import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type Tool } from "./editor";
+import { commitTextEdit, createAnnotationStore, restyleTextBox } from "./annotation-store";
+import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type TextStylePatch, type Tool } from "./editor";
 import { exportAnnotatedPdf } from "./export";
 import { Notepad } from "./Notepad";
 import { NotesResizeHandle } from "./NotesResizeHandle";
@@ -96,9 +96,28 @@ export function LectureView({
     [store, endEdit],
   );
 
+  // A toolbar action ends the typing session first, so the text typed so far is one step, and a save still waiting
+  // cannot write over what the action did.
+  const endTyping = useCallback(() => {
+    const session = editingRef.current;
+    if (session !== undefined) endEdit(session.id);
+  }, [endEdit]);
+
   // Each message gets a new id, so a message that repeats is still read out.
   const [announcement, setAnnouncement] = useState({ text: "", id: 0 });
   const announce = useCallback((text: string) => setAnnouncement((previous) => ({ text, id: previous.id + 1 })), []);
+
+  const restyle = useCallback(
+    (id: string, patch: TextStylePatch) => {
+      const session = editingRef.current;
+      const carriedOn = restyleTextBox(store, id, patch, session);
+      if (carriedOn !== session) {
+        editingRef.current = carriedOn;
+        setEditing(carriedOn);
+      }
+    },
+    [store],
+  );
 
   const editor = useMemo<EditorValue>(
     () => ({
@@ -114,8 +133,9 @@ export function LectureView({
       beginEdit,
       endEdit,
       announce,
+      restyle,
     }),
-    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce],
+    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce, restyle],
   );
 
   function deleteSelected() {
@@ -206,10 +226,19 @@ export function LectureView({
               onSize={setSize}
               canUndo={canUndo}
               canRedo={canRedo}
-              onUndo={() => store.getState().undo()}
-              onRedo={() => store.getState().redo()}
+              onUndo={() => {
+                endTyping();
+                store.getState().undo();
+              }}
+              onRedo={() => {
+                endTyping();
+                store.getState().redo();
+              }}
               canDelete={selectedId !== undefined}
-              onDelete={deleteSelected}
+              onDelete={() => {
+                endTyping();
+                deleteSelected();
+              }}
             />
             <ViewControls
               page={page}
