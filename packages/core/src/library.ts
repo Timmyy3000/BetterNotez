@@ -100,6 +100,22 @@ interface LocatedLecture {
 }
 
 /**
+ * One entry of annotations.json: an annotation this version reads, or an entry of a kind it does not know.
+ * An unknown entry is kept as stored, so writing the file back does not drop what a newer version wrote.
+ */
+type StoredAnnotation = { readonly annotation: Annotation } | { readonly unknown: unknown };
+
+function annotationOf(entry: StoredAnnotation): Annotation | undefined {
+  return "annotation" in entry ? entry.annotation : undefined;
+}
+
+/** Whether a stored value names a kind of annotation this version knows, whether or not the rest of it parses. */
+function hasKnownKind(value: unknown): boolean {
+  const kind = typeof value === "object" && value !== null && "kind" in value ? value.kind : undefined;
+  return Annotation.options.some((option) => option.shape.kind.safeParse(kind).success);
+}
+
+/**
  * Library layout on storage:
  *   library.json
  *   planner.json, tasks.json
@@ -264,8 +280,8 @@ export class Library {
     const { lecture, dir } = await this.locateLecture(lectureId);
     const annotation = Annotation.parse({ ...draft, id: newId() });
     assertPageInRange(annotation.page, lecture.pageCount);
-    const annotations = await this.readAnnotations(dir);
-    await this.writeJson(`${dir}/annotations.json`, [...annotations, annotation]);
+    const stored = await this.readStored(dir);
+    await this.writeStored(dir, [...stored, { annotation }]);
     return annotation;
   }
 
@@ -274,13 +290,13 @@ export class Library {
     const { lecture, dir } = await this.locateLecture(lectureId);
     const next = Annotation.parse(annotation);
     assertPageInRange(next.page, lecture.pageCount);
-    const annotations = await this.readAnnotations(dir);
-    const stored = annotations.some((existing) => existing.id === next.id);
-    await this.writeJson(
-      `${dir}/annotations.json`,
-      stored
-        ? annotations.map((existing) => (existing.id === next.id ? next : existing))
-        : [...annotations, next],
+    const stored = await this.readStored(dir);
+    const replaces = stored.some((entry) => annotationOf(entry)?.id === next.id);
+    await this.writeStored(
+      dir,
+      replaces
+        ? stored.map((entry) => (annotationOf(entry)?.id === next.id ? { annotation: next } : entry))
+        : [...stored, { annotation: next }],
     );
     return next;
   }
@@ -291,28 +307,28 @@ export class Library {
     patch: AnnotationPatch,
   ): Promise<Annotation> {
     const { lecture, dir } = await this.locateLecture(lectureId);
-    const annotations = await this.readAnnotations(dir);
-    const current = annotations.find((annotation) => annotation.id === annotationId);
+    const stored = await this.readStored(dir);
+    const current = stored.map(annotationOf).find((annotation) => annotation?.id === annotationId);
     if (current === undefined) {
       throw new NotFoundError("Annotation", annotationId);
     }
     const next = Annotation.parse(mergeDefined(current, patch));
     assertPageInRange(next.page, lecture.pageCount);
-    await this.writeJson(
-      `${dir}/annotations.json`,
-      annotations.map((annotation) => (annotation.id === annotationId ? next : annotation)),
+    await this.writeStored(
+      dir,
+      stored.map((entry) => (annotationOf(entry)?.id === annotationId ? { annotation: next } : entry)),
     );
     return next;
   }
 
   async removeAnnotation(lectureId: string, annotationId: string): Promise<void> {
     const { dir } = await this.locateLecture(lectureId);
-    const annotations = await this.readAnnotations(dir);
-    const remaining = annotations.filter((annotation) => annotation.id !== annotationId);
-    if (remaining.length === annotations.length) {
+    const stored = await this.readStored(dir);
+    const remaining = stored.filter((entry) => annotationOf(entry)?.id !== annotationId);
+    if (remaining.length === stored.length) {
       throw new NotFoundError("Annotation", annotationId);
     }
-    await this.writeJson(`${dir}/annotations.json`, remaining);
+    await this.writeStored(dir, remaining);
   }
 
   async getNotes(lectureId: string): Promise<string> {
@@ -480,44 +496,53 @@ export class Library {
     }
 
     for (const lecture of await this.listLectures()) {
-      const dir = lectureDir(lecture.subjectId, lecture.id);
-      const where = { subjectId: lecture.subjectId, lectureId: lecture.id };
-
-      const titleSnippet = matchSnippet(lecture.title, needle);
-      if (titleSnippet !== undefined) {
-        hits.push({ kind: "lecture", ...where, snippet: titleSnippet });
+      try {
+        hits.push(...(await this.searchLecture(lecture, needle, options)));
+      } catch (error) {
+        // A material whose files cannot be read is left out, and the rest of the library is still searched.
+        console.warn(`Lecture ${lecture.id} was left out of the search`, error);
       }
+    }
+    return hits;
+  }
 
-      const notes = await this.storage.readText(`${dir}/notes.md`);
-      const notesSnippet = notes === undefined ? undefined : matchSnippet(notes, needle);
-      if (notesSnippet !== undefined) {
-        hits.push({ kind: "notes", ...where, snippet: notesSnippet });
+  private async searchLecture(lecture: Lecture, needle: string, options: SearchOptions): Promise<SearchHit[]> {
+    const dir = lectureDir(lecture.subjectId, lecture.id);
+    const where = { subjectId: lecture.subjectId, lectureId: lecture.id };
+    const hits: SearchHit[] = [];
+
+    const titleSnippet = matchSnippet(lecture.title, needle);
+    if (titleSnippet !== undefined) {
+      hits.push({ kind: "lecture", ...where, snippet: titleSnippet });
+    }
+
+    const notes = await this.storage.readText(`${dir}/notes.md`);
+    const notesSnippet = notes === undefined ? undefined : matchSnippet(notes, needle);
+    if (notesSnippet !== undefined) {
+      hits.push({ kind: "notes", ...where, snippet: notesSnippet });
+    }
+
+    for (const annotation of await this.readAnnotations(dir)) {
+      if (annotation.kind !== "text") {
+        continue;
       }
-
-      for (const annotation of await this.readAnnotations(dir)) {
-        if (annotation.kind !== "text") {
-          continue;
-        }
-        const snippet = matchSnippet(annotation.text, needle);
-        if (snippet !== undefined) {
-          hits.push({
-            kind: "annotation",
-            ...where,
-            annotationId: annotation.id,
-            page: annotation.page,
-            snippet,
-          });
-        }
+      const snippet = matchSnippet(annotation.text, needle);
+      if (snippet !== undefined) {
+        hits.push({
+          kind: "annotation",
+          ...where,
+          annotationId: annotation.id,
+          page: annotation.page,
+          snippet,
+        });
       }
+    }
 
-      const pages = options.pdfText
-        ? await options.pdfText(lecture.id)
-        : await this.readPdfText(dir);
-      for (const [index, text] of (pages ?? []).entries()) {
-        const snippet = matchSnippet(text, needle);
-        if (snippet !== undefined) {
-          hits.push({ kind: "pdf", ...where, page: index + 1, snippet });
-        }
+    const pages = options.pdfText ? await options.pdfText(lecture.id) : await this.readPdfText(dir);
+    for (const [index, text] of (pages ?? []).entries()) {
+      const snippet = matchSnippet(text, needle);
+      if (snippet !== undefined) {
+        hits.push({ kind: "pdf", ...where, page: index + 1, snippet });
       }
     }
     return hits;
@@ -573,7 +598,38 @@ export class Library {
   }
 
   private async readAnnotations(dir: string): Promise<Annotation[]> {
-    return (await this.readJson(`${dir}/annotations.json`, z.array(Annotation))) ?? [];
+    const annotations: Annotation[] = [];
+    for (const entry of await this.readStored(dir)) {
+      const annotation = annotationOf(entry);
+      if (annotation !== undefined) {
+        annotations.push(annotation);
+      }
+    }
+    return annotations;
+  }
+
+  /**
+   * Every entry of annotations.json, in order. An entry of a kind this version does not know, such as one a
+   * newer version added, is skipped with a warning and kept in the file, so a write does not lose it. An entry
+   * of a known kind must still parse, so a damaged annotation fails the list rather than vanishing.
+   */
+  private async readStored(dir: string): Promise<StoredAnnotation[]> {
+    const path = `${dir}/annotations.json`;
+    const values = (await this.readJson(path, z.array(z.unknown()))) ?? [];
+    return values.map((value): StoredAnnotation => {
+      if (!hasKnownKind(value)) {
+        console.warn(`An annotation of an unknown kind in ${path} is not shown. It is kept in the file.`);
+        return { unknown: value };
+      }
+      return { annotation: Annotation.parse(value) };
+    });
+  }
+
+  private async writeStored(dir: string, entries: readonly StoredAnnotation[]): Promise<void> {
+    await this.writeJson(
+      `${dir}/annotations.json`,
+      entries.map((entry) => ("annotation" in entry ? entry.annotation : entry.unknown)),
+    );
   }
 
   private async readPdfText(dir: string): Promise<string[] | undefined> {
