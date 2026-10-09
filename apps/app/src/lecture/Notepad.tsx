@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useLibrary } from "../library";
 import { useRefreshWhileVisible } from "./use-refresh";
@@ -93,10 +94,11 @@ export function Notepad({ lectureId }: { readonly lectureId: string }) {
   }
 
   return (
-    <aside aria-label="Notes" className="flex w-80 shrink-0 flex-col border-l border-border bg-surface">
-      <div className="flex h-12 shrink-0 items-center justify-between px-4">
-        <h2 className="text-sm font-semibold">Notes</h2>
-        <span role="status" className="text-xs text-muted-foreground">
+    <aside aria-label="Notes" className="grain flex w-[340px] shrink-0 flex-col border-l border-border bg-surface">
+      <div className="flex h-[84px] shrink-0 items-end justify-between pt-0 pr-6 pb-1.5 pl-[66px]">
+        <h2 className="font-serif text-[32px] leading-none">Notes</h2>
+        <span role="status" className="flex items-center gap-1.5 text-[13px] text-faint">
+          {status === "saved" && <Check aria-hidden className="size-3.5" />}
           {STATUS_LABEL[status]}
         </span>
       </div>
@@ -106,7 +108,7 @@ export function Notepad({ lectureId }: { readonly lectureId: string }) {
         disabled={text === undefined}
         value={text ?? ""}
         onChange={handleChange}
-        className="min-h-0 flex-1 resize-none bg-transparent px-4 pb-4 text-sm leading-6 outline-none placeholder:text-muted-foreground disabled:opacity-60"
+        className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base text-foreground outline-none placeholder:text-faint disabled:opacity-60"
       />
     </aside>
   );

@@ -157,9 +157,11 @@ export function TextBoxView({
       data-kind="text"
       data-author={box.author}
       className={cn(
-        "group absolute rounded-sm border",
-        isEditing ? "border-accent bg-surface/80 cursor-text" : "cursor-move touch-none select-none",
-        isSelected && !isEditing ? "border-accent" : !isEditing && "border-transparent hover:border-accent/50",
+        "group absolute rounded-sm border border-dashed",
+        isEditing
+          ? "border-solid border-accent bg-surface/80 cursor-text"
+          : "cursor-move touch-none border-pen/45 select-none hover:border-pen/80",
+        isSelected && !isEditing && "border-solid border-accent",
         tool === "select" || tool === "text" ? "pointer-events-auto" : "pointer-events-none",
       )}
       style={{
@@ -183,7 +185,7 @@ export function TextBoxView({
         onBlur={finishEditing}
         onKeyDown={handleKeyDown}
         className={cn(
-          "block size-full resize-none overflow-hidden bg-transparent outline-none",
+          "block size-full resize-none overflow-hidden bg-transparent font-serif italic outline-none",
           isEditing ? "pointer-events-auto" : "pointer-events-none",
         )}
         style={{ padding: TEXT_PADDING_PT * scale, fontSize: fontPx, lineHeight: LINE_HEIGHT, color: box.color }}

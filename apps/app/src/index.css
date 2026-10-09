@@ -12,6 +12,8 @@
   --color-faint: var(--faint);
   --color-border: var(--border);
   --color-rule: var(--rule);
+  --color-desk: var(--desk);
+  --color-pen: var(--pen);
   --color-rule-strong: var(--rule-strong);
   --color-control: var(--control-border);
   --color-accent: var(--accent);
@@ -217,6 +219,32 @@
   }
 
   /* The editorial rule under a masthead: one heavy line and one fine one. */
+  /* The lecture's surround: the desk under a lamp, with the grain on top. */
+  .desk {
+    background:
+      radial-gradient(900px 520px at 50% -10%, var(--lamp), transparent 70%), var(--grain), var(--desk);
+  }
+
+  /* A PDF page lies on the desk as a sheet. The canvas paints over it once the page is drawn. */
+  .pdf-sheet {
+    background-color: var(--sheet);
+    box-shadow:
+      0 0 0 1px rgb(40 28 14 / 0.06),
+      0 2px 3px rgb(40 28 14 / 0.12),
+      0 26px 46px -16px rgb(20 12 4 / 0.55);
+  }
+
+  /* Ruled notes: 28px lines under 28px of text, with one vermilion margin. Local attachment keeps the rules with the text as it scrolls. */
+  .ruled-paper {
+    background-image:
+      linear-gradient(90deg, transparent 50px, var(--margin) 50px, var(--margin) 51px, transparent 51px),
+      linear-gradient(transparent 27px, var(--rule) 27px, var(--rule) 28px);
+    background-size: 100% 100%, 100% 28px;
+    background-repeat: no-repeat, repeat;
+    background-attachment: local;
+    line-height: 28px;
+  }
+
   .double-rule {
     height: 6px;
     background: linear-gradient(var(--foreground) 0 2px, transparent 2px 5px, var(--foreground) 5px 6px);
@@ -229,7 +257,7 @@
 }
 
 [data-theme="dark"] .raised-edge {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), var(--lift);
 }
 
 /* Dims the rendered page to cut glare and warms it a little, so a real PDF sits on the desk. Its ink overlay is not a canvas, so it keeps its colour. */

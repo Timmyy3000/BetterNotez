@@ -14,7 +14,7 @@ import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type
 import { exportAnnotatedPdf } from "./export";
 import { Notepad } from "./Notepad";
 import { PdfPages, type PdfPagesHandle } from "./PdfPages";
-import { INK_COLORS, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
+import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
 import { useRefreshWhileVisible } from "./use-refresh";
 
 export function LectureView({
@@ -35,7 +35,7 @@ export function LectureView({
   const [store] = useState(() => createAnnotationStore(library, lecture.id, []));
 
   const [tool, setTool] = useState<Tool>("select");
-  const [color, setColor] = useState<string>(INK_COLORS[0].value);
+  const [color, setColor] = useState<string>(DEFAULT_INK);
   const [size, setSize] = useState<number>(PEN_SIZES[1].value);
   const [selectedId, setSelectedId] = useState<string>();
   const [editing, setEditing] = useState<EditSession>();
@@ -131,20 +131,15 @@ export function LectureView({
   return (
     <EditorContext value={editor}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-background py-0 pr-[18px] pl-3.5">
           <Link to={`/subjects/${subject.id}`} aria-label={`Back to ${subject.name}`} className={iconButtonClass}>
             <ChevronLeft />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-muted-foreground">{subject.name}</p>
-            <h1 className="truncate text-[15px] font-semibold">{lecture.title}</h1>
+            <p className="label truncate text-[11px]">{subject.name}</p>
+            <h1 className="mt-0.5 truncate text-[27px] leading-tight">{lecture.title}</h1>
           </div>
-          <Button
-            variant="ghost"
-            aria-pressed={notesOpen}
-            className="aria-pressed:bg-accent-soft aria-pressed:text-accent"
-            onClick={() => setNotesOpen((open) => !open)}
-          >
+          <Button variant="secondary" aria-pressed={notesOpen} onClick={() => setNotesOpen((open) => !open)}>
             <NotebookPen />
             Notes
           </Button>
