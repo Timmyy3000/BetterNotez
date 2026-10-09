@@ -69,7 +69,7 @@ function AppearanceSection() {
               aria-pressed={selected}
               onClick={() => setPreference(value)}
               className={cn(
-                "inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.96] [&_svg]:size-4",
+                "inline-flex h-10 items-center gap-2 rounded-lg border px-3.5 text-sm transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.96] [&_svg]:size-4",
                 selected
                   ? "border-foreground bg-foreground text-background"
                   : "border-control text-foreground hover:bg-foreground/5",
@@ -159,17 +159,17 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
           <h3 className="font-serif text-2xl">What Claude can do</h3>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-            <li>Find and read subjects, lectures, notes, text boxes, and PDF text</li>
-            <li>Create and edit subjects, lectures, notes, tasks, and timetable classes</li>
-            <li>Add text boxes and drawings to PDF pages</li>
+          <ul className="mt-2 list-none space-y-1.5 text-sm text-muted-foreground">
+            <li className={LIST_ITEM}>Find and read subjects, lectures, notes, text boxes, and PDF text</li>
+            <li className={LIST_ITEM}>Create and edit subjects, lectures, notes, tasks, and timetable classes</li>
+            <li className={LIST_ITEM}>Add text boxes and drawings to PDF pages</li>
           </ul>
         </div>
         <div>
           <h3 className="font-serif text-2xl">What Claude can't do</h3>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-            <li>Delete anything. Deleting happens only in the app.</li>
-            <li>Bring back a note's text after Claude replaces it. There is no trash or history.</li>
+          <ul className="mt-2 list-none space-y-1.5 text-sm text-muted-foreground">
+            <li className={LIST_ITEM}>Delete anything. Deleting happens only in the app.</li>
+            <li className={LIST_ITEM}>Bring back a note's text after Claude replaces it. There is no trash or history.</li>
           </ul>
         </div>
       </div>
@@ -267,6 +267,9 @@ function Section({
     </section>
   );
 }
+
+/** A list item with a hanging en dash, in place of a disc bullet. */
+const LIST_ITEM = "relative pl-5 before:absolute before:left-0 before:content-['–']";
 
 function Step({ number, children }: { readonly number: number; readonly children: ReactNode }) {
   return (
