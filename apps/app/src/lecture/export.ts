@@ -15,7 +15,7 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
   const font = await document.embedFont(StandardFonts.Helvetica);
   const pages = document.getPages();
 
-  for (const annotation of annotations) {
+  for (const annotation of paintOrder(annotations)) {
     const page = pages[annotation.page - 1];
     if (page === undefined) continue;
     const geometry = pageGeometry(page);
@@ -28,6 +28,15 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
     }
   }
   return document.save();
+}
+
+/**
+ * The order the annotations are drawn in, which is the order the screen stacks them: highlights lie under
+ * the page's text, strokes lie over the highlights, and text boxes lie on top. Within a kind, the list's order holds.
+ */
+export function paintOrder(annotations: readonly Annotation[]): Annotation[] {
+  const layer = (annotation: Annotation): number => (annotation.kind === "highlight" ? 0 : annotation.kind === "ink" ? 1 : 2);
+  return [...annotations].sort((a, b) => layer(a) - layer(b));
 }
 
 function pageGeometry(page: PDFPage): PageGeometry {

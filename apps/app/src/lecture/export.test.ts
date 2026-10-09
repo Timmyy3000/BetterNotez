@@ -3,7 +3,7 @@ import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { degrees, PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { AnnotationId } from "@betternotez/core";
-import { exportAnnotatedPdf } from "./export";
+import { exportAnnotatedPdf, paintOrder } from "./export";
 
 /** Each page is 300 by 400 points and holds its own number as text. */
 async function makePdf(pageCount: number, rotation = 0): Promise<Uint8Array> {
@@ -107,6 +107,34 @@ describe("exportAnnotatedPdf", () => {
     // The box's left and top, as the reader sees them on the rotated page, are 0.1 and 0.2 of 400 by 300.
     expect(x).toBeCloseTo(44, 1);
     expect(y).toBeCloseTo(77.3, 1);
+  });
+
+  it("draws highlights first, then strokes, then text boxes, as the screen stacks them", () => {
+    const text = textBox({ id: AnnotationId.parse("01ORDERTEXT000000000000000") });
+    const stroke: Annotation = {
+      id: AnnotationId.parse("01ORDERINK00000000000000000"),
+      kind: "ink",
+      page: 2,
+      author: "user",
+      points: [[0.1, 0.1, 0.5]],
+      color: "#2563eb",
+      size: 3,
+    };
+    const highlight: Highlight = {
+      id: AnnotationId.parse("01ORDERHIGHLIGHT000000000"),
+      kind: "highlight",
+      page: 2,
+      author: "user",
+      rects: [{ x: 0.2, y: 0.2, width: 0.4, height: 0.07 }],
+      text: "Original page 2",
+      color: "#ffd21f",
+    };
+
+    expect(paintOrder([text, stroke, highlight]).map((annotation) => annotation.kind)).toEqual([
+      "highlight",
+      "ink",
+      "text",
+    ]);
   });
 
   it("draws a pen stroke as a filled path on its page", async () => {
