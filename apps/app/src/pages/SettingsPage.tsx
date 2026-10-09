@@ -134,7 +134,8 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
     );
   }
 
-  const libraryPath = folder ?? LIBRARY_PLACEHOLDER;
+  // Forward slashes work on every OS and stay valid inside JSON and shell quotes.
+  const libraryPath = (folder ?? LIBRARY_PLACEHOLDER).replaceAll("\\", "/");
 
   return (
     <Section id="assistant-heading" title="Connect your AI" numeral={3}>
@@ -182,8 +183,8 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
         </Step>
         <Step number={3}>
           <p>
-            Quit the app completely, then open it again. Ask, &quot;List my BetterNotez subjects.&quot; If it lists your
-            subjects, the connection works.
+            Quit Claude, ChatGPT, or Codex completely, then open it again. Ask, &quot;List my BetterNotez subjects.&quot; If
+            it lists your subjects, the connection works.
           </p>
         </Step>
       </ol>
@@ -244,7 +245,7 @@ function claudeSetupPrompt(libraryPath: string): string {
 function codexSetupPrompt(libraryPath: string): string {
   return setupPrompt(
     "ChatGPT or Codex",
-    `   ChatGPT desktop and Codex share one config file. Add a [mcp_servers.betternotez] entry to ~/.codex/config.toml (Windows: %USERPROFILE%\\.codex\\config.toml, or under CODEX_HOME if that is set), keeping everything already there. Use single-quoted TOML strings for Windows paths. If the codex command is available, \`codex mcp add betternotez -- node "<file>" --library "${libraryPath}"\` does the same.`,
+    `   Codex (and the ChatGPT desktop app, where it supports local MCP servers) reads ~/.codex/config.toml. Add a [mcp_servers.betternotez] entry to ~/.codex/config.toml (Windows: %USERPROFILE%\\.codex\\config.toml, or under CODEX_HOME if that is set), keeping everything already there. If the codex command is available, \`codex mcp add betternotez -- node "<file>" --library "${libraryPath}"\` does the same. If you are the ChatGPT desktop app and it doesn't read that file, add the server through its own settings for MCP servers or connectors instead.`,
     libraryPath,
   );
 }
