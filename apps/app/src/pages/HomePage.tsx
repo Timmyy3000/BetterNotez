@@ -86,7 +86,7 @@ export function HomePage() {
           <h2 id="due-heading" className="label">
             Due
           </h2>
-          <Link to="/tasks" className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+          <Link to="/tasks" className="-my-2.5 py-2.5 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
             All tasks
           </Link>
         </div>
