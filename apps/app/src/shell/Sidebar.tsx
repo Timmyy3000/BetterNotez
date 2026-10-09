@@ -42,7 +42,7 @@ export function Sidebar() {
         <ul className="-ml-[22px] flex flex-col gap-0.5 overflow-y-auto pl-[22px]">
           {subjects.data?.map((subject) => (
             <li key={subject.id}>
-              <NavLink to={`/subjects/${subject.id}`} className={({ isActive }) => subjectItemClass(isActive)}>
+              <NavLink to={`/subjects/${subject.id}`} title={subject.name} className={({ isActive }) => subjectItemClass(isActive)}>
                 <span className="ink-dot" style={{ backgroundColor: subjectTone(subject.color) }} />
                 <span className="truncate">{subject.name}</span>
               </NavLink>
