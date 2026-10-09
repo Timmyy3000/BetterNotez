@@ -51,7 +51,7 @@ export function DeleteSubjectDialog({
           <p className="text-sm">This removes:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             {lectureCount > 0 && (
-              <li>{countLabel(lectureCount, "lecture")}, with their PDFs, annotations, and notes</li>
+              <li>{countLabel(lectureCount, "material")}, with their PDFs, annotations, and notes</li>
             )}
             {cardCount > 0 && <li>{countLabel(cardCount, "timetable class", "timetable classes")}</li>}
           </ul>

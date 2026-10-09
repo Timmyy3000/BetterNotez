@@ -116,8 +116,8 @@ export function Notepad({
         </span>
       </div>
       <textarea
-        aria-label="Lecture notes"
-        placeholder="Write notes for this lecture"
+        aria-label="Material notes"
+        placeholder="Write notes for this material"
         disabled={text === undefined}
         value={text ?? ""}
         onChange={handleChange}

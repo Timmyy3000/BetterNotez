@@ -15,7 +15,7 @@ type HitKind = SearchHit["kind"];
 
 const GROUPS: readonly { readonly kind: HitKind; readonly label: string }[] = [
   { kind: "subject", label: "Subjects" },
-  { kind: "lecture", label: "Lectures" },
+  { kind: "lecture", label: "Materials" },
   { kind: "notes", label: "Notes" },
   { kind: "annotation", label: "Text boxes" },
   { kind: "pdf", label: "PDF text" },
@@ -58,7 +58,7 @@ export function SearchPage() {
           aria-label="Search"
           autoFocus
           className="min-w-0 flex-1 bg-transparent py-2 font-serif text-3xl outline-none placeholder:text-faint placeholder:italic [&::-webkit-search-cancel-button]:appearance-none"
-          placeholder="Search subjects, lectures, notes, text boxes, or PDF text"
+          placeholder="Search subjects, materials, notes, text boxes, or PDF text"
           value={query}
           onChange={(event) => setParams({ q: event.target.value }, { replace: true })}
         />
@@ -80,7 +80,7 @@ export function SearchPage() {
       <div className="mt-10 space-y-12">
         {needle === "" && (
           <EmptyState icon={Search} title="Search your semester">
-            Find subjects, lectures, notes, text boxes, or words inside a PDF.
+            Find subjects, materials, notes, text boxes, or words inside a PDF.
           </EmptyState>
         )}
         {results.error !== undefined && <QueryError error={results.error} />}

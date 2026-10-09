@@ -83,7 +83,7 @@ export function PlannerCardDialog({
     return (
       <ModalDialog
         title={`Remove ${subjectName}?`}
-        description="This takes the class off your timetable. The subject and its lectures stay."
+        description="This takes the class off your timetable. The subject and its material stay."
         onClose={onClose}
       >
         <DialogActions>

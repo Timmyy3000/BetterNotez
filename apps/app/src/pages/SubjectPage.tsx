@@ -85,7 +85,7 @@ export function SubjectPage() {
           </>
         }
         title={current.name}
-        description={countLabel(ordered.length, "lecture")}
+        description={countLabel(ordered.length, "material")}
         actions={
           <>
             <Button variant="primary" onClick={() => setDialog({ kind: "import", files: [] })}>
@@ -115,8 +115,8 @@ export function SubjectPage() {
 
       <div className="rise" style={revealAt(2)}>
         {ordered.length === 0 ? (
-          <EmptyState icon={FileText} title="No lectures yet">
-            Drop lecture PDFs anywhere on this page, or click Import PDF.
+          <EmptyState icon={FileText} title="No material yet">
+            Drop material PDFs anywhere on this page, or click Import PDF.
           </EmptyState>
         ) : (
           <ol className="border-b border-border">
@@ -182,7 +182,7 @@ function LectureRow({
           </DropdownMenuItem>
           <DropdownMenuItem destructive onSelect={onDelete}>
             <Trash2 />
-            Delete lecture
+            Delete material
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
