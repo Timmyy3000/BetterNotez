@@ -35,11 +35,11 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "get_lecture",
-    "Get one piece of material with its notepad, annotations, and whether its PDF text is cached. Annotation ids here are what update_annotation takes.",
-    { lectureId: lectureRef },
-    async ({ lectureId }) => ({
+    "Get one piece of material with its notes, annotations, and whether its PDF text is cached. Notes are kept per page, and each one names its page. Pages without a note are left out. Pass page to read only that page's note. Annotation ids here are what update_annotation takes.",
+    { lectureId: lectureRef, page: pageRef.optional() },
+    async ({ lectureId, page }) => ({
       lecture: await library.getLecture(lectureId),
-      notes: await library.getNotes(lectureId),
+      notes: await pageNotes(library, lectureId, page),
       annotations: await library.listAnnotations(lectureId),
       pdfTextCached: (await library.getPdfText(lectureId)) !== undefined,
     }),
@@ -87,19 +87,29 @@ export function registerLectureTools(tools: ToolRegistry, library: Library): voi
 
   tools.tool(
     "update_notes",
-    "Edit the notepad of a piece of material. Use mode append (the default) to add to the notes. Use replace only when the student asks to rewrite them, because replace removes the existing text.",
+    "Edit the note on one page of a piece of material. Use mode append (the default) to add to that page's note. Use replace only when the student asks to rewrite it, because replace removes what the page's note says now. Other pages are not changed.",
     {
       lectureId: lectureRef,
+      page: pageRef,
       text: z.string().describe("Markdown text to write."),
       mode: z.enum(["append", "replace"]).default("append"),
     },
-    async ({ lectureId, text, mode }) => {
+    async ({ lectureId, page, text, mode }) => {
       if (mode === "replace") {
-        await library.setNotes(lectureId, text);
+        await library.setPageNote(lectureId, page, text);
       } else {
-        await library.appendNotes(lectureId, text);
+        await library.appendPageNote(lectureId, page, text);
       }
-      return { lectureId, notes: await library.getNotes(lectureId) };
+      return { lectureId, page, text: await library.getPageNote(lectureId, page) };
     },
   );
+}
+
+/** Every page's note, or only the note on `page`. That list is empty when the page has no note. */
+async function pageNotes(library: Library, lectureId: string, page: number | undefined) {
+  if (page === undefined) {
+    return library.listPageNotes(lectureId);
+  }
+  const text = await library.getPageNote(lectureId, page);
+  return text === "" ? [] : [{ page, text }];
 }
