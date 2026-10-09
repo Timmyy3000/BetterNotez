@@ -192,7 +192,7 @@ export function TasksPage() {
     <>
       <PageHeader
         title="Tasks"
-        description="Drag each task from To do to Doing, then to Done."
+        description="Study tasks, from To do to Done."
         actions={
           <select
             aria-label="Filter by subject"
@@ -214,7 +214,7 @@ export function TasksPage() {
       {saved.length === 0 && (
         <div className="mt-8">
           <EmptyState icon={ListChecks} title="Plan your study tasks">
-            Type a task into To do. Drag it to Doing when you start, and to Done when you finish.
+            Type a task in the To do column. Drag it to Doing when you start, and to Done when you finish.
           </EmptyState>
         </div>
       )}
