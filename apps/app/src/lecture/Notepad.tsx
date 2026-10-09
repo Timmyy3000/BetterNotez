@@ -33,7 +33,7 @@ export function Notepad({
     >
       <div className="flex h-[84px] shrink-0 items-end justify-between pt-0 pr-6 pb-1.5 pl-[66px]">
         <h2 className="font-serif text-[32px] leading-none">
-          Notes <span className="label ml-1 text-[11px]">Page {page}</span>
+          Notes <span className="label ml-1 text-[11px]">· Page {page}</span>
         </h2>
         <span role="status" className="flex items-center gap-1.5 text-[13px] text-faint">
           {notes.status === "saved" && <Check aria-hidden className="size-3.5" />}
