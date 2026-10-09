@@ -54,6 +54,7 @@
   --border: #362f27;
   --rule: #362f27;
   --rule-strong: #7a6e5e;
+  --ruled: #3d362d;
   --control-border: #837666;
   --accent: #f0785a;
   --accent-foreground: #171310;
@@ -109,6 +110,7 @@
   --border: #ddd3be;
   --rule: #ddd3be;
   --rule-strong: #877b69;
+  --ruled: #ddd3be;
   --control-border: #7d7161;
   --accent: #b5382a;
   --accent-foreground: #fffdf8;
@@ -238,7 +240,7 @@
   .ruled-paper {
     background-image:
       linear-gradient(90deg, transparent 50px, var(--margin) 50px, var(--margin) 51px, transparent 51px),
-      linear-gradient(transparent 27px, var(--rule) 27px, var(--rule) 28px);
+      linear-gradient(transparent 27px, var(--ruled) 27px, var(--ruled) 28px);
     background-size: 100% 100%, 100% 28px;
     background-repeat: no-repeat, repeat;
     background-attachment: local;
