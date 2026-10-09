@@ -62,7 +62,7 @@ function SelectControl({
   return (
     <SelectPrimitive.Root
       value={toItem(value)}
-      onValueChange={(next) => onValueChange(fromItem(next))}
+      onValueChange={handleChoice(onValueChange)}
       disabled={disabled}
     >
       <SelectPrimitive.Trigger
@@ -117,6 +117,11 @@ export function toItem(value: string): string {
 /** The value the caller is given. Choosing the stand-in reports the empty value again. */
 export function fromItem(item: string): string {
   return item === EMPTY_ITEM ? "" : item;
+}
+
+/** The change handler Radix calls with the chosen item. It passes the caller the value that item stands for. */
+export function handleChoice(onValueChange: (value: string) => void): (item: string) => void {
+  return (item) => onValueChange(fromItem(item));
 }
 
 /** A select under a visible `<label>`. The label is tied to the trigger, so it names the control for assistive technology. */
