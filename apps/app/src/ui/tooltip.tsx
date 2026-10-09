@@ -21,7 +21,7 @@ export function IconButton({
         <TooltipPrimitive.Content
           side="bottom"
           sideOffset={6}
-          className="z-50 rounded-md bg-foreground px-2 py-1 text-xs text-background"
+          className="z-50 animate-[fade-in_125ms_ease-out] rounded-md bg-foreground px-2 py-1 text-xs text-background"
         >
           {label}
         </TooltipPrimitive.Content>

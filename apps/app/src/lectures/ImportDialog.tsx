@@ -77,7 +77,7 @@ export function ImportDialog({
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          "flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-7 text-center transition-colors",
+          "flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-8 text-center transition-colors",
           dragging ? "border-accent bg-accent-soft" : "border-control",
         )}
       >

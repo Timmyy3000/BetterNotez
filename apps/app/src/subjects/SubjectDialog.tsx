@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { useLibrary } from "../library";
 import { errorMessage } from "../lib/errors";
 import { cn } from "../lib/cn";
-import { DEFAULT_SUBJECT_COLOR, SUBJECT_COLORS } from "../lib/subject-colors";
+import { DEFAULT_SUBJECT_COLOR, SUBJECT_COLORS, subjectTone } from "../lib/subject-colors";
 import { notifyLibraryChanged } from "../store";
 import { Button } from "../ui/button";
 import { DialogActions, ModalDialog } from "../ui/dialog";
@@ -50,7 +50,7 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <label className="block space-y-2">
+        <label className="grid gap-2.5">
           <span className="text-sm font-medium">Name</span>
           <Input
             autoFocus
@@ -71,10 +71,10 @@ export function SubjectDialog({ subject, onClose }: { readonly subject?: Subject
                 aria-pressed={color === hex}
                 onClick={() => setColor(hex)}
                 className={cn(
-                  "size-8 rounded-full outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
-                  color === hex && "ring-2 ring-foreground ring-offset-2 ring-offset-surface",
+                  "size-8 rounded-full transition-transform hover:scale-110",
+                  color === hex && "ring-2 ring-foreground ring-offset-2 ring-offset-raised",
                 )}
-                style={{ backgroundColor: hex }}
+                style={{ backgroundColor: subjectTone(hex) }}
               />
             ))}
           </div>

@@ -79,6 +79,37 @@ export function newBlock(anchor: number, current: number, range: Span): Span {
   return { start, end: Math.min(end, range.end) };
 }
 
+export type ArrowKey = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
+
+export function isArrowKey(key: string): key is ArrowKey {
+  return key === "ArrowUp" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowRight";
+}
+
+/**
+ * The placement after one arrow key on a block. Up and down move it a slot, and left and right
+ * move it a visible day. With Shift, up and down change its end by a slot instead. A step past the
+ * grid or the visible days returns the block unchanged.
+ */
+export function keyStep(
+  block: { readonly day: number; readonly start: number; readonly end: number },
+  key: ArrowKey,
+  shift: boolean,
+  days: readonly number[],
+  range: Span,
+): { readonly day: number; readonly start: number; readonly end: number } {
+  const sign = key === "ArrowUp" || key === "ArrowLeft" ? -1 : 1;
+  const { day, start, end } = block;
+  if (key === "ArrowLeft" || key === "ArrowRight") {
+    const index = days.indexOf(day);
+    if (shift || index === -1) return { day, start, end };
+    const next = days[Math.min(Math.max(index + sign, 0), days.length - 1)];
+    return { day: next ?? day, start, end };
+  }
+  if (shift) return { day, start, end: placeEnd(start, end + sign * SLOT_MINUTES, range) };
+  const nextStart = placeStart(start + sign * SLOT_MINUTES, end - start, range);
+  return { day, start: nextStart, end: nextStart + (end - start) };
+}
+
 /** The narrowest a card may get before overlapping cards start to stack instead of sharing the day. */
 export const MIN_CARD_PX = 88;
 

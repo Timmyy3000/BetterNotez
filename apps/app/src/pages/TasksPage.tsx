@@ -16,18 +16,20 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ListChecks } from "lucide-react";
+import { ListChecks, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { TaskStatus, type Task } from "@betternotez/core";
 import { useLibrary, useLibraryQuery, useLibraryRefresh } from "../library";
 import { errorMessage } from "../lib/errors";
 import { EmptyState } from "../ui/empty-state";
-import { Input } from "../ui/input";
 import { PageHeader } from "../ui/page-header";
 import { QueryError } from "../ui/query-error";
+import { revealAt } from "../lib/motion";
 import { notifyLibraryChanged } from "../store";
 import { dropOver, isOverdue, localDateKey, planDrop, statusOf, toBoard, type Board, type OrderUpdate } from "../tasks/board";
+import { announce } from "../tasks/announce";
 import { SortableTaskCard, TaskCardFace, type TaskCardInfo } from "../tasks/TaskCard";
 import { TaskDialog } from "../tasks/TaskDialog";
 
@@ -54,13 +56,18 @@ export function TasksPage() {
   const [filter, setFilter] = useState(ALL_SUBJECTS);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   // A pointer drag ends with a click on the card it started from. Opening the editor there would be wrong.
   const justDragged = useRef(false);
   useLibraryRefresh();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    // Enter opens a card, as a click does, so only Space picks one up.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space", "Tab"] },
+    }),
   );
 
   useEffect(() => {
@@ -77,6 +84,15 @@ export function TasksPage() {
     if (Object.keys(next).length !== Object.keys(previous).length) updatePlanned(next);
   }, [tasks.data]);
 
+  // A ledger link opens its task. The parameter is cleared so a reload does not reopen the editor.
+  const requestedTask = searchParams.get("task");
+  useEffect(() => {
+    const requested = requestedTask;
+    if (requested === null || tasks.data === undefined) return;
+    if (tasks.data.some((task) => task.id === requested)) setEditingId(requested);
+    setSearchParams({}, { replace: true });
+  }, [tasks.data, requestedTask]);
+
   if (tasks.error !== undefined) return <QueryError error={tasks.error} />;
   if (subjects.error !== undefined) return <QueryError error={subjects.error} />;
   if (lectures.error !== undefined) return <QueryError error={lectures.error} />;
@@ -90,6 +106,14 @@ export function TasksPage() {
   const lectureById = new Map(lectureList.map((lecture) => [lecture.id, lecture]));
   const today = localDateKey(new Date());
   const activeTask = activeId === null ? undefined : Object.values(board).flat().find((task) => task.id === activeId);
+  // Drag announcements name a task and its column. The defaults read out the ids.
+  const nameOf = (id: string | number): string =>
+    Object.values(board).flat().find((task) => task.id === String(id))?.title ?? "a task";
+  const columnOf = (id: string | number | undefined): string | undefined => {
+    if (id === undefined) return undefined;
+    const status = TaskStatus.safeParse(String(id)).success ? TaskStatus.parse(String(id)) : statusOf(board, String(id));
+    return status === undefined ? undefined : COLUMN_LABELS[status];
+  };
   const editing = editingId === null ? undefined : saved.find((task) => task.id === editingId);
 
   function infoFor(task: Task): TaskCardInfo {
@@ -192,22 +216,32 @@ export function TasksPage() {
     <>
       <PageHeader
         title="Tasks"
-        description="Study tasks, from To do to Done."
+        eyebrow="Study tasks"
+        description="From To do to Done."
         actions={
-          <select
-            aria-label="Filter by subject"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            className="h-9 rounded-lg border border-control bg-surface px-3 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
-          >
-            <option value={ALL_SUBJECTS}>All subjects</option>
-            <option value={NO_SUBJECT}>No subject</option>
-            {subjectList.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-col items-start gap-1.5">
+            <span className="label">Subject</span>
+            <div className="relative">
+              <select
+                aria-label="Filter by subject"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                className="min-w-52 cursor-pointer appearance-none border-0 border-b border-rule-strong bg-transparent py-2 pr-8 text-[17px] text-foreground transition-colors focus:border-accent"
+              >
+                <option value={ALL_SUBJECTS}>All subjects</option>
+                <option value={NO_SUBJECT}>No subject</option>
+                {subjectList.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-[40%] right-1.5 size-[7px] -translate-y-1/2 rotate-45 border-r-[1.5px] border-b-[1.5px] border-muted-foreground"
+              />
+            </div>
+          </div>
         }
       />
 
@@ -226,8 +260,16 @@ export function TasksPage() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
+        accessibility={{
+          announcements: {
+            onDragStart: ({ active }) => announce.pickedUp(nameOf(active.id)),
+            onDragOver: ({ active, over }) => announce.movedOver(nameOf(active.id), columnOf(over?.id)),
+            onDragEnd: ({ active, over }) => announce.droppedIn(nameOf(active.id), columnOf(over?.id)),
+            onDragCancel: ({ active }) => announce.cancelled(nameOf(active.id)),
+          },
+        }}
       >
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="rise grid md:grid-cols-3" style={revealAt(2)}>
           {TaskStatus.options.map((status) => (
             <BoardColumn
               key={status}
@@ -272,20 +314,18 @@ function BoardColumn({
   const label = COLUMN_LABELS[status];
 
   return (
-    <section aria-label={label} className="flex min-h-72 flex-col rounded-2xl bg-sidebar p-3">
-      <header className="flex items-center justify-between px-1 pb-3">
-        <h2 className="text-sm font-semibold">{label}</h2>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
-          {tasks.length}
-        </span>
+    <section aria-label={label} className="flex min-h-72 min-w-0 flex-col px-7 first:pl-0 last:pr-0 md:border-l md:border-rule first:md:border-l-0">
+      <header className="flex items-baseline justify-between border-b-2 border-foreground pb-3">
+        <h2 className="text-[34px] leading-none">{label}</h2>
+        <span className="font-serif text-[22px] text-faint italic tabular-nums">{tasks.length}</span>
       </header>
       <AddTaskForm label={label} onAdd={onAdd} />
       <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-        <div ref={setNodeRef} className="mt-3 flex flex-1 flex-col gap-2">
+        <div ref={setNodeRef} className="mt-4 flex flex-1 flex-col gap-3.5">
           {tasks.map((task) => (
             <SortableTaskCard key={task.id} info={infoFor(task)} onEdit={() => onOpen(task.id)} />
           ))}
-          {tasks.length === 0 && <div className="flex-1 rounded-xl border border-dashed border-control" />}
+          {tasks.length === 0 && <div className="flex-1 rounded-lg border border-dashed border-rule-strong" />}
         </div>
       </SortableContext>
     </section>
@@ -304,14 +344,18 @@ function AddTaskForm({ label, onAdd }: { readonly label: string; readonly onAdd:
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Input
+    <form
+      onSubmit={handleSubmit}
+      className="mt-5 flex items-center gap-2.5 border-b border-rule-strong pt-2.5 pb-2 text-faint transition-colors duration-200 focus-within:border-accent"
+    >
+      <Plus aria-hidden className="size-4 shrink-0" />
+      <input
         aria-label={`Add a task to ${label}`}
         placeholder="Add a task"
         maxLength={200}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        className="bg-surface"
+        className="min-w-0 flex-1 bg-transparent text-[15px] text-foreground placeholder:text-faint"
       />
     </form>
   );
