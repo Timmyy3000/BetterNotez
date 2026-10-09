@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Bot, FolderOpen, Info, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
+import { FolderOpen, Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import pkg from "../../package.json";
 import { cn } from "../lib/cn";
+import { romanNumeral } from "../lib/format";
 import { isDesktop } from "../lib/platform";
 import { libraryFolder } from "../storage";
 import { type ThemePreference, useThemeStore } from "../theme";
@@ -36,7 +37,7 @@ export function SettingsPage() {
     <>
       <PageHeader title="Settings" description="Change how BetterNotez looks, find your library, and connect Claude." />
 
-      <div className="mt-10 max-w-2xl space-y-12">
+      <div className="max-w-2xl space-y-16">
         <AppearanceSection />
         <LibrarySection desktop={desktop} folder={folder} />
         <AssistantSection desktop={desktop} folder={folder} />
@@ -51,11 +52,11 @@ function AppearanceSection() {
   const setPreference = useThemeStore((state) => state.setPreference);
 
   return (
-    <Section id="appearance-heading" title="Appearance" icon={Sun}>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+    <Section id="appearance-heading" title="Appearance" numeral={1}>
+      <p className="text-[15px] leading-relaxed text-muted-foreground">
         Choose how BetterNotez looks. System follows your computer's light or dark setting.
       </p>
-      <div role="group" aria-label="Theme" className="mt-4 inline-flex rounded-xl border border-control bg-muted p-1">
+      <div role="group" aria-label="Theme" className="mt-5 inline-flex gap-2">
         {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
           const selected = preference === value;
           return (
@@ -65,10 +66,10 @@ function AppearanceSection() {
               aria-pressed={selected}
               onClick={() => setPreference(value)}
               className={cn(
-                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors [&_svg]:size-4",
+                "inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.96] [&_svg]:size-4",
                 selected
-                  ? "raised-edge bg-raised text-foreground shadow-sm ring-1 ring-border [&_svg]:text-accent"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-control text-foreground hover:bg-foreground/5",
               )}
             >
               <Icon />
@@ -84,8 +85,8 @@ function AppearanceSection() {
 function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
   if (!desktop) {
     return (
-      <Section id="library-heading" title="Your library" icon={FolderOpen}>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+      <Section id="library-heading" title="Your library" numeral={2}>
+        <p className="text-[15px] leading-relaxed text-muted-foreground">
           This web app keeps your library in this browser only. Clearing your browser's data deletes it, and other
           browsers or computers cannot open it. To keep one lecture, open it and click Export PDF. To back up the whole
           library as a folder, use the desktop app.
@@ -95,8 +96,8 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
   }
 
   return (
-    <Section id="library-heading" title="Your library" icon={FolderOpen}>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+    <Section id="library-heading" title="Your library" numeral={2}>
+      <p className="text-[15px] leading-relaxed text-muted-foreground">
         Your library is one folder on this computer. BetterNotez saves lectures, notes, annotations, and tasks as ordinary
         files, so you can copy or back them up without the app. The folders are named by ID, and each PDF is saved as
         lecture.pdf, so use BetterNotez to find a lecture.
@@ -119,8 +120,8 @@ function LibrarySection({ desktop, folder }: { readonly desktop: boolean; readon
 function AssistantSection({ desktop, folder }: { readonly desktop: boolean; readonly folder: string | undefined }) {
   if (!desktop) {
     return (
-      <Section id="assistant-heading" title="Connect Claude" icon={Bot}>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+      <Section id="assistant-heading" title="Connect Claude" numeral={3}>
+        <p className="text-[15px] leading-relaxed text-muted-foreground">
           Connecting Claude needs the desktop app. Claude reads your library from a folder on your computer. The web app
           keeps its library in this browser, where Claude cannot reach it.{" "}
           <a href={RELEASES_URL} className="text-accent underline underline-offset-2">
@@ -145,8 +146,8 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
   const claudeCodeCommand = `claude mcp add betternotez -- node "${SERVER_PLACEHOLDER}" --library "${libraryPath}"`;
 
   return (
-    <Section id="assistant-heading" title="Connect Claude" icon={Bot}>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+    <Section id="assistant-heading" title="Connect Claude" numeral={3}>
+      <p className="text-[15px] leading-relaxed text-muted-foreground">
         Claude can find a lecture by name, read its PDF text and your notes, and help you write notes or add text boxes
         and drawings to a PDF. Try asking about one of your lectures, such as &quot;Let's talk about Lecture 1 in Digital
         Systems.&quot; Setup takes three steps, and you do it once.
@@ -154,7 +155,7 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
-          <h3 className="text-sm font-medium">What Claude can do</h3>
+          <h3 className="font-serif text-2xl">What Claude can do</h3>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
             <li>Find and read subjects, lectures, notes, text boxes, and PDF text</li>
             <li>Create and edit subjects, lectures, notes, tasks, and timetable classes</li>
@@ -162,7 +163,7 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
           </ul>
         </div>
         <div>
-          <h3 className="text-sm font-medium">What Claude can't do</h3>
+          <h3 className="font-serif text-2xl">What Claude can't do</h3>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
             <li>Delete anything. Deleting happens only in the app.</li>
             <li>Bring back a note's text after Claude replaces it. There is no trash or history.</li>
@@ -199,14 +200,14 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
             you copied in step 1. On Windows, use forward slashes, such as C:/Users/you/Downloads/betternotez-mcp.mjs,
             because backslashes break the JSON.
           </p>
-          <h3 className="mt-4 text-sm font-medium">Claude Desktop</h3>
+          <h3 className="mt-4 font-serif text-2xl">Claude Desktop</h3>
           <p className="mt-1 text-muted-foreground">
             In Claude Desktop, open Settings, then Developer, then Edit Config. If the file is new or empty, paste the
             whole snippet. If it already has settings, add the betternotez entry inside its mcpServers section and keep
             the rest.
           </p>
           <Copyable label="Claude Desktop config" value={claudeDesktopConfig} />
-          <h3 className="mt-4 text-sm font-medium">Claude Code (for terminal users)</h3>
+          <h3 className="mt-4 font-serif text-2xl">Claude Code (for terminal users)</h3>
           <p className="mt-1 text-muted-foreground">
             Open a terminal, paste this command, and press Enter. You only need to do this once.
           </p>
@@ -226,35 +227,40 @@ function AssistantSection({ desktop, folder }: { readonly desktop: boolean; read
 
 function AboutSection() {
   return (
-    <Section id="about-heading" title="About" icon={Info}>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+    <Section id="about-heading" title="About" numeral={4}>
+      <p className="text-[15px] leading-relaxed text-muted-foreground">
         Version {pkg.version}. BetterNotez is free and open source under the AGPL-3.0 license.
       </p>
-      <a href={REPOSITORY_URL} className="mt-3 inline-block text-sm text-accent underline underline-offset-2">
+      <a href={REPOSITORY_URL} className="mt-3 inline-block text-sm text-accent underline underline-offset-4">
         View the code on GitHub
       </a>
     </Section>
   );
 }
 
+/** A numbered part of the page, set like a chapter: a roman numeral in the margin, then the title over a rule. */
 function Section({
   id,
   title,
-  icon: Icon,
+  numeral,
   children,
 }: {
   readonly id: string;
   readonly title: string;
-  readonly icon?: LucideIcon;
+  readonly numeral: number;
   readonly children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={id}>
-      <h2 id={id} className="flex items-center gap-2 text-lg font-semibold">
-        {Icon !== undefined && <Icon className="size-5 text-accent" />}
-        {title}
-      </h2>
-      {children}
+    <section aria-labelledby={id} className="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2">
+      <span aria-hidden className="pt-2 font-serif text-xl text-faint italic">
+        {romanNumeral(numeral)}.
+      </span>
+      <div className="min-w-0">
+        <h2 id={id} className="border-b border-rule pb-4 text-[34px] leading-none">
+          {title}
+        </h2>
+        <div className="mt-5 space-y-4">{children}</div>
+      </div>
     </section>
   );
 }
@@ -262,7 +268,7 @@ function Section({
 function Step({ number, children }: { readonly number: number; readonly children: ReactNode }) {
   return (
     <li className="flex gap-4">
-      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-sm font-semibold text-accent">
+      <span aria-hidden className="w-6 shrink-0 pt-0.5 font-serif text-2xl text-faint italic">
         {number}
       </span>
       <div className="min-w-0 flex-1 space-y-2 text-sm leading-relaxed">{children}</div>
