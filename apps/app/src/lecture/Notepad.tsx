@@ -16,6 +16,7 @@ export function Notepad({
   notes,
   width,
   onFocusChange,
+  onPointerDown,
 }: {
   readonly id: string;
   /** The page whose note is shown and edited. */
@@ -24,6 +25,8 @@ export function Notepad({
   readonly width: number;
   /** Reports when the field gains or loses focus, so the page under typing can be held. */
   readonly onFocusChange: (focused: boolean) => void;
+  /** Runs on a press anywhere in the panel. The rendered note cannot take focus, so this is how the page learns of it. */
+  readonly onPointerDown: () => void;
 }) {
   // The page the source was opened for. It stops matching when the page changes, so turning the page shows the new
   // page's mode with no reset to run.
@@ -46,6 +49,7 @@ export function Notepad({
       id={id}
       aria-label="Notes"
       style={{ width }}
+      onPointerDown={onPointerDown}
       className="grain flex shrink-0 flex-col border-l border-border bg-surface"
     >
       <div className="flex h-[84px] shrink-0 items-end justify-between pt-0 pr-6 pb-1.5 pl-[66px]">
