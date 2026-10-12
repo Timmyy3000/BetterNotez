@@ -1,13 +1,17 @@
 import { z } from "zod";
-import { InvalidError, NotFoundError, UnreadableNotesError } from "./errors.js";
-import { LectureId, SubjectId, newId, type AnnotationId } from "./ids.js";
+import { InvalidError, NotFoundError, UnreadableNotesError, UnreadableOrganizationError } from "./errors.js";
+import { FolderId, LectureId, SubjectId, newId, type AnnotationId } from "./ids.js";
 import {
   Annotation,
   type AnnotationDraft,
+  Folder,
   type Highlight,
   type Ink,
   Lecture,
+  LectureStatus,
+  LecturePlacement,
   LibraryFile,
+  OrganizationFile,
   PageNotes,
   PageNumber,
   PlannerCard,
@@ -102,6 +106,19 @@ export interface PageNote {
   readonly text: string;
 }
 
+/** A material's status and folder, with the defaults applied. */
+export interface MaterialPlacement {
+  readonly status: LectureStatus;
+  /** Left out when the material is in Unfiled, which includes a folder that no longer exists. */
+  readonly folderId?: FolderId;
+}
+
+/** The folders of a subject, and the placement of each of its materials. */
+export interface SubjectOrganization {
+  readonly folders: Folder[];
+  readonly lectures: Record<string, MaterialPlacement>;
+}
+
 interface LocatedLecture {
   readonly lecture: Lecture;
   readonly dir: string;
@@ -132,7 +149,7 @@ function hasKnownKind(value: unknown): boolean {
  * Library layout on storage:
  *   library.json
  *   planner.json, tasks.json
- *   subjects/<subjectId>/subject.json
+ *   subjects/<subjectId>/subject.json, organization.json
  *   subjects/<subjectId>/lectures/<lectureId>/{lecture.json, lecture.pdf, annotations.json, notes.json, text.json}
  *
  * Every write parses the full record before storing it, and every read parses the stored JSON.
@@ -141,6 +158,7 @@ export class Library {
   private readonly storage: Storage;
   private readonly clock: () => Date;
   private noteWrites: Promise<unknown> = Promise.resolve();
+  private organizationWrites: Promise<unknown> = Promise.resolve();
 
   constructor(storage: Storage, options: LibraryOptions = {}) {
     this.storage = storage;
@@ -274,6 +292,86 @@ export class Library {
     const { lecture, dir } = await this.locateLecture(id);
     await this.unlinkTasks(undefined, new Set([lecture.id]));
     await this.storage.remove(dir);
+    await this.dropPlacement(lecture);
+  }
+
+  /** The folders of a subject, oldest first. */
+  async listFolders(subjectId: string): Promise<Folder[]> {
+    const subject = await this.getSubject(subjectId);
+    return (await this.readOrganization(subject.id)).folders.sort(byId);
+  }
+
+  async createFolder(subjectId: string, name: string): Promise<Folder> {
+    const subject = await this.getSubject(subjectId);
+    const folder = Folder.parse({ id: newId(), name, createdAt: this.timestamp() });
+    await this.editOrganization(subject.id, (file) => ({ ...file, folders: [...file.folders, folder] }));
+    return folder;
+  }
+
+  async renameFolder(subjectId: string, folderId: string, name: string): Promise<Folder> {
+    const subject = await this.getSubject(subjectId);
+    const id = lookupId(FolderId, folderId, "Folder");
+    const file = await this.editOrganization(subject.id, (current) => {
+      const renamed = Folder.parse({ ...folderIn(current, id), name });
+      return { ...current, folders: current.folders.map((folder) => (folder.id === id ? renamed : folder)) };
+    });
+    return folderIn(file, id);
+  }
+
+  /** Removes the folder. Its material moves to Unfiled, and no PDF is deleted. One write, so nothing is left half done. */
+  async deleteFolder(subjectId: string, folderId: string): Promise<void> {
+    const subject = await this.getSubject(subjectId);
+    const id = lookupId(FolderId, folderId, "Folder");
+    await this.editOrganization(subject.id, (file) => {
+      folderIn(file, id);
+      const lectures = Object.fromEntries(
+        Object.entries(file.lectures).map(([lectureId, placement]) => [
+          lectureId,
+          placement.folderId === id ? { ...placement, folderId: undefined } : placement,
+        ]),
+      );
+      return {
+        ...file,
+        folders: file.folders.filter((folder) => folder.id !== id),
+        lectures: withoutEmptyPlacements(lectures),
+      };
+    });
+  }
+
+  /** The folders of a subject, and the status and folder of each of its material, with the defaults filled in. */
+  async getOrganization(subjectId: string): Promise<SubjectOrganization> {
+    const subject = await this.getSubject(subjectId);
+    const file = await this.readOrganization(subject.id);
+    const folderIds = new Set(file.folders.map((folder) => folder.id));
+    const lectures: Record<string, MaterialPlacement> = {};
+    for (const lecture of await this.listLectures(subject.id)) {
+      const stored = file.lectures[lecture.id];
+      const folderId = stored?.folderId;
+      lectures[lecture.id] = {
+        status: statusOf(stored?.status),
+        folderId: folderId !== undefined && folderIds.has(folderId) ? folderId : undefined,
+      };
+    }
+    return { folders: [...file.folders].sort(byId), lectures };
+  }
+
+  async setLectureStatus(lectureId: string, status: LectureStatus): Promise<void> {
+    const { lecture } = await this.locateLecture(lectureId);
+    const next = LectureStatus.parse(status);
+    await this.editOrganization(lecture.subjectId, (file) =>
+      placeLecture(file, lecture.id, { ...file.lectures[lecture.id], status: next }),
+    );
+  }
+
+  /** Puts a material in a folder of its own subject, or back in Unfiled when `folderId` is null. */
+  async moveLecture(lectureId: string, folderId: string | null): Promise<void> {
+    const { lecture } = await this.locateLecture(lectureId);
+    const target = folderId === null ? undefined : lookupId(FolderId, folderId, "Folder");
+    await this.editOrganization(lecture.subjectId, (file) => {
+      // A folder of another subject is not in this file, so it is refused here.
+      if (target !== undefined) folderIn(file, target);
+      return placeLecture(file, lecture.id, { ...file.lectures[lecture.id], folderId: target });
+    });
   }
 
   async getPdf(id: string): Promise<Uint8Array> {
@@ -722,6 +820,56 @@ export class Library {
     return run;
   }
 
+  /**
+   * A subject's folders and placements. A file that is damaged or from a newer version throws. It is never read as
+   * empty, because the next write would replace it.
+   */
+  private async readOrganization(subjectId: string): Promise<OrganizationFile> {
+    let stored: OrganizationFile | undefined;
+    try {
+      stored = await this.readJson(`${subjectDir(subjectId)}/organization.json`, OrganizationFile);
+    } catch (error) {
+      if (error instanceof InvalidError || error instanceof z.ZodError) throw new UnreadableOrganizationError();
+      throw error;
+    }
+    return stored ?? { version: 1, folders: [], lectures: {} };
+  }
+
+  /**
+   * Rewrites a subject's organization.json from its current contents. Writes run one at a time, and each reads the whole
+   * file first, so two edits to different materials cannot drop one another. A change that leaves the file as it was
+   * writes nothing, so a file that was never written is not created.
+   */
+  private editOrganization(
+    subjectId: string,
+    change: (file: OrganizationFile) => OrganizationFile,
+  ): Promise<OrganizationFile> {
+    const run = this.organizationWrites.then(async () => {
+      const current = await this.readOrganization(subjectId);
+      const next = OrganizationFile.parse(change(current));
+      if (JSON.stringify(next) === JSON.stringify(current)) return current;
+      await this.writeJson(`${subjectDir(subjectId)}/organization.json`, next);
+      return next;
+    });
+    this.organizationWrites = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * Removes a deleted material's entry. A file that cannot be read is left alone. Its stale entry does no harm, because
+   * no read lists a material that is gone.
+   */
+  private async dropPlacement(lecture: Lecture): Promise<void> {
+    try {
+      await this.editOrganization(lecture.subjectId, (file) => {
+        const { [lecture.id]: _removed, ...lectures } = file.lectures;
+        return { ...file, lectures };
+      });
+    } catch (error) {
+      if (!(error instanceof UnreadableOrganizationError)) throw error;
+    }
+  }
+
   private async readPdfText(dir: string): Promise<string[] | undefined> {
     return this.readJson(`${dir}/text.json`, PDF_TEXT);
   }
@@ -792,6 +940,31 @@ function mergeDefined(current: object, patch: object): unknown {
     ...current,
     ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
   };
+}
+
+/** A status this version does not know reads as reading, the same as a material that never had one. */
+function statusOf(status: string | undefined): LectureStatus {
+  return LectureStatus.safeParse(status).data ?? "reading";
+}
+
+/** The folder with this id in one subject's file. A folder of another subject is not in that file, so it is not found. */
+function folderIn(file: OrganizationFile, folderId: FolderId): Folder {
+  const folder = file.folders.find((item) => item.id === folderId);
+  if (folder === undefined) {
+    throw new NotFoundError("Folder", folderId);
+  }
+  return folder;
+}
+
+function placeLecture(file: OrganizationFile, lectureId: string, placement: LecturePlacement): OrganizationFile {
+  return { ...file, lectures: withoutEmptyPlacements({ ...file.lectures, [lectureId]: placement }) };
+}
+
+/** Drops each entry that holds neither a status nor a folder, so the file keeps only what is set. */
+function withoutEmptyPlacements(lectures: OrganizationFile["lectures"]): OrganizationFile["lectures"] {
+  return Object.fromEntries(
+    Object.entries(lectures).filter(([, placement]) => placement.status !== undefined || placement.folderId !== undefined),
+  );
 }
 
 function nextOrder(tasks: readonly Task[], status: TaskStatus): number {
