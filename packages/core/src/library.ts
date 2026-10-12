@@ -368,7 +368,6 @@ export class Library {
     const { lecture } = await this.locateLecture(lectureId);
     const target = folderId === null ? undefined : lookupId(FolderId, folderId, "Folder");
     await this.editOrganization(lecture.subjectId, (file) => {
-      // A folder of another subject is not in this file, so it is refused here.
       if (target !== undefined) folderIn(file, target);
       return placeLecture(file, lecture.id, { ...file.lectures[lecture.id], folderId: target });
     });
@@ -820,10 +819,6 @@ export class Library {
     return run;
   }
 
-  /**
-   * A subject's folders and placements. A file that is damaged or from a newer version throws. It is never read as
-   * empty, because the next write would replace it.
-   */
   private async readOrganization(subjectId: string): Promise<OrganizationFile> {
     let stored: OrganizationFile | undefined;
     try {
@@ -835,11 +830,6 @@ export class Library {
     return stored ?? { version: 1, folders: [], lectures: {} };
   }
 
-  /**
-   * Rewrites a subject's organization.json from its current contents. Writes run one at a time, and each reads the whole
-   * file first, so two edits to different materials cannot drop one another. A change that leaves the file as it was
-   * writes nothing, so a file that was never written is not created.
-   */
   private editOrganization(
     subjectId: string,
     change: (file: OrganizationFile) => OrganizationFile,
@@ -855,10 +845,6 @@ export class Library {
     return run;
   }
 
-  /**
-   * Removes a deleted material's entry. A file that cannot be read is left alone. Its stale entry does no harm, because
-   * no read lists a material that is gone.
-   */
   private async dropPlacement(lecture: Lecture): Promise<void> {
     try {
       await this.editOrganization(lecture.subjectId, (file) => {
@@ -942,12 +928,10 @@ function mergeDefined(current: object, patch: object): unknown {
   };
 }
 
-/** A status this version does not know reads as reading, the same as a material that never had one. */
 function statusOf(status: string | undefined): LectureStatus {
   return LectureStatus.safeParse(status).data ?? "reading";
 }
 
-/** The folder with this id in one subject's file. A folder of another subject is not in that file, so it is not found. */
 function folderIn(file: OrganizationFile, folderId: FolderId): Folder {
   const folder = file.folders.find((item) => item.id === folderId);
   if (folder === undefined) {
@@ -960,7 +944,6 @@ function placeLecture(file: OrganizationFile, lectureId: string, placement: Lect
   return { ...file, lectures: withoutEmptyPlacements({ ...file.lectures, [lectureId]: placement }) };
 }
 
-/** Drops each entry that holds neither a status nor a folder, so the file keeps only what is set. */
 function withoutEmptyPlacements(lectures: OrganizationFile["lectures"]): OrganizationFile["lectures"] {
   return Object.fromEntries(
     Object.entries(lectures).filter(([, placement]) => placement.status !== undefined || placement.folderId !== undefined),

@@ -36,7 +36,6 @@ async function importLecture(page: Page, fileName: string, pageTexts: readonly s
   await expect(page.getByRole("link", { name: title, exact: true })).toBeVisible();
 }
 
-/** Drags with the mouse from the middle of `from` to the middle of `to`, as a student would. */
 async function dragTo(page: Page, from: Locator, to: Locator): Promise<void> {
   const source = await from.boundingBox();
   const target = await to.boundingBox();

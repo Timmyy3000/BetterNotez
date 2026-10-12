@@ -62,7 +62,6 @@ const FILTERS: readonly { readonly value: StatusFilter; readonly label: string }
   { value: "done", label: "Done" },
 ];
 
-/** Drop targets. A folder's id is prefixed so it cannot collide with the Unfiled target. */
 const UNFILED_TARGET = "unfiled";
 const FOLDER_TARGET = "folder:";
 
@@ -76,12 +75,10 @@ export function SubjectPage() {
   const [dragging, setDragging] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
-  // A pointer drag ends with a click on the row it started from. Opening the material there would be wrong.
   const justDragged = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    // Enter opens a material, as a click does, so only Space picks one up.
     useSensor(KeyboardSensor, {
       keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space", "Tab"] },
     }),
@@ -104,9 +101,7 @@ export function SubjectPage() {
   const ordered = sortLectures(lectures.data);
   const { readable, folders, lectures: placements } = organization.data;
   const counts = countByStatus(ordered, placements);
-  // Without a readable file no material has a known status, so the filter shows every material.
   const sections = groupLectures(folders, ordered, placements, readable ? filter : "all");
-  // Numbers follow the whole list, so a filter does not renumber the material it shows.
   const numberOf = new Map(ordered.map((lecture, index) => [lecture.id, index + 1]));
   const activeLecture = ordered.find((lecture) => lecture.id === activeId);
   const titleOf = (id: string | number) => ordered.find((lecture) => lecture.id === String(id))?.title ?? "a material";
@@ -152,7 +147,6 @@ export function SubjectPage() {
     const lecture = ordered.find((item) => item.id === String(active.id));
     if (lecture === undefined || over === null) return;
     const target = targetFolder(String(over.id));
-    // Dropping a material where it already is changes nothing, so it is not written.
     if ((placements[lecture.id]?.folderId ?? null) === target) return;
     try {
       await library.moveLecture(lecture.id, target);
@@ -367,10 +361,6 @@ export function SubjectPage() {
   );
 }
 
-/**
- * A subject's folders and status. An unreadable organization.json is not an error here. The page lists the material
- * flat, and the file stays as it is. Any other failure is still reported.
- */
 async function readOrganization(
   library: Library,
   subjectId: string,
@@ -383,12 +373,10 @@ async function readOrganization(
   }
 }
 
-/** The folder a drop target stands for, or null for Unfiled. */
 function targetFolder(target: string): string | null {
   return target === UNFILED_TARGET ? null : target.slice(FOLDER_TARGET.length);
 }
 
-/** What an empty section says. Under a filter the material is there but hidden, so the hint says that instead. */
 function emptyHint(section: Section, filter: StatusFilter): string {
   if (filter !== "all") return "No material matches this filter.";
   return section.folder === undefined ? "Drop material here to unfile it." : "Drop material here.";
@@ -467,16 +455,13 @@ function LectureRow({
   readonly number: number;
   readonly lecture: Lecture;
   readonly status: LectureStatus;
-  /** False when organization.json cannot be read. The status is then unknown, so no status control is shown. */
   readonly readable: boolean;
-  /** A material can be dragged only when the subject has folders to drop it on, and its organization can be read. */
   readonly movable: boolean;
   readonly justDragged: RefObject<boolean>;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
   readonly onToggleStatus: () => void;
 }) {
-  // Only the grip starts a drag, so the rest of the row can still be clicked and scrolled.
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: lecture.id });
   const done = status === "done";
 
@@ -551,7 +536,6 @@ function LectureRow({
   );
 }
 
-/** A copy of a row for the drag overlay. It has no link and no controls, so it is only a picture of the row. */
 function LectureRowFace({ number, lecture }: { readonly number: number; readonly lecture: Lecture }) {
   return (
     <div className="flex w-[55rem] max-w-[calc(100vw-2rem)] items-baseline gap-6 rounded-lg border border-rule bg-raised px-5 py-4 shadow-(--lift)">

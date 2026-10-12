@@ -1,9 +1,7 @@
 import type { Folder, Lecture, LectureStatus, MaterialPlacement } from "@betternotez/core";
 
-/** "all" shows every material. The other two show the materials with that status. */
 export type StatusFilter = "all" | LectureStatus;
 
-/** A folder's section of the subject page, or Unfiled when `folder` is undefined. */
 export interface Section {
   readonly folder: Folder | undefined;
   readonly lectures: readonly Lecture[];
@@ -11,11 +9,6 @@ export interface Section {
 
 export type Placements = Readonly<Record<string, MaterialPlacement | undefined>>;
 
-/**
- * Sections for the subject page. Each folder comes in the order it was given, and Unfiled comes last. Every folder has a
- * section, even when the filter leaves it empty. A material whose folder is not in `folders` is in Unfiled. Materials
- * keep the order they were given in.
- */
 export function groupLectures(
   folders: readonly Folder[],
   lectures: readonly Lecture[],
@@ -38,13 +31,11 @@ export function groupLectures(
   ];
 }
 
-/** How many materials each filter shows. */
 export function countByStatus(lectures: readonly Lecture[], placements: Placements): Record<StatusFilter, number> {
   const done = lectures.filter((lecture) => statusOf(placements, lecture) === "done").length;
   return { all: lectures.length, reading: lectures.length - done, done };
 }
 
-/** A material with no placement is reading, the same as the library reads it. */
 function statusOf(placements: Placements, lecture: Lecture): LectureStatus {
   return placements[lecture.id]?.status ?? "reading";
 }
