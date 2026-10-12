@@ -158,6 +158,13 @@ export function LectureView({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (isTypingTarget(event.target)) return;
+      if (event.key === "Escape") {
+        setSelectedId(undefined);
+        setTool("select");
+        window.getSelection()?.removeAllRanges();
+        return;
+      }
+      if (event.target instanceof Node && document.getElementById(notesId)?.contains(event.target)) return;
       const key = event.key.toLowerCase();
       const modifier = event.metaKey || event.ctrlKey;
       if (modifier && key === "z") {
@@ -170,15 +177,11 @@ export function LectureView({
       } else if ((event.key === "Delete" || event.key === "Backspace") && selectedId !== undefined) {
         event.preventDefault();
         deleteSelected();
-      } else if (event.key === "Escape") {
-        setSelectedId(undefined);
-        setTool("select");
-        window.getSelection()?.removeAllRanges();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [store, selectedId]);
+  }, [store, selectedId, notesId]);
 
   async function exportPdf() {
     try {
@@ -283,6 +286,7 @@ export function LectureView({
                 notes={pageNotes}
                 width={notes.width}
                 onFocusChange={(focused) => setFocusedPage(focused ? page : undefined)}
+                onPointerDown={() => setSelectedId(undefined)}
               />
             </>
           )}
