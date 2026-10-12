@@ -368,3 +368,22 @@ test("Ctrl+Z after a click on a rendered note leaves the PDF drawing alone", asy
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeEnabled();
   await expect(page.locator('[data-page-number="1"] [data-kind="ink"]')).toHaveCount(1);
 });
+
+test("Escape from a rendered note returns the pen to select", async ({ page }) => {
+  await createSubject(page, "Escape notes");
+  await importLecture(page, "Escape.pdf", ["Escape"]);
+  await openLecture(page, "Escape");
+  await openNotes(page);
+
+  await notesField(page).fill("Read me");
+  await waitForSaved(page);
+  await leaveField(page);
+
+  await page.getByRole("button", { name: "Pen" }).click();
+  await expect(page.getByRole("button", { name: "Pen" })).toHaveAttribute("aria-pressed", "true");
+  await renderedNote(page).locator("p").click();
+  await expect(renderedNote(page)).toBeFocused();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByRole("button", { name: "Pen" })).not.toHaveAttribute("aria-pressed", "true");
+});
