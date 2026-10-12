@@ -478,7 +478,7 @@ function LectureRow({
       <button
         type="button"
         aria-pressed={done}
-        aria-label={`Mark ${lecture.title} as ${done ? "reading" : "done"}`}
+        aria-label={`Mark ${lecture.title} as done`}
         onClick={onToggleStatus}
         className={cn(
           "relative inline-flex h-7 shrink-0 items-center gap-1.5 self-center rounded-full border px-3 text-xs transition-colors [&_svg]:size-3.5",
