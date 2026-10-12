@@ -286,7 +286,7 @@ test("Backspace after a click on a rendered note leaves the selected text box al
   await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
 });
 
-test("Backspace on the Edit button leaves the selected text box alone", async ({ page }) => {
+test("Backspace on the Edit button and on a rendered note leaves the selected text box alone", async ({ page }) => {
   await createSubject(page, "Keyboard boxes");
   await importLecture(page, "Keyed.pdf", ["Keyed"]);
   await openLecture(page, "Keyed");
@@ -397,5 +397,24 @@ test("Escape from a rendered note returns the pen to select", async ({ page }) =
   await expect(renderedNote(page)).toBeFocused();
   await page.keyboard.press("Escape");
 
+  await expect(page.getByRole("button", { name: "Select and move" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Pen" })).not.toHaveAttribute("aria-pressed", "true");
+});
+
+test("Escape while typing in a note leaves the pen selected", async ({ page }) => {
+  await createSubject(page, "Escape typing");
+  await importLecture(page, "Typing.pdf", ["Typing"]);
+  await openLecture(page, "Typing");
+  await openNotes(page);
+
+  await notesField(page).fill("Read me");
+  await waitForSaved(page);
+  await leaveField(page);
+
+  await page.getByRole("button", { name: "Pen" }).click();
+  await editButton(page).click();
+  await expect(notesField(page)).toBeFocused();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByRole("button", { name: "Pen" })).toHaveAttribute("aria-pressed", "true");
 });
