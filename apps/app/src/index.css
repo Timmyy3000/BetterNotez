@@ -346,6 +346,132 @@
     line-height: 28px;
   }
 
+  .notes-markdown {
+    font-size: 16px;
+    line-height: 28px;
+    overflow-wrap: anywhere;
+  }
+
+  .notes-markdown > * + * {
+    margin-top: 28px;
+  }
+
+  .notes-markdown p,
+  .notes-markdown li {
+    white-space: pre-line;
+  }
+
+  .notes-markdown ul,
+  .notes-markdown ol,
+  .notes-markdown blockquote,
+  .notes-markdown table {
+    white-space: normal;
+  }
+
+  .notes-markdown h3 {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    line-height: 56px;
+    font-weight: 400;
+  }
+
+  .notes-markdown h4 {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 400;
+  }
+
+  .notes-markdown h5 {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 28px;
+    font-weight: 400;
+  }
+
+  .notes-markdown h6 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+  }
+
+  .notes-markdown ul,
+  .notes-markdown ol {
+    padding-left: 28px;
+  }
+
+  .notes-markdown ul {
+    list-style: disc;
+  }
+
+  .notes-markdown ol {
+    list-style: decimal;
+  }
+
+  .notes-markdown .contains-task-list {
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .notes-markdown blockquote {
+    padding-left: 14px;
+    border-left: 2px solid var(--faint);
+    color: var(--muted-foreground);
+  }
+
+  .notes-markdown a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .notes-markdown code {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .notes-markdown pre {
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 28px;
+    white-space: pre;
+  }
+
+  .notes-markdown pre code {
+    line-height: inherit;
+  }
+
+  .notes-markdown hr {
+    height: 28px;
+    border: 0;
+    background: linear-gradient(var(--faint), var(--faint)) center / 100% 1px no-repeat;
+  }
+
+  .notes-markdown table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .notes-markdown th,
+  .notes-markdown td {
+    padding: 0 20px 0 0;
+    line-height: 28px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .notes-markdown th {
+    font-weight: 600;
+  }
+
+  .notes-markdown input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0 8px 0 0;
+    vertical-align: middle;
+  }
+
   .double-rule {
     height: 6px;
     background: linear-gradient(var(--foreground) 0 2px, transparent 2px 5px, var(--foreground) 5px 6px);

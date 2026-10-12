@@ -1,4 +1,6 @@
 import { Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { NoteText } from "./NoteText";
 import type { PageNotesView } from "./use-page-notes";
 
 /**
@@ -11,6 +13,7 @@ export function Notepad({
   notes,
   width,
   onFocusChange,
+  onPointerDown,
 }: {
   readonly id: string;
   /** The page whose note is shown and edited. */
@@ -19,36 +22,85 @@ export function Notepad({
   readonly width: number;
   /** Reports when the field gains or loses focus, so the page under typing can be held. */
   readonly onFocusChange: (focused: boolean) => void;
+  readonly onPointerDown: () => void;
 }) {
+  const [editingPage, setEditingPage] = useState<number>();
+  const editing = editingPage === page;
+  const text = notes.textOf(page);
+  const showField = editing || text.trim() === "";
+  const field = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const element = field.current;
+    if (!editing || element === null || document.activeElement === element) return;
+    element.focus();
+    element.setSelectionRange(element.value.length, element.value.length);
+  }, [editing]);
+
   return (
     <aside
       id={id}
       aria-label="Notes"
       style={{ width }}
+      onPointerDown={onPointerDown}
       className="grain flex shrink-0 flex-col border-l border-border bg-surface"
     >
       <div className="flex h-[84px] shrink-0 items-end justify-between pt-0 pr-6 pb-1.5 pl-[66px]">
         <h2 className="font-serif text-[32px] leading-none">
           Notes <span className="label ml-1 text-[11px]">· Page {page}</span>
         </h2>
-        <SaveStatus notes={notes} />
+        <div className="flex items-center gap-4">
+          {notes.status !== "unreadable" && !showField && (
+            <button
+              type="button"
+              aria-label={`Edit notes for page ${page}`}
+              onClick={() => setEditingPage(page)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                setEditingPage(page);
+              }}
+              className="text-[13px] text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Edit
+            </button>
+          )}
+          <SaveStatus notes={notes} />
+        </div>
       </div>
       {notes.status === "unreadable" ? (
         <p role="alert" className="pt-2 pr-6 pl-[66px] text-[15px] leading-relaxed text-muted-foreground">
           This material's notes can't be read. The notes file is damaged or was made by a newer version of BetterNotez,
           so it has been left as it is.
         </p>
-      ) : (
+      ) : showField ? (
         <textarea
+          ref={field}
           aria-label={`Notes for page ${page}`}
           placeholder={`Write notes for page ${page}`}
           disabled={!notes.ready}
-          value={notes.textOf(page)}
+          value={text}
           onChange={(event) => notes.edit(page, event.target.value)}
-          onFocus={() => onFocusChange(true)}
-          onBlur={() => onFocusChange(false)}
+          onFocus={() => {
+            setEditingPage(page);
+            onFocusChange(true);
+          }}
+          onBlur={() => {
+            setEditingPage(undefined);
+            onFocusChange(false);
+          }}
           className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base leading-[28px] text-foreground placeholder:text-faint disabled:opacity-60"
         />
+      ) : (
+        <div
+          data-rendered-note
+          role="region"
+          tabIndex={0}
+          aria-label={`Rendered notes for page ${page}`}
+          className="ruled-paper min-h-0 flex-1 overflow-y-auto pr-6 pb-4 pl-[66px]"
+        >
+          <NoteText text={text} />
+        </div>
       )}
     </aside>
   );
