@@ -55,7 +55,7 @@ function notesField(page: Page): Locator {
   return page.getByRole("textbox", { name: /^Notes for page \d+$/ });
 }
 
-/** The note on the page in view: the field's text while the field is shown, otherwise the rendered text. */
+/** The note on the page in view. It is the field's text while the field is shown, and the rendered text otherwise. */
 async function noteText(page: Page): Promise<string> {
   if ((await notesField(page).count()) > 0) return notesField(page).inputValue();
   const rendered = notesPanel(page).locator("[data-rendered-note]");

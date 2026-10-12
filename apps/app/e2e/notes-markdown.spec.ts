@@ -206,7 +206,7 @@ test("a note is typed as Markdown, read rendered, edited again, and saved as its
 
   await editButton(page).click();
   await expect(notesField(page)).toHaveValue(SOURCE);
-  // The caret starts at the end, so typing carries on the note.
+  // The caret starts at the end, so typing continues the note.
   await page.keyboard.type("\n\nWritten after Edit");
   await waitForSaved(page);
   await leaveField(page);

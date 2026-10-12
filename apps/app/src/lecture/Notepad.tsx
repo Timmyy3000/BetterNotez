@@ -25,11 +25,11 @@ export function Notepad({
   readonly width: number;
   /** Reports when the field gains or loses focus, so the page under typing can be held. */
   readonly onFocusChange: (focused: boolean) => void;
-  /** Runs on a press anywhere in the panel. The rendered note cannot take focus, so this is how the page learns of it. */
+  /** Runs on a press anywhere in the panel. Rendered text takes no focus, so the page needs this to know the reader moved on. */
   readonly onPointerDown: () => void;
 }) {
-  // The page the source was opened for. It stops matching when the page changes, so turning the page shows the new
-  // page's mode with no reset to run.
+  // The page the source was opened for. It stops matching when the page changes, so turning the page shows that page's
+  // mode without a reset.
   const [editingPage, setEditingPage] = useState<number>();
   const editing = editingPage === page;
   const text = notes.textOf(page);
