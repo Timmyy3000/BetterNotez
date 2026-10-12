@@ -7,7 +7,6 @@ function render(text: string): string {
   return renderToStaticMarkup(createElement(NoteText, { text }));
 }
 
-/** The web app has no Tauri internals on window. */
 function onWeb(): void {
   vi.stubGlobal("window", {});
 }

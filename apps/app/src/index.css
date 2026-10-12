@@ -346,7 +346,6 @@
     line-height: 28px;
   }
 
-  /* Rendered notes. Every line is 28px and vertical margins are multiples of 28px, so the text stays on the rules. */
   .notes-markdown {
     font-size: 16px;
     line-height: 28px;
@@ -357,13 +356,11 @@
     margin-top: 28px;
   }
 
-  /* A single line break in a note shows as a line break. Only text blocks keep the newline, not their containers. */
   .notes-markdown p,
   .notes-markdown li {
     white-space: pre-line;
   }
 
-  /* White-space is inherited, so a list nested in an item would keep the item's pre-line and open a line per newline. */
   .notes-markdown ul,
   .notes-markdown ol,
   .notes-markdown blockquote,
@@ -371,7 +368,6 @@
     white-space: normal;
   }
 
-  /* The sizes follow the Markdown level, so # is an h3 here, ## an h4, and ### an h5. See NoteText for the shift. */
   .notes-markdown h3 {
     font-family: var(--font-serif);
     font-size: 22px;
@@ -427,7 +423,6 @@
     text-underline-offset: 4px;
   }
 
-  /* Inline code is smaller than the text. Its line-height is 1, so its box cannot push the line off the rules. */
   .notes-markdown code {
     font-family: var(--font-mono);
     font-size: 14px;

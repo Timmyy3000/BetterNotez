@@ -3,14 +3,8 @@ import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isDesktop } from "../lib/platform";
 
-/**
- * A note as it reads on the page. A note holds text an assistant may have written, so nothing here loads from the
- * network or runs. Task-list checkboxes come out disabled and stay that way, because ticking one would rewrite the
- * note's source.
- */
 const components: Components = {
   a: NoteLink,
-  // The lecture title is an h1 and the panel heading an h2, so a note's headings move down two levels, stopping at h6.
   h1: "h3",
   h2: "h4",
   h3: "h5",
@@ -21,10 +15,6 @@ const components: Components = {
   table: NoteTable,
 };
 
-/**
- * The note as Markdown. Raw HTML is deliberately not rendered. There is no rehype-raw below, so a note's tags show as
- * text. Do not add rehype-raw here.
- */
 export function NoteText({ text }: { readonly text: string }) {
   return (
     <div className="notes-markdown">
@@ -37,12 +27,6 @@ export function NoteText({ text }: { readonly text: string }) {
 
 const WEB_ADDRESS = /^(https?|mailto):/i;
 
-/**
- * A link with no address shows its text alone. Markdown leaves the address empty when it is unsafe, such as a
- * javascript: address. The desktop window must not navigate away from the app, so its links show as text too. An
- * in-page link, such as a footnote number, would open a second copy of the app in a new tab on the web, so it shows as
- * text too.
- */
 function NoteLink({ href, children }: ComponentProps<"a">) {
   if (!href || !WEB_ADDRESS.test(href) || isDesktop()) return <span>{children}</span>;
   return (
@@ -58,10 +42,6 @@ function isBlockElement(node: ReactNode): boolean {
   return isValidElement(node) && BLOCK_ELEMENTS.includes(node.type);
 }
 
-/**
- * Markdown puts a newline between a list item's blocks. The item keeps its line breaks, so such a newline would show as
- * an empty line, and it is dropped. A newline between two pieces of inline text is a real line break, and stays.
- */
 function NoteItem({ className, children }: ComponentProps<"li">) {
   const nodes = Children.toArray(children);
   const isSeparator = (node: ReactNode, index: number) =>
@@ -69,12 +49,10 @@ function NoteItem({ className, children }: ComponentProps<"li">) {
   return <li className={className}>{nodes.filter((node, index) => !isSeparator(node, index))}</li>;
 }
 
-/** The alt text stands in for the picture, so a note never fetches an image. */
 function NoteImage({ alt }: ComponentProps<"img">) {
   return <span>{alt || "image"}</span>;
 }
 
-/** A wide table scrolls sideways inside the panel instead of squeezing its columns. */
 function NoteTable({ children }: ComponentProps<"table">) {
   return (
     <div className="overflow-x-auto">

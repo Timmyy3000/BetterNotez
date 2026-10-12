@@ -6,9 +6,6 @@ import type { PageNotesView } from "./use-page-notes";
 /**
  * The notes for the page the panel shows. Switching pages swaps the text and keeps the field focused, so typing carries
  * on from the new page. The text of the page being left is already in memory, and is saved with the other pages.
- *
- * A page with text shows its note as Markdown until the reader opens the source with Edit. A page with no text always
- * shows the field, so there is somewhere to write.
  */
 export function Notepad({
   id,
@@ -25,18 +22,14 @@ export function Notepad({
   readonly width: number;
   /** Reports when the field gains or loses focus, so the page under typing can be held. */
   readonly onFocusChange: (focused: boolean) => void;
-  /** Runs on a press anywhere in the panel. Rendered text takes no focus, so the page needs this to know the reader moved on. */
   readonly onPointerDown: () => void;
 }) {
-  // The page the source was opened for. It stops matching when the page changes, so turning the page shows that page's
-  // mode without a reset.
   const [editingPage, setEditingPage] = useState<number>();
   const editing = editingPage === page;
   const text = notes.textOf(page);
   const showField = editing || text.trim() === "";
   const field = useRef<HTMLTextAreaElement>(null);
 
-  // Edit moves focus into the field with the caret at the end. A field the reader focused already has the caret.
   useEffect(() => {
     const element = field.current;
     if (!editing || element === null || document.activeElement === element) return;
@@ -63,7 +56,6 @@ export function Notepad({
               aria-label={`Edit notes for page ${page}`}
               onClick={() => setEditingPage(page)}
               onKeyDown={(event) => {
-                // Enter opens the source here, and is stopped so it never lands in the field as a line break.
                 if (event.key !== "Enter") return;
                 event.preventDefault();
                 setEditingPage(page);
@@ -100,7 +92,6 @@ export function Notepad({
           className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base leading-[28px] text-foreground placeholder:text-faint disabled:opacity-60"
         />
       ) : (
-        // Focusable even when the note fits, so Ctrl+Z after a press does not reach the PDF's undo history.
         <div
           data-rendered-note
           role="region"

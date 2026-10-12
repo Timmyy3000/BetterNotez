@@ -46,7 +46,6 @@ function notesPanel(page: Page): Locator {
   return page.getByRole("complementary", { name: "Notes" });
 }
 
-/** The panel's own heading, which names the page. A heading in a rendered note has other words, so it does not match. */
 function notesHeading(page: Page): Locator {
   return notesPanel(page).getByRole("heading", { name: /^Notes · Page \d+$/ });
 }
@@ -55,7 +54,6 @@ function notesField(page: Page): Locator {
   return page.getByRole("textbox", { name: /^Notes for page \d+$/ });
 }
 
-/** The note on the page in view. It is the field's text while the field is shown, and the rendered text otherwise. */
 async function noteText(page: Page): Promise<string> {
   if ((await notesField(page).count()) > 0) return notesField(page).inputValue();
   const rendered = notesPanel(page).locator("[data-rendered-note]");
@@ -93,7 +91,6 @@ async function libraryFileText(page: Page, name: string): Promise<string | undef
 
 async function openNotes(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Notes", exact: true }).click();
-  // A page with text shows its rendered note once loaded. A blank page shows the field, once it is enabled.
   await expect(notesPanel(page).locator('textarea:enabled, [data-rendered-note]')).toBeVisible();
 }
 
