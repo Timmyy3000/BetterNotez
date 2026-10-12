@@ -46,12 +46,20 @@ function notesPanel(page: Page): Locator {
   return page.getByRole("complementary", { name: "Notes" });
 }
 
+/** The panel's own heading, which names the page. A heading in a rendered note has other words, so it does not match. */
 function notesHeading(page: Page): Locator {
-  return notesPanel(page).getByRole("heading", { name: "Notes" });
+  return notesPanel(page).getByRole("heading", { name: /^Notes · Page \d+$/ });
 }
 
 function notesField(page: Page): Locator {
   return page.getByRole("textbox", { name: /^Notes for page \d+$/ });
+}
+
+/** The note on the page in view: the field's text while the field is shown, otherwise the rendered text. */
+async function noteText(page: Page): Promise<string> {
+  if ((await notesField(page).count()) > 0) return notesField(page).inputValue();
+  const rendered = notesPanel(page).locator("[data-rendered-note]");
+  return (await rendered.count()) > 0 ? ((await rendered.textContent()) ?? "") : "";
 }
 
 function notesStatus(page: Page): Locator {
@@ -84,8 +92,9 @@ async function libraryFileText(page: Page, name: string): Promise<string | undef
 }
 
 async function openNotes(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Notes" }).click();
-  await expect(notesField(page)).toBeEnabled();
+  await page.getByRole("button", { name: "Notes", exact: true }).click();
+  // A page with text shows its rendered note once loaded. A blank page shows the field, once it is enabled.
+  await expect(notesPanel(page).locator('textarea:enabled, [data-rendered-note]')).toBeVisible();
 }
 
 async function writeNote(page: Page, text: string): Promise<void> {
@@ -98,7 +107,7 @@ async function scrollToPage(page: Page, number: number): Promise<void> {
   const column = await page.locator(".desk").boundingBox();
   if (column === null) throw new Error("the PDF column is not on screen");
   // While the notes field has focus the panel stays on its page, so leave the field first.
-  await notesField(page).blur();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.mouse.move(column.x + column.width / 2, column.y + column.height / 2);
   await expect
     .poll(
@@ -129,13 +138,13 @@ test("each page has its own note, and the panel shows the page in view", async (
   await writeNote(page, "Divide, then merge");
 
   await scrollToPage(page, 1);
-  await expect(notesField(page)).toHaveValue("Compare adjacent items");
+  await expect.poll(() => noteText(page)).toBe("Compare adjacent items");
 
   await page.reload();
   await openNotes(page);
-  await expect(notesField(page)).toHaveValue("Compare adjacent items");
+  await expect.poll(() => noteText(page)).toBe("Compare adjacent items");
   await scrollToPage(page, 2);
-  await expect(notesField(page)).toHaveValue("Divide, then merge");
+  await expect.poll(() => noteText(page)).toBe("Divide, then merge");
 
   expect(JSON.parse((await libraryFileText(page, "notes.json")) ?? "null")).toEqual({
     version: 1,
@@ -155,12 +164,12 @@ test("turning the page saves the note being typed, before the pause ends", async
   await expect(notesField(page)).toHaveValue("");
 
   await page.getByRole("button", { name: "Previous page" }).click();
-  await expect(notesField(page)).toHaveValue("Typed just before turning");
+  await expect.poll(() => noteText(page)).toBe("Typed just before turning");
   await expect(notesStatus(page)).toHaveText("Saved");
 
   await page.reload();
   await openNotes(page);
-  await expect(notesField(page)).toHaveValue("Typed just before turning");
+  await expect.poll(() => noteText(page)).toBe("Typed just before turning");
 });
 
 test("a material with a note from before per-page notes shows it on page 1", async ({ page }) => {
@@ -195,7 +204,7 @@ test("a material with a note from before per-page notes shows it on page 1", asy
   await page.reload();
   await openNotes(page);
   await expect(notesHeading(page)).toContainText("Page 1");
-  await expect(notesField(page)).toHaveValue("Old single note");
+  await expect.poll(() => noteText(page)).toBe("Old single note");
 
   await scrollToPage(page, 2);
   await expect(notesField(page)).toHaveValue("");
@@ -222,5 +231,5 @@ test("a search hit on a page's note opens the material on that page with its not
 
   await expect(page.getByRole("heading", { name: "Optics", exact: true })).toBeVisible();
   await expect(notesHeading(page)).toContainText("Page 2");
-  await expect(notesField(page)).toHaveValue("Concave mirrors focus light");
+  await expect.poll(() => noteText(page)).toBe("Concave mirrors focus light");
 });
