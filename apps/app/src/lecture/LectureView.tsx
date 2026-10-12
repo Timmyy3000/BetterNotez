@@ -285,6 +285,7 @@ export function LectureView({
                 notes={pageNotes}
                 width={notes.width}
                 onFocusChange={(focused) => setFocusedPage(focused ? page : undefined)}
+                onPointerDown={() => setSelectedId(undefined)}
               />
             </>
           )}

@@ -224,3 +224,27 @@ test("Enter on the Edit button opens the source and types no line break", async 
   await expect(notesField(page)).toBeFocused();
   await expect(notesField(page)).toHaveValue("One line");
 });
+
+test("Backspace after a click on a rendered note leaves the selected text box alone", async ({ page }) => {
+  await createSubject(page, "Annotated");
+  await importLecture(page, "Boxes.pdf", ["Boxes"]);
+  await openLecture(page, "Boxes");
+
+  await page.getByRole("button", { name: "Text box", exact: true }).click();
+  const pageBox = await page.locator('[data-page-number="1"]').boundingBox();
+  if (pageBox === null) throw new Error("page 1 is not on screen");
+  await page.mouse.click(pageBox.x + pageBox.width * 0.3, pageBox.y + pageBox.height * 0.6);
+  await page.keyboard.type("Keep me");
+  await page.getByRole("button", { name: "Select and move" }).click();
+  await page.locator('[data-page-number="1"] [data-kind="text"]').click();
+  await page.keyboard.press("Escape");
+
+  await openNotes(page);
+  await notesField(page).fill("Read me");
+  await waitForSaved(page);
+  await leaveField(page);
+  await renderedNote(page).locator("p").click();
+  await page.keyboard.press("Backspace");
+
+  await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
+});
