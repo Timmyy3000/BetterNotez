@@ -29,3 +29,16 @@ export class UnreadableNotesError extends Error {
     this.name = "UnreadableNotesError";
   }
 }
+
+/**
+ * A subject's organization.json is damaged, or was written by a newer version. Its folders and reading status are not
+ * treated as empty, and nothing is written over it, so they stay on disk for the version that can read them.
+ */
+export class UnreadableOrganizationError extends Error {
+  constructor() {
+    super(
+      "This subject's folders and reading status can't be read. Its organization.json is damaged or was written by a newer version of BetterNotez, so it was left as it is.",
+    );
+    this.name = "UnreadableOrganizationError";
+  }
+}
