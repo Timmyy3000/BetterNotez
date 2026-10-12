@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AnnotationId, LectureId, PlannerCardId, SubjectId, TaskId } from "./ids.js";
+import { AnnotationId, FolderId, LectureId, PlannerCardId, SubjectId, TaskId } from "./ids.js";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -158,3 +158,31 @@ export const Task = z.object({
   due: calendarDate.optional(),
 });
 export type Task = z.infer<typeof Task>;
+
+export const LectureStatus = z.enum(["reading", "done"]);
+export type LectureStatus = z.infer<typeof LectureStatus>;
+
+export const Folder = z.object({
+  id: FolderId,
+  name: label,
+  createdAt: timestamp,
+});
+export type Folder = z.infer<typeof Folder>;
+
+/**
+ * Where one material sits in its subject. A field is left out until it is set. The status is kept as stored text, so a
+ * status a newer version wrote is still there after a write that does not change it.
+ */
+export const LecturePlacement = z.object({
+  status: z.string().optional(),
+  folderId: FolderId.optional(),
+});
+export type LecturePlacement = z.infer<typeof LecturePlacement>;
+
+/** subjects/<subjectId>/organization.json. Only builds that know folders write it, so older builds never change it. */
+export const OrganizationFile = z.object({
+  version: z.literal(1),
+  folders: z.array(Folder),
+  lectures: z.record(LectureId, LecturePlacement),
+});
+export type OrganizationFile = z.infer<typeof OrganizationFile>;
