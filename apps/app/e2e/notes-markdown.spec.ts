@@ -50,7 +50,6 @@ function notesField(page: Page): Locator {
   return page.getByRole("textbox", { name: /^Notes for page \d+$/ });
 }
 
-/** The rendered note of the page in view. It is shown when the page has text and the source is not open. */
 function renderedNote(page: Page): Locator {
   return notesPanel(page).locator("[data-rendered-note]");
 }
@@ -59,7 +58,6 @@ function editButton(page: Page): Locator {
   return notesPanel(page).getByRole("button", { name: /^Edit notes for page \d+$/ });
 }
 
-/** The text of a file in the web library, found by its name. The test library holds one material. */
 async function libraryFileText(page: Page, name: string): Promise<string | undefined> {
   return page.evaluate(async (fileName) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -89,7 +87,6 @@ async function openNotes(page: Page): Promise<void> {
   await expect(notesField(page).or(renderedNote(page))).toBeVisible();
 }
 
-/** Leaves the field, which returns a page with text to its rendered note. */
 async function leaveField(page: Page): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 }
@@ -98,7 +95,6 @@ async function waitForSaved(page: Page): Promise<void> {
   await expect(notesPanel(page).getByText("Saved", { exact: true })).toBeVisible();
 }
 
-/** Drags the mouse through points given as fractions of the page, so the stroke lands the same on any size. */
 async function drag(page: Page, pageLocator: Locator, points: readonly (readonly [number, number])[]): Promise<void> {
   await pageLocator.scrollIntoViewIfNeeded();
   const box = await pageLocator.boundingBox();
@@ -145,7 +141,6 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   await expect(renderedNote(page).locator("h4")).toHaveCSS("font-family", /^"Instrument Serif"/);
   await expect(renderedNote(page).locator("ul").first().locator("xpath=./li")).toHaveText(["compare by key", "swap"]);
   await expect(renderedNote(page).locator("ol li")).toHaveText(["divide", "merge"]);
-  // A nested item starts one 28px line below its parent, with no empty line between them.
   const parent = await renderedNote(page).locator("ul > li").first().boundingBox();
   const nested = await renderedNote(page).locator("ul ul > li").first().boundingBox();
   expect((nested?.y ?? 0) - (parent?.y ?? 0)).toBe(28);
@@ -154,11 +149,9 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   await expect(link).toHaveAttribute("href", "https://example.com/sorting");
   await expect(link).toHaveAttribute("target", "_blank");
 
-  // Two source lines in one paragraph sit on two 28px ruled lines.
   const paragraph = renderedNote(page).locator("p", { hasText: "equal items in order" });
   await expect.poll(() => paragraph.textContent()).toBe("Stable sorts keep the docs\nequal items in order");
   expect((await paragraph.boundingBox())?.height).toBe(56);
-  // The paragraph follows the list after one 28px line, the same gap as between any two blocks.
   const list = await renderedNote(page).locator("ol").boundingBox();
   const after = await paragraph.boundingBox();
   expect((after?.y ?? 0) - ((list?.y ?? 0) + (list?.height ?? 0))).toBe(28);
@@ -225,7 +218,6 @@ test("a note is typed as Markdown, read rendered, edited again, and saved as its
 
   await editButton(page).click();
   await expect(notesField(page)).toHaveValue(SOURCE);
-  // The caret starts at the end, so typing continues the note.
   await page.keyboard.type("\n\nWritten after Edit");
   await waitForSaved(page);
   await leaveField(page);
@@ -296,7 +288,6 @@ test("Backspace on the Edit button leaves the selected text box alone", async ({
 
   await page.locator('[data-page-number="1"] [data-kind="text"]').click();
   await expect(page.getByRole("button", { name: "Delete selected" })).toBeEnabled();
-  // Tab passes the toolbar and the notes edge on the way to Edit, so it is pressed until Edit has focus.
   const onEdit = () => editButton(page).evaluate((element) => element === document.activeElement);
   for (let press = 0; press < 60 && !(await onEdit()); press++) await page.keyboard.press("Tab");
   await expect(editButton(page)).toBeFocused();
@@ -317,7 +308,6 @@ test("a note taller than the panel is a named region that Tab reaches from Edit"
   await openLecture(page, "Long");
   await openNotes(page);
 
-  // A scroller is keyboard-focusable only once its content overflows, so the note must be taller than the panel.
   const lines = Array.from({ length: 60 }, (_, index) => `Line ${index + 1} of a long note`);
   await notesField(page).fill(lines.join("\n\n"));
   await waitForSaved(page);
@@ -342,7 +332,6 @@ test("a note that fits its panel is a named region that Tab reaches from Edit", 
   await waitForSaved(page);
   await leaveField(page);
 
-  // A note that fits has no overflow to make the region focusable, so only its tab stop can do that.
   const region = page.getByRole("region", { name: "Rendered notes for page 1" });
   await expect(region).toBeVisible();
   expect(await region.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(false);

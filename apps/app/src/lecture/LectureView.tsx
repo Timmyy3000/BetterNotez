@@ -164,7 +164,6 @@ export function LectureView({
         window.getSelection()?.removeAllRanges();
         return;
       }
-      // Keys pressed in the notes panel, such as on its Edit button, belong to the panel, not to the page's shortcuts.
       if (event.target instanceof Node && document.getElementById(notesId)?.contains(event.target)) return;
       const key = event.key.toLowerCase();
       const modifier = event.metaKey || event.ctrlKey;
