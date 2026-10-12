@@ -99,6 +99,8 @@ describe("NoteText", () => {
     "tauri://localhost",
     "asset://localhost/x",
     "notes:open",
+    "ircs://example.com",
+    "xmpp:someone@example.com",
   ])("shows a link to %s as its text, with no address", (url) => {
     onWeb();
     expect(render(`[x](${url})`)).toBe('<div class="notes-markdown"><p><span>x</span></p></div>');
