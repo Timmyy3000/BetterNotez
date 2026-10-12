@@ -23,7 +23,7 @@ afterEach(() => {
 describe("NoteText", () => {
   it("renders headings, lists, bold text, and tables from Markdown", () => {
     onWeb();
-    expect(render("# Sorting")).toBe('<div class="notes-markdown"><h1>Sorting</h1></div>');
+    expect(render("# Sorting")).toBe('<div class="notes-markdown"><h3>Sorting</h3></div>');
     expect(render("- one\n- two")).toBe('<div class="notes-markdown"><ul>\n<li>one</li>\n<li>two</li>\n</ul></div>');
     expect(render("1. first\n2. second")).toBe(
       '<div class="notes-markdown"><ol>\n<li>first</li>\n<li>second</li>\n</ol></div>',
@@ -33,6 +33,18 @@ describe("NoteText", () => {
       '<div class="notes-markdown"><div class="overflow-x-auto"><table><thead><tr><th>a</th><th>b</th></tr></thead>' +
         "<tbody><tr><td>1</td><td>2</td></tr></tbody></table></div></div>",
     );
+  });
+
+  it("renders a # heading as h3 and moves each deeper heading down with it, stopping at h6", () => {
+    onWeb();
+    expect(render("# a\n\n## b\n\n### c\n\n#### d\n\n##### e\n\n###### f")).toBe(
+      '<div class="notes-markdown"><h3>a</h3>\n<h4>b</h4>\n<h5>c</h5>\n<h6>d</h6>\n<h6>e</h6>\n<h6>f</h6></div>',
+    );
+  });
+
+  it("moves the footnote heading down with the note's headings, so it is not an h2", () => {
+    onWeb();
+    expect(render("Text[^1]\n\n[^1]: Note")).toContain('<h4 class="sr-only" id="footnote-label">Footnotes</h4>');
   });
 
   it("drops the newline that separates a list item from its nested list, so no empty line opens", () => {

@@ -371,19 +371,20 @@
     white-space: normal;
   }
 
-  .notes-markdown h1 {
+  /* The sizes follow the Markdown level, so # is an h3 here, ## an h4, and ### an h5. See NoteText for the shift. */
+  .notes-markdown h3 {
     font-size: 22px;
     line-height: 56px;
     font-weight: 600;
   }
 
-  .notes-markdown h2 {
+  .notes-markdown h4 {
     font-size: 18px;
     line-height: 28px;
     font-weight: 600;
   }
 
-  .notes-markdown h3 {
+  .notes-markdown h5 {
     font-size: 16px;
     line-height: 28px;
     font-weight: 600;
