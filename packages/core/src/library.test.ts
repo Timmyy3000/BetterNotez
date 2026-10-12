@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
-import { InvalidError, NotFoundError, UnreadableNotesError } from "./errors.js";
+import { InvalidError, NotFoundError, UnreadableNotesError, UnreadableOrganizationError } from "./errors.js";
 import { AnnotationId } from "./ids.js";
 import { Library } from "./library.js";
+import type { LectureStatus } from "./model.js";
+import type { Storage } from "./storage.js";
 import { CLOCK, decodeText, pdfBytes, storageBackends, type StorageEnv } from "./test/backends.js";
 
 describe.each(storageBackends)("Library on $name", ({ create }) => {
@@ -954,6 +956,275 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       expect(task?.title).toBe("Review Lecture 1");
       expect(task?.subjectId).toBeUndefined();
       expect(task?.lectureId).toBeUndefined();
+    });
+  });
+
+  describe("folders and status", () => {
+    const organizationPath = (subjectId: string) => `subjects/${subjectId}/organization.json`;
+    const lecturePath = (subjectId: string, lectureId: string) =>
+      `subjects/${subjectId}/lectures/${lectureId}/lecture.json`;
+    const unknownFolderId = "01FOLDERUNKNOWN0000000000000";
+
+    async function importTwoLectures() {
+      const subject = await library.createSubject({ name: "Digital Systems" });
+      const first = await library.importLecture(subject.id, "Lecture 1", pdfBytes("first"), 1);
+      const second = await library.importLecture(subject.id, "Lecture 2", pdfBytes("second"), 1);
+      return { subject, first, second };
+    }
+
+    it("lists a subject's folders oldest first, and a folder does not show in another subject", async () => {
+      const digital = await library.createSubject({ name: "Digital Systems" });
+      const algebra = await library.createSubject({ name: "Algebra" });
+      await library.createFolder(digital.id, "Week 1");
+      await library.createFolder(algebra.id, "Week 1");
+      await library.createFolder(digital.id, "Week 2");
+
+      expect((await library.listFolders(digital.id)).map((folder) => folder.name)).toEqual(["Week 1", "Week 2"]);
+      expect((await library.listFolders(algebra.id)).map((folder) => folder.name)).toEqual(["Week 1"]);
+    });
+
+    it("refuses a folder for a subject that does not exist", async () => {
+      await expect(library.createFolder("MISSING", "Week 1")).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it("renames a folder and keeps it in its place", async () => {
+      const { subject } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+
+      const renamed = await library.renameFolder(subject.id, folder.id, "Week 01");
+
+      expect(renamed.id).toBe(folder.id);
+      expect((await library.listFolders(subject.id)).map((item) => item.name)).toEqual(["Week 01"]);
+    });
+
+    it("rejects a blank folder name on create and on rename", async () => {
+      const { subject } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+
+      await expect(library.createFolder(subject.id, "   ")).rejects.toBeInstanceOf(ZodError);
+      await expect(library.renameFolder(subject.id, folder.id, " ")).rejects.toBeInstanceOf(ZodError);
+    });
+
+    it("reports a folder that is not in the subject as not found", async () => {
+      const { subject, first } = await importTwoLectures();
+
+      await expect(library.renameFolder(subject.id, unknownFolderId, "Week 2")).rejects.toBeInstanceOf(NotFoundError);
+      await expect(library.deleteFolder(subject.id, unknownFolderId)).rejects.toBeInstanceOf(NotFoundError);
+      await expect(library.moveLecture(first.id, unknownFolderId)).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it("refuses to move a material into a folder of another subject, and leaves it where it was", async () => {
+      const digital = await library.createSubject({ name: "Digital Systems" });
+      const algebra = await library.createSubject({ name: "Algebra" });
+      const lecture = await library.importLecture(digital.id, "Lecture 1", pdfBytes("a"), 1);
+      const algebraFolder = await library.createFolder(algebra.id, "Week 1");
+
+      await expect(library.moveLecture(lecture.id, algebraFolder.id)).rejects.toBeInstanceOf(NotFoundError);
+      expect((await library.getOrganization(digital.id)).lectures[lecture.id]).toEqual({ status: "reading" });
+    });
+
+    it("moves a material into a folder and back to Unfiled", async () => {
+      const { subject, first } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+
+      await library.moveLecture(first.id, folder.id);
+      expect((await library.getOrganization(subject.id)).lectures[first.id]).toEqual({
+        status: "reading",
+        folderId: folder.id,
+      });
+
+      await library.moveLecture(first.id, null);
+      expect((await library.getOrganization(subject.id)).lectures[first.id]).toEqual({ status: "reading" });
+    });
+
+    it("deleting a folder moves its material to Unfiled, keeps every PDF, and leaves other folders in place", async () => {
+      const { subject, first, second } = await importTwoLectures();
+      const third = await library.importLecture(subject.id, "Lecture 3", pdfBytes("third"), 1);
+      const week1 = await library.createFolder(subject.id, "Week 1");
+      const week2 = await library.createFolder(subject.id, "Week 2");
+      await library.moveLecture(first.id, week1.id);
+      await library.moveLecture(second.id, week1.id);
+      await library.moveLecture(third.id, week2.id);
+
+      await library.deleteFolder(subject.id, week1.id);
+
+      expect((await library.listFolders(subject.id)).map((folder) => folder.name)).toEqual(["Week 2"]);
+      expect((await library.getOrganization(subject.id)).lectures).toEqual({
+        [first.id]: { status: "reading" },
+        [second.id]: { status: "reading" },
+        [third.id]: { status: "reading", folderId: week2.id },
+      });
+      expect(decodeText(await library.getPdf(first.id))).toBe("%PDF-1.7\nfirst\n%%EOF\n");
+      expect(decodeText(await library.getPdf(second.id))).toBe("%PDF-1.7\nsecond\n%%EOF\n");
+    });
+
+    it("reads a material as Reading until it is marked done, and keeps the mark after reopening the library", async () => {
+      const { subject, first } = await importTwoLectures();
+      expect((await library.getOrganization(subject.id)).lectures[first.id]).toEqual({ status: "reading" });
+
+      await library.setLectureStatus(first.id, "done");
+      const reopened = new Library(env.open(), { now: () => CLOCK });
+      expect((await reopened.getOrganization(subject.id)).lectures[first.id]).toEqual({ status: "done" });
+
+      await reopened.setLectureStatus(first.id, "reading");
+      expect((await reopened.getOrganization(subject.id)).lectures[first.id]).toEqual({ status: "reading" });
+    });
+
+    it("refuses a status that is neither reading nor done", async () => {
+      const { first } = await importTwoLectures();
+
+      await expect(library.setLectureStatus(first.id, "archived" as LectureStatus)).rejects.toBeInstanceOf(ZodError);
+    });
+
+    it("leaves organization.json as it was when a material's title changes", async () => {
+      const { subject, first } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+      await library.moveLecture(first.id, folder.id);
+      await library.setLectureStatus(first.id, "done");
+      const before = await env.open().readText(organizationPath(subject.id));
+
+      await library.updateLecture(first.id, { title: "Lecture 1: Logic gates" });
+
+      expect(await env.open().readText(organizationPath(subject.id))).toBe(before);
+    });
+
+    it("leaves lecture.json as it was when a material is moved or marked", async () => {
+      const { subject, first } = await importTwoLectures();
+      const before = await env.open().readText(lecturePath(subject.id, first.id));
+      const folder = await library.createFolder(subject.id, "Week 1");
+
+      await library.moveLecture(first.id, folder.id);
+      await library.setLectureStatus(first.id, "done");
+
+      expect(await env.open().readText(lecturePath(subject.id, first.id))).toBe(before);
+    });
+
+    it("removes a deleted material's entry from organization.json", async () => {
+      const { subject, first, second } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+      await library.moveLecture(first.id, folder.id);
+      await library.setLectureStatus(second.id, "done");
+
+      await library.deleteLecture(first.id);
+
+      expect(JSON.parse((await env.open().readText(organizationPath(subject.id))) ?? "null")).toEqual({
+        version: 1,
+        folders: [{ id: folder.id, name: "Week 1", createdAt: "2026-10-08T09:00:00.000Z" }],
+        lectures: { [second.id]: { status: "done" } },
+      });
+    });
+
+    it("deleting a material with no folder or status does not create organization.json", async () => {
+      const { subject, first } = await importTwoLectures();
+
+      await library.deleteLecture(first.id);
+
+      expect(await env.open().readText(organizationPath(subject.id))).toBeUndefined();
+    });
+
+    it("deletes a material while organization.json is damaged, and leaves the file as it was", async () => {
+      const { subject, first } = await importTwoLectures();
+      const damaged = "{ not json";
+      await env.open().writeText(organizationPath(subject.id), damaged);
+
+      await library.deleteLecture(first.id);
+
+      expect((await library.listLectures(subject.id)).map((lecture) => lecture.title)).toEqual(["Lecture 2"]);
+      expect(await env.open().readText(organizationPath(subject.id))).toBe(damaged);
+    });
+
+    it("refuses to read a damaged organization.json, and no write replaces it", async () => {
+      const { subject, first } = await importTwoLectures();
+      const damaged = "{ not json";
+      await env.open().writeText(organizationPath(subject.id), damaged);
+
+      await expect(library.getOrganization(subject.id)).rejects.toBeInstanceOf(UnreadableOrganizationError);
+      await expect(library.createFolder(subject.id, "Week 1")).rejects.toBeInstanceOf(UnreadableOrganizationError);
+      await expect(library.setLectureStatus(first.id, "done")).rejects.toBeInstanceOf(UnreadableOrganizationError);
+      await expect(library.moveLecture(first.id, null)).rejects.toBeInstanceOf(UnreadableOrganizationError);
+      expect(await env.open().readText(organizationPath(subject.id))).toBe(damaged);
+    });
+
+    it("refuses an organization.json from a newer version, and leaves it as it is", async () => {
+      const { subject, first } = await importTwoLectures();
+      const newer = JSON.stringify({ version: 2, folders: [], lectures: {}, layout: "grid" });
+      await env.open().writeText(organizationPath(subject.id), newer);
+
+      await expect(library.getOrganization(subject.id)).rejects.toBeInstanceOf(UnreadableOrganizationError);
+      await expect(library.setLectureStatus(first.id, "done")).rejects.toBeInstanceOf(UnreadableOrganizationError);
+      expect(await env.open().readText(organizationPath(subject.id))).toBe(newer);
+    });
+
+    it("reads a folder that is gone from the subject as Unfiled", async () => {
+      const { subject, first } = await importTwoLectures();
+      await env.open().writeText(
+        organizationPath(subject.id),
+        JSON.stringify({ version: 1, folders: [], lectures: { [first.id]: { folderId: unknownFolderId } } }),
+      );
+
+      expect((await library.getOrganization(subject.id)).lectures[first.id]).toEqual({ status: "reading" });
+    });
+
+    it("reads a status it does not know as Reading, and a move keeps the status as stored", async () => {
+      const { subject, first } = await importTwoLectures();
+      await env.open().writeText(
+        organizationPath(subject.id),
+        JSON.stringify({ version: 1, folders: [], lectures: { [first.id]: { status: "archived" } } }),
+      );
+
+      expect((await library.getOrganization(subject.id)).lectures[first.id]).toEqual({ status: "reading" });
+
+      await library.moveLecture(first.id, null);
+      expect(JSON.parse((await env.open().readText(organizationPath(subject.id))) ?? "null")).toEqual({
+        version: 1,
+        folders: [],
+        lectures: { [first.id]: { status: "archived" } },
+      });
+    });
+
+    it("keeps every change when edits to different materials arrive together", async () => {
+      const { subject, first, second } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+
+      await Promise.all([
+        library.setLectureStatus(first.id, "done"),
+        library.moveLecture(second.id, folder.id),
+        library.setLectureStatus(second.id, "done"),
+      ]);
+
+      expect((await library.getOrganization(subject.id)).lectures).toEqual({
+        [first.id]: { status: "done" },
+        [second.id]: { status: "done", folderId: folder.id },
+      });
+    });
+
+    it("keeps the folders and placements when a write to organization.json fails", async () => {
+      const { subject, first } = await importTwoLectures();
+      const folder = await library.createFolder(subject.id, "Week 1");
+      await library.moveLecture(first.id, folder.id);
+      const inner = env.open();
+      const failing: Storage = {
+        readText: (path) => inner.readText(path),
+        writeText: async (path, text) => {
+          if (path === organizationPath(subject.id)) throw new Error("The disk is full.");
+          await inner.writeText(path, text);
+        },
+        readBytes: (path) => inner.readBytes(path),
+        writeBytes: (path, bytes) => inner.writeBytes(path, bytes),
+        list: (dir) => inner.list(dir),
+        remove: (path) => inner.remove(path),
+        exists: (path) => inner.exists(path),
+      };
+
+      await expect(new Library(failing, { now: () => CLOCK }).deleteFolder(subject.id, folder.id)).rejects.toThrow(
+        "The disk is full.",
+      );
+
+      expect((await library.listFolders(subject.id)).map((item) => item.name)).toEqual(["Week 1"]);
+      expect((await library.getOrganization(subject.id)).lectures[first.id]).toEqual({
+        status: "reading",
+        folderId: folder.id,
+      });
     });
   });
 });
