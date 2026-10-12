@@ -20,6 +20,7 @@ It is local-first. There is no account, and your library is a folder of plain fi
 ## Features
 
 - **Subjects and lectures.** Make a subject for each class and import lecture PDFs into it. Add a date to a lecture if you want to sort by it. Lectures without a date work too.
+- **Folders and reading status.** Mark each lecture Reading or Done, and filter a subject to see one or the other. Put lectures into folders inside a subject by dragging them by their grip, or with the Folder field in the Edit dialog. Folders hold one level, and deleting a folder moves its lectures to Unfiled without deleting their PDFs.
 - **Annotate pages.** Add text boxes and type into them, or draw freehand ink for diagrams with a mouse, touch, or stylus. Select text to highlight it in a colour, then click a highlight to change or remove it. Undo and redo cover your edits during a session.
 - **Format text boxes.** Select a text box to get a small bar for its size, bold, italic, underline, and color. The bar sits above the box, or below it where the toolbar is in the way. Ctrl+B, Ctrl+I, and Ctrl+U work while you type.
 - **Notes for each page.** Every page of a material has its own note, saved as you type. The notes panel shows the note for the page you are reading, and a small mark beside the page shows which pages have notes.
@@ -77,6 +78,7 @@ BetterNotez Library/
   tasks.json                        task board
   subjects/<subject-id>/
     subject.json                    name and color
+    organization.json               folders, and the reading status of each lecture
     lectures/<lecture-id>/
       lecture.json                  title, date, page count
       lecture.pdf                   the PDF you imported
