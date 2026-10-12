@@ -88,9 +88,32 @@ describe("NoteText", () => {
     expect(render("[docs](https://example.com/a)")).toBe('<div class="notes-markdown"><p><span>docs</span></p></div>');
   });
 
-  it("shows a link with an unsafe address as its text, with no address", () => {
+  it.each([
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "&#106;avascript:alert(1)",
+    "&#x6A;avascript:alert(1)",
+    "<javascript:alert(1)>",
+    "vbscript:msgbox(1)",
+    "data:text/html,<b>x</b>",
+    "file:///etc/passwd",
+    "tauri://localhost",
+    "asset://localhost/x",
+    "notes:open",
+  ])("shows a link to %s as its text, with no address", (url) => {
     onWeb();
-    expect(render("[bad](javascript:alert(1))")).toBe('<div class="notes-markdown"><p><span>bad</span></p></div>');
+    expect(render(`[x](${url})`)).toBe('<div class="notes-markdown"><p><span>x</span></p></div>');
+  });
+
+  it.each([
+    ["https://example.com", '<a href="https://example.com" target="_blank" rel="noopener noreferrer">x</a>'],
+    ["mailto:a@b.c", '<a href="mailto:a@b.c" target="_blank" rel="noopener noreferrer">x</a>'],
+    ["//example.com/x", '<a href="//example.com/x" target="_blank" rel="noopener noreferrer">x</a>'],
+    ["/path", '<a href="/path" target="_blank" rel="noopener noreferrer">x</a>'],
+    ["#frag", "<span>x</span>"],
+  ])("renders a link to %s as %s on the web", (url, inner) => {
+    onWeb();
+    expect(render(`[x](${url})`)).toBe(`<div class="notes-markdown"><p>${inner}</p></div>`);
   });
 
   it("shows an image as its alt text, or as 'image' without alt text, and never as an img element", () => {
