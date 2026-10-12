@@ -139,6 +139,7 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   await expect(renderedNote(page).locator("h4")).toHaveText("Steps");
   await expect(renderedNote(page).locator("h4")).toHaveCSS("font-size", "18px");
   await expect(renderedNote(page).locator("h4")).toHaveCSS("font-family", /^"Instrument Serif"/);
+  await expect(renderedNote(page).locator("h4")).toHaveCSS("font-weight", "400");
   await expect(renderedNote(page).locator("ul").first().locator("xpath=./li")).toHaveText(["compare by key", "swap"]);
   await expect(renderedNote(page).locator("ol li")).toHaveText(["divide", "merge"]);
   const parent = await renderedNote(page).locator("ul > li").first().boundingBox();
@@ -155,6 +156,22 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   const list = await renderedNote(page).locator("ol").boundingBox();
   const after = await paragraph.boundingBox();
   expect((after?.y ?? 0) - ((list?.y ?? 0) + (list?.height ?? 0))).toBe(28);
+});
+
+test("### and #### headings render as h5 and h6, both in the serif face", async ({ page }) => {
+  await createSubject(page, "Deep headings");
+  await importLecture(page, "Deep.pdf", ["Deep"]);
+  await openLecture(page, "Deep");
+  await openNotes(page);
+
+  await notesField(page).fill("### Level three\n\n#### Level four");
+  await waitForSaved(page);
+  await leaveField(page);
+
+  await expect(renderedNote(page).locator("h5")).toHaveText("Level three");
+  await expect(renderedNote(page).locator("h5")).toHaveCSS("font-family", /^"Instrument Serif"/);
+  await expect(renderedNote(page).locator("h6")).toHaveText("Level four");
+  await expect(renderedNote(page).locator("h6")).toHaveCSS("font-family", /^"Instrument Serif"/);
 });
 
 test("a script tag and an image's onerror attribute show as text and never run", async ({ page }) => {
