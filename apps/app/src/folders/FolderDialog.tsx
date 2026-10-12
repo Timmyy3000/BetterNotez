@@ -8,7 +8,6 @@ import { Button } from "../ui/button";
 import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
 
-/** Creates a folder in a subject, or renames the one passed in. */
 export function FolderDialog({
   subjectId,
   folder,

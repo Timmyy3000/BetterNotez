@@ -36,7 +36,6 @@ async function importLecture(page: Page, fileName: string, pageTexts: readonly s
   await expect(page.getByRole("link", { name: title, exact: true })).toBeVisible();
 }
 
-/** The text of a file in the web library, found by its name. The test library holds one subject. */
 async function libraryFileText(page: Page, name: string): Promise<string | undefined> {
   return page.evaluate(async (fileName) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -61,7 +60,6 @@ async function libraryFileText(page: Page, name: string): Promise<string | undef
   }, name);
 }
 
-/** Writes a file into the subject's directory in the web library. */
 async function writeSubjectFile(page: Page, name: string, text: string): Promise<void> {
   await page.evaluate(
     async ({ fileName, contents }) => {
@@ -93,7 +91,6 @@ async function writeSubjectFile(page: Page, name: string, text: string): Promise
 const ALERT =
   "This subject's folders and reading status can't be read. The file is damaged or was made by a newer version of BetterNotez, so it has been left as it is.";
 
-/** A file cut off partway through a write. This build cannot read it, so it must stay exactly as it is. */
 const DAMAGED_FILE = '{"version":1,"folders":[{"id":"01DAMAGEDFOLDER0000000000"';
 
 test("a subject whose organization.json cannot be read still lists its material, and the file stays as it is", async ({

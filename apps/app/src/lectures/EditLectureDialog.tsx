@@ -9,7 +9,6 @@ import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { SelectField } from "../ui/select";
 
-/** An empty folder value means Not in a folder. It is the Unfiled section on the subject page. */
 const NO_FOLDER = "";
 
 export function EditLectureDialog({
@@ -20,7 +19,6 @@ export function EditLectureDialog({
 }: {
   readonly lecture: Lecture;
   readonly folders: readonly Folder[];
-  /** The folder the material is in when the dialog opens. */
   readonly folderId: string | undefined;
   readonly onClose: () => void;
 }) {
@@ -37,7 +35,6 @@ export function EditLectureDialog({
     setSaving(true);
     try {
       await library.updateLecture(lecture.id, { title: trimmed, date: date === "" ? null : date });
-      // Only a change of folder moves the material. Saving the same folder again must not touch it.
       if (folder !== openedFolder) {
         await library.moveLecture(lecture.id, folder === NO_FOLDER ? null : folder);
       }
