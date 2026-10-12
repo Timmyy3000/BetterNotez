@@ -246,13 +246,41 @@ test("Backspace after a click on a rendered note leaves the selected text box al
   await page.keyboard.type("Keep me");
   await page.getByRole("button", { name: "Select and move" }).click();
   await page.locator('[data-page-number="1"] [data-kind="text"]').click();
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Delete selected" })).toBeEnabled();
 
   await openNotes(page);
   await notesField(page).fill("Read me");
   await waitForSaved(page);
   await leaveField(page);
   await renderedNote(page).locator("p").click();
+  await page.keyboard.press("Backspace");
+
+  await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
+});
+
+test("Backspace on the Edit button leaves the selected text box alone", async ({ page }) => {
+  await createSubject(page, "Keyboard boxes");
+  await importLecture(page, "Keyed.pdf", ["Keyed"]);
+  await openLecture(page, "Keyed");
+
+  await page.getByRole("button", { name: "Text box", exact: true }).click();
+  const pageBox = await page.locator('[data-page-number="1"]').boundingBox();
+  if (pageBox === null) throw new Error("page 1 is not on screen");
+  await page.mouse.click(pageBox.x + pageBox.width * 0.3, pageBox.y + pageBox.height * 0.6);
+  await page.keyboard.type("Keep me");
+  await page.getByRole("button", { name: "Select and move" }).click();
+
+  await openNotes(page);
+  await notesField(page).fill("Read me");
+  await waitForSaved(page);
+  await leaveField(page);
+
+  await page.locator('[data-page-number="1"] [data-kind="text"]').click();
+  await expect(page.getByRole("button", { name: "Delete selected" })).toBeEnabled();
+  // Tab passes the toolbar and the notes edge on the way to Edit, so it is pressed until Edit has focus.
+  const onEdit = () => editButton(page).evaluate((element) => element === document.activeElement);
+  for (let press = 0; press < 60 && !(await onEdit()); press++) await page.keyboard.press("Tab");
+  await expect(editButton(page)).toBeFocused();
   await page.keyboard.press("Backspace");
 
   await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
