@@ -1,4 +1,4 @@
-import type { Lecture } from "@betternotez/core";
+import type { Folder, Lecture } from "@betternotez/core";
 import { toast } from "sonner";
 import { useState, type FormEvent } from "react";
 import { useLibrary } from "../library";
@@ -7,11 +7,28 @@ import { notifyLibraryChanged } from "../store";
 import { Button } from "../ui/button";
 import { DialogActions, ModalDialog } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { SelectField } from "../ui/select";
 
-export function EditLectureDialog({ lecture, onClose }: { readonly lecture: Lecture; readonly onClose: () => void }) {
+/** An empty folder value means Not in a folder. It is the Unfiled section on the subject page. */
+const NO_FOLDER = "";
+
+export function EditLectureDialog({
+  lecture,
+  folders,
+  folderId,
+  onClose,
+}: {
+  readonly lecture: Lecture;
+  readonly folders: readonly Folder[];
+  /** The folder the material is in when the dialog opens. */
+  readonly folderId: string | undefined;
+  readonly onClose: () => void;
+}) {
   const library = useLibrary();
   const [title, setTitle] = useState(lecture.title);
   const [date, setDate] = useState(lecture.date ?? "");
+  const [openedFolder] = useState(folderId ?? NO_FOLDER);
+  const [folder, setFolder] = useState(openedFolder);
   const [saving, setSaving] = useState(false);
   const trimmed = title.trim();
 
@@ -20,6 +37,10 @@ export function EditLectureDialog({ lecture, onClose }: { readonly lecture: Lect
     setSaving(true);
     try {
       await library.updateLecture(lecture.id, { title: trimmed, date: date === "" ? null : date });
+      // Only a change of folder moves the material. Saving the same folder again must not touch it.
+      if (folder !== openedFolder) {
+        await library.moveLecture(lecture.id, folder === NO_FOLDER ? null : folder);
+      }
       notifyLibraryChanged();
       onClose();
     } catch (error) {
@@ -29,7 +50,11 @@ export function EditLectureDialog({ lecture, onClose }: { readonly lecture: Lect
   }
 
   return (
-    <ModalDialog title="Edit material" description="Change the title or the date. The PDF stays as it is." onClose={onClose}>
+    <ModalDialog
+      title="Edit material"
+      description="Change the title, the date, or the folder. The PDF stays as it is."
+      onClose={onClose}
+    >
       <form onSubmit={handleSubmit} className="space-y-5">
         <label className="block space-y-2">
           <span className="text-sm font-medium">Title</span>
@@ -39,6 +64,17 @@ export function EditLectureDialog({ lecture, onClose }: { readonly lecture: Lect
           <span className="text-sm font-medium">Date (optional)</span>
           <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </label>
+        {folders.length > 0 && (
+          <SelectField
+            label="Folder"
+            value={folder}
+            onValueChange={setFolder}
+            options={[
+              { value: NO_FOLDER, label: "Not in a folder" },
+              ...folders.map((item) => ({ value: item.id, label: item.name })),
+            ]}
+          />
+        )}
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={trimmed === "" || saving}>
