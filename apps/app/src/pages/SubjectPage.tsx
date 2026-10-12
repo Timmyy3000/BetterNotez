@@ -11,7 +11,14 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { Folder, Lecture, LectureStatus } from "@betternotez/core";
+import {
+  UnreadableOrganizationError,
+  type Folder,
+  type Lecture,
+  type LectureStatus,
+  type Library,
+  type SubjectOrganization,
+} from "@betternotez/core";
 import { Check, Ellipsis, FileText, FolderPlus, GripVertical, Pencil, Trash2, Upload } from "lucide-react";
 import { useRef, useState, type DragEvent, type ReactNode, type RefObject } from "react";
 import { Link, useParams } from "react-router";
@@ -64,7 +71,7 @@ export function SubjectPage() {
   const library = useLibrary();
   const subject = useLibraryQuery((lib) => lib.getSubject(subjectId), [subjectId]);
   const lectures = useLibraryQuery((lib) => lib.listLectures(subjectId), [subjectId]);
-  const organization = useLibraryQuery((lib) => lib.getOrganization(subjectId), [subjectId]);
+  const organization = useLibraryQuery((lib) => readOrganization(lib, subjectId), [subjectId]);
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const [dragging, setDragging] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -95,9 +102,10 @@ export function SubjectPage() {
 
   const current = subject.data;
   const ordered = sortLectures(lectures.data);
-  const { folders, lectures: placements } = organization.data;
+  const { readable, folders, lectures: placements } = organization.data;
   const counts = countByStatus(ordered, placements);
-  const sections = groupLectures(folders, ordered, placements, filter);
+  // Without a readable file no material has a known status, so the filter shows every material.
+  const sections = groupLectures(folders, ordered, placements, readable ? filter : "all");
   // Numbers follow the whole list, so a filter does not renumber the material it shows.
   const numberOf = new Map(ordered.map((lecture, index) => [lecture.id, index + 1]));
   const activeLecture = ordered.find((lecture) => lecture.id === activeId);
@@ -171,7 +179,8 @@ export function SubjectPage() {
         number={numberOf.get(lecture.id) ?? 0}
         lecture={lecture}
         status={status}
-        movable={folders.length > 0}
+        readable={readable}
+        movable={readable && folders.length > 0}
         justDragged={justDragged}
         onEdit={() =>
           setDialog({ kind: "edit-lecture", lecture, folderId: placements[lecture.id]?.folderId })
@@ -208,10 +217,12 @@ export function SubjectPage() {
               <Upload />
               Import PDF
             </Button>
-            <Button onClick={() => setDialog({ kind: "new-folder" })}>
-              <FolderPlus />
-              New folder
-            </Button>
+            {readable && (
+              <Button onClick={() => setDialog({ kind: "new-folder" })}>
+                <FolderPlus />
+                New folder
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button type="button" aria-label="Subject actions" className={iconButtonClass}>
@@ -255,29 +266,37 @@ export function SubjectPage() {
         }}
       >
         <div className="rise" style={revealAt(2)}>
+          {!readable && (
+            <p role="alert" className="mb-7 text-[15px] leading-relaxed text-muted-foreground">
+              This subject's folders and reading status can't be read. The file is damaged or was made by a newer
+              version of BetterNotez, so it has been left as it is.
+            </p>
+          )}
           {ordered.length === 0 ? (
             <EmptyState icon={FileText} title="No material yet">
               Drop PDFs anywhere on this page, or click Import PDF.
             </EmptyState>
           ) : (
             <>
-              <div
-                role="group"
-                aria-label="Show material"
-                className="mb-7 flex flex-wrap gap-x-7 gap-y-2 border-b border-rule pb-3"
-              >
-                {FILTERS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={filter === value}
-                    onClick={() => setFilter(value)}
-                    className="font-serif text-xl text-muted-foreground italic transition-colors hover:text-foreground aria-pressed:text-foreground aria-pressed:underline aria-pressed:underline-offset-4"
-                  >
-                    {label} <span className="tabular-nums">{counts[value]}</span>
-                  </button>
-                ))}
-              </div>
+              {readable && (
+                <div
+                  role="group"
+                  aria-label="Show material"
+                  className="mb-7 flex flex-wrap gap-x-7 gap-y-2 border-b border-rule pb-3"
+                >
+                  {FILTERS.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={filter === value}
+                      onClick={() => setFilter(value)}
+                      className="font-serif text-xl text-muted-foreground italic transition-colors hover:text-foreground aria-pressed:text-foreground aria-pressed:underline aria-pressed:underline-offset-4"
+                    >
+                      {label} <span className="tabular-nums">{counts[value]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {folders.length === 0 ? (
                 shown.length === 0 ? (
@@ -346,6 +365,22 @@ export function SubjectPage() {
       )}
     </div>
   );
+}
+
+/**
+ * A subject's folders and status. An unreadable organization.json is not an error here. The page lists the material
+ * flat, and the file stays as it is. Any other failure is still reported.
+ */
+async function readOrganization(
+  library: Library,
+  subjectId: string,
+): Promise<SubjectOrganization & { readonly readable: boolean }> {
+  try {
+    return { ...(await library.getOrganization(subjectId)), readable: true };
+  } catch (error) {
+    if (error instanceof UnreadableOrganizationError) return { folders: [], lectures: {}, readable: false };
+    throw error;
+  }
 }
 
 /** The folder a drop target stands for, or null for Unfiled. */
@@ -422,6 +457,7 @@ function LectureRow({
   number,
   lecture,
   status,
+  readable,
   movable,
   justDragged,
   onEdit,
@@ -431,7 +467,9 @@ function LectureRow({
   readonly number: number;
   readonly lecture: Lecture;
   readonly status: LectureStatus;
-  /** A material can be dragged only when the subject has folders to drop it on. */
+  /** False when organization.json cannot be read. The status is then unknown, so no status control is shown. */
+  readonly readable: boolean;
+  /** A material can be dragged only when the subject has folders to drop it on, and its organization can be read. */
   readonly movable: boolean;
   readonly justDragged: RefObject<boolean>;
   readonly onEdit: () => void;
@@ -475,21 +513,23 @@ function LectureRow({
         </Link>
         <p className="mt-1.5 text-sm text-muted-foreground tabular-nums">{lectureMeta(lecture)}</p>
       </div>
-      <button
-        type="button"
-        aria-pressed={done}
-        aria-label={`Mark ${lecture.title} as done`}
-        onClick={onToggleStatus}
-        className={cn(
-          "relative inline-flex h-7 shrink-0 items-center gap-1.5 self-center rounded-full border px-3 text-xs transition-colors [&_svg]:size-3.5",
-          done
-            ? "border-foreground bg-foreground text-background"
-            : "border-control text-muted-foreground hover:text-foreground",
-        )}
-      >
-        {done && <Check aria-hidden />}
-        {done ? "Done" : "Reading"}
-      </button>
+      {readable && (
+        <button
+          type="button"
+          aria-pressed={done}
+          aria-label={`Mark ${lecture.title} as done`}
+          onClick={onToggleStatus}
+          className={cn(
+            "relative inline-flex h-7 shrink-0 items-center gap-1.5 self-center rounded-full border px-3 text-xs transition-colors [&_svg]:size-3.5",
+            done
+              ? "border-foreground bg-foreground text-background"
+              : "border-control text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {done && <Check aria-hidden />}
+          {done ? "Done" : "Reading"}
+        </button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button type="button" aria-label={`Actions for ${lecture.title}`} className={cn(iconButtonClass, "relative self-center")}>
