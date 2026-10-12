@@ -142,6 +142,7 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   await expect(renderedNote(page).locator("h3")).toHaveCSS("font-size", "22px");
   await expect(renderedNote(page).locator("h4")).toHaveText("Steps");
   await expect(renderedNote(page).locator("h4")).toHaveCSS("font-size", "18px");
+  await expect(renderedNote(page).locator("h4")).toHaveCSS("font-family", /^"Instrument Serif"/);
   await expect(renderedNote(page).locator("ul").first().locator("xpath=./li")).toHaveText(["compare by key", "swap"]);
   await expect(renderedNote(page).locator("ol li")).toHaveText(["divide", "merge"]);
   // A nested item starts one 28px line below its parent, with no empty line between them.
