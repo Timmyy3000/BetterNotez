@@ -123,6 +123,7 @@ test("text box, pen stroke, notes, and export survive a reload, and undo works",
   await expect(page.getByRole("complementary", { name: "Notes" }).getByText("Saved", { exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Notes" }).click();
+  await page.getByRole("button", { name: "Edit notes for page 1" }).click();
   await expect(page.getByRole("textbox", { name: /^Notes for page \d+$/ })).toHaveValue("Remember the truth table");
 
   const [download] = await Promise.all([
