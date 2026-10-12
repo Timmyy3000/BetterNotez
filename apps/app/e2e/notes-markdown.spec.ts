@@ -323,6 +323,26 @@ test("a note taller than the panel is a named region that Tab reaches from Edit"
   await expect(region).toBeFocused();
 });
 
+test("a note that fits its panel is a named region that Tab reaches from Edit", async ({ page }) => {
+  await createSubject(page, "Short note");
+  await importLecture(page, "Brief.pdf", ["Brief"]);
+  await openLecture(page, "Brief");
+  await openNotes(page);
+
+  await notesField(page).fill("One short line");
+  await waitForSaved(page);
+  await leaveField(page);
+
+  // A note that fits has no overflow to make the region focusable, so only its tab stop can do that.
+  const region = page.getByRole("region", { name: "Rendered notes for page 1" });
+  await expect(region).toBeVisible();
+  expect(await region.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(false);
+
+  await editButton(page).focus();
+  await page.keyboard.press("Tab");
+  await expect(region).toBeFocused();
+});
+
 test("Ctrl+Z after a click on a rendered note leaves the PDF drawing alone", async ({ page }) => {
   await createSubject(page, "Undo notes");
   await importLecture(page, "Strokes.pdf", ["Strokes"]);

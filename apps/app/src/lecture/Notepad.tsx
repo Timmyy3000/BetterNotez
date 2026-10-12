@@ -100,10 +100,11 @@ export function Notepad({
           className="ruled-paper min-h-0 flex-1 resize-none bg-transparent pr-6 pb-4 pl-[66px] text-base leading-[28px] text-foreground placeholder:text-faint disabled:opacity-60"
         />
       ) : (
-        // Chromium makes this scroller keyboard-focusable once a note overflows, so it needs a name for keyboard users.
+        // Focusable even when the note fits, so Ctrl+Z after a press does not reach the PDF's undo history.
         <div
           data-rendered-note
           role="region"
+          tabIndex={0}
           aria-label={`Rendered notes for page ${page}`}
           className="ruled-paper min-h-0 flex-1 overflow-y-auto pr-6 pb-4 pl-[66px]"
         >
