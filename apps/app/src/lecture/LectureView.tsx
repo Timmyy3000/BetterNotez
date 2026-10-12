@@ -158,6 +158,8 @@ export function LectureView({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (isTypingTarget(event.target)) return;
+      // Keys pressed in the notes panel, such as on its Edit button, belong to the panel, not to the page's shortcuts.
+      if (event.target instanceof Node && document.getElementById(notesId)?.contains(event.target)) return;
       const key = event.key.toLowerCase();
       const modifier = event.metaKey || event.ctrlKey;
       if (modifier && key === "z") {
@@ -178,7 +180,7 @@ export function LectureView({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [store, selectedId]);
+  }, [store, selectedId, notesId]);
 
   async function exportPdf() {
     try {
