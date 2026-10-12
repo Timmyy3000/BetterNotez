@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { Children, type ComponentProps, isValidElement, type ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isDesktop } from "../lib/platform";
@@ -11,6 +11,7 @@ import { isDesktop } from "../lib/platform";
 const components: Components = {
   a: NoteLink,
   img: NoteImage,
+  li: NoteItem,
   table: NoteTable,
 };
 
@@ -39,6 +40,23 @@ function NoteLink({ href, children }: ComponentProps<"a">) {
       {children}
     </a>
   );
+}
+
+const BLOCK_ELEMENTS: unknown[] = ["p", "ul", "ol", "pre", "blockquote", "hr", NoteTable];
+
+function isBlockElement(node: ReactNode): boolean {
+  return isValidElement(node) && BLOCK_ELEMENTS.includes(node.type);
+}
+
+/**
+ * Markdown puts a newline between a list item's blocks. The item keeps its line breaks, so such a newline would show as
+ * an empty line, and it is dropped. A newline between two pieces of inline text is a real line break, and stays.
+ */
+function NoteItem({ className, children }: ComponentProps<"li">) {
+  const nodes = Children.toArray(children);
+  const isSeparator = (node: ReactNode, index: number) =>
+    node === "\n" && [nodes[index - 1], nodes[index + 1]].some(isBlockElement);
+  return <li className={className}>{nodes.filter((node, index) => !isSeparator(node, index))}</li>;
 }
 
 /** The alt text stands in for the picture, so a note never fetches an image. */

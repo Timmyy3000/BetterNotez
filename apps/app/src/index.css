@@ -360,8 +360,15 @@
   /* A single line break in a note shows as a line break. Only text blocks keep the newline, not their containers. */
   .notes-markdown p,
   .notes-markdown li {
-    margin: 0;
     white-space: pre-line;
+  }
+
+  /* White-space is inherited, so a list nested in an item would keep the item's pre-line and open a line per newline. */
+  .notes-markdown ul,
+  .notes-markdown ol,
+  .notes-markdown blockquote,
+  .notes-markdown table {
+    white-space: normal;
   }
 
   .notes-markdown h1 {
@@ -421,7 +428,6 @@
 
   .notes-markdown pre {
     overflow-x: auto;
-    margin: 0;
     font-family: var(--font-mono);
     font-size: 14px;
     line-height: 28px;
