@@ -303,6 +303,12 @@ test("Backspace on the Edit button leaves the selected text box alone", async ({
   await page.keyboard.press("Backspace");
 
   await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
+
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("region", { name: "Rendered notes for page 1" })).toBeFocused();
+  await page.keyboard.press("Backspace");
+
+  await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
 });
 
 test("a note taller than the panel is a named region that Tab reaches from Edit", async ({ page }) => {
