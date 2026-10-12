@@ -257,3 +257,24 @@ test("Backspace after a click on a rendered note leaves the selected text box al
 
   await expect(page.locator('[data-page-number="1"] [data-kind="text"]')).toHaveCount(1);
 });
+
+test("a note taller than the panel is a named region that Tab reaches from Edit", async ({ page }) => {
+  await createSubject(page, "Scrolling");
+  await importLecture(page, "Long.pdf", ["Long"]);
+  await openLecture(page, "Long");
+  await openNotes(page);
+
+  // A scroller is keyboard-focusable only once its content overflows, so the note must be taller than the panel.
+  const lines = Array.from({ length: 60 }, (_, index) => `Line ${index + 1} of a long note`);
+  await notesField(page).fill(lines.join("\n\n"));
+  await waitForSaved(page);
+  await leaveField(page);
+
+  const region = page.getByRole("region", { name: "Rendered notes for page 1" });
+  await expect(region).toBeVisible();
+  expect(await region.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+
+  await editButton(page).focus();
+  await page.keyboard.press("Tab");
+  await expect(region).toBeFocused();
+});
