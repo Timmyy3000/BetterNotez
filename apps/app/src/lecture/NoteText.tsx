@@ -37,10 +37,12 @@ export function NoteText({ text }: { readonly text: string }) {
 
 /**
  * A link with no address shows its text alone. Markdown leaves the address empty when it is unsafe, such as a
- * javascript: address. The desktop window must not navigate away from the app, so its links show as text too.
+ * javascript: address. The desktop window must not navigate away from the app, so its links show as text too. An
+ * in-page link, such as a footnote number, would open a second copy of the app in a new tab on the web, so it shows as
+ * text too.
  */
 function NoteLink({ href, children }: ComponentProps<"a">) {
-  if (!href || isDesktop()) return <span>{children}</span>;
+  if (!href || href.startsWith("#") || isDesktop()) return <span>{children}</span>;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer">
       {children}

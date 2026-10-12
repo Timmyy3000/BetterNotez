@@ -75,6 +75,14 @@ describe("NoteText", () => {
     );
   });
 
+  it("shows a footnote number and an in-page link as text, not as a second copy of the app", () => {
+    onWeb();
+    const footnote = render("Text[^1]\n\n[^1]: Note");
+    expect(footnote).toContain("<sup><span>1</span></sup>");
+    expect(footnote).not.toContain("href");
+    expect(render("[x](#frag)")).toBe('<div class="notes-markdown"><p><span>x</span></p></div>');
+  });
+
   it("shows a link as its text on the desktop, where the window must not navigate", () => {
     onDesktop();
     expect(render("[docs](https://example.com/a)")).toBe('<div class="notes-markdown"><p><span>docs</span></p></div>');
