@@ -35,6 +35,20 @@ describe("NoteText", () => {
     );
   });
 
+  it("drops the newline that separates a list item from its nested list, so no empty line opens", () => {
+    onWeb();
+    expect(render("- item one\n  - nested a")).toBe(
+      '<div class="notes-markdown"><ul>\n<li>item one<ul>\n<li>nested a</li>\n</ul></li>\n</ul></div>',
+    );
+  });
+
+  it("keeps a line break between two pieces of inline text in a list item", () => {
+    onWeb();
+    expect(render("- **a**\n  **b**")).toBe(
+      '<div class="notes-markdown"><ul>\n<li><strong>a</strong>\n<strong>b</strong></li>\n</ul></div>',
+    );
+  });
+
   it("keeps a single line break inside a paragraph", () => {
     onWeb();
     expect(render("Two lines\nin one paragraph")).toBe(

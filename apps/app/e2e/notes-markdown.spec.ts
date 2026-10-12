@@ -102,6 +102,7 @@ const SOURCE = [
   "# Sorting",
   "## Steps",
   "- compare",
+  "  - by key",
   "- swap",
   "",
   "1. divide",
@@ -123,8 +124,12 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
 
   await expect(renderedNote(page).locator("h1")).toHaveText("Sorting");
   await expect(renderedNote(page).locator("h2")).toHaveText("Steps");
-  await expect(renderedNote(page).locator("ul li")).toHaveText(["compare", "swap"]);
+  await expect(renderedNote(page).locator("ul").first().locator("xpath=./li")).toHaveText(["compare by key", "swap"]);
   await expect(renderedNote(page).locator("ol li")).toHaveText(["divide", "merge"]);
+  // A nested item starts one 28px line below its parent, with no empty line between them.
+  const parent = await renderedNote(page).locator("ul > li").first().boundingBox();
+  const nested = await renderedNote(page).locator("ul ul > li").first().boundingBox();
+  expect((nested?.y ?? 0) - (parent?.y ?? 0)).toBe(28);
   await expect(renderedNote(page).locator("strong")).toHaveText("Stable");
   const link = renderedNote(page).getByRole("link", { name: "the docs" });
   await expect(link).toHaveAttribute("href", "https://example.com/sorting");
@@ -134,6 +139,10 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   const paragraph = renderedNote(page).locator("p", { hasText: "equal items in order" });
   await expect.poll(() => paragraph.textContent()).toBe("Stable sorts keep the docs\nequal items in order");
   expect((await paragraph.boundingBox())?.height).toBe(56);
+  // The paragraph follows the list after one 28px line, the same gap as between any two blocks.
+  const list = await renderedNote(page).locator("ol").boundingBox();
+  const after = await paragraph.boundingBox();
+  expect((after?.y ?? 0) - ((list?.y ?? 0) + (list?.height ?? 0))).toBe(28);
 });
 
 test("a script tag and an image's onerror attribute show as text and never run", async ({ page }) => {
