@@ -101,13 +101,14 @@ test("a subject whose organization.json cannot be read still lists its material,
 
   await createSubject(page, "Unreadable");
   await importLecture(page, "Lecture 1.pdf", ["first"]);
+  await expect(page.getByRole("button", { name: /^Done: / })).toHaveCount(1);
   await writeSubjectFile(page, "organization.json", DAMAGED_FILE);
   await page.reload();
 
   await expect(page.getByRole("link", { name: "Lecture 1", exact: true })).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText(ALERT);
   await expect(page.getByRole("heading", { name: "Unfiled", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^Mark / })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Done: / })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Move Lecture 1", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "New folder" })).toHaveCount(0);
 

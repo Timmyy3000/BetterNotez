@@ -65,9 +65,11 @@ test("a student files a material into a folder, marks another done, and both sta
   await expect(week1.getByRole("link", { name: "Lecture 1", exact: true })).toBeVisible();
   await expect(unfiled.getByRole("link", { name: "Lecture 1", exact: true })).toHaveCount(0);
 
-  await expect(page.getByRole("button", { name: "Mark Lecture 2 as done" })).toHaveAttribute("aria-pressed", "false");
-  await page.getByRole("button", { name: "Mark Lecture 2 as done" }).click();
-  await expect(page.getByRole("button", { name: "Mark Lecture 2 as done" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Done: Lecture 2" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Done: Lecture 2" })).toHaveText("Done");
+  await page.getByRole("button", { name: "Done: Lecture 2" }).click();
+  await expect(page.getByRole("button", { name: "Done: Lecture 2" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Done: Lecture 2" })).toHaveText("Done");
   await expect(page.getByText("2 materials · 1 done")).toBeVisible();
 
   await page.getByRole("button", { name: "Done 1", exact: true }).click();
@@ -76,7 +78,7 @@ test("a student files a material into a folder, marks another done, and both sta
 
   await page.reload();
   await expect(page.getByRole("region", { name: "Week 1" }).getByRole("link", { name: "Lecture 1", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Mark Lecture 2 as done" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Done: Lecture 2" })).toHaveAttribute("aria-pressed", "true");
 
   expect(pageErrors).toEqual([]);
 });
