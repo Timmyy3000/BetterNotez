@@ -98,6 +98,22 @@ async function waitForSaved(page: Page): Promise<void> {
   await expect(notesPanel(page).getByText("Saved", { exact: true })).toBeVisible();
 }
 
+/** Drags the mouse through points given as fractions of the page, so the stroke lands the same on any size. */
+async function drag(page: Page, pageLocator: Locator, points: readonly (readonly [number, number])[]): Promise<void> {
+  await pageLocator.scrollIntoViewIfNeeded();
+  const box = await pageLocator.boundingBox();
+  if (box === null) throw new Error("page is not on screen");
+  const at = ([u, v]: readonly [number, number]) => ({ x: box.x + u * box.width, y: box.y + v * box.height });
+  const [start, ...rest] = points.map(at);
+  if (start === undefined) throw new Error("no points");
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  for (const point of rest) {
+    await page.mouse.move(point.x, point.y, { steps: 8 });
+  }
+  await page.mouse.up();
+}
+
 const SOURCE = [
   "# Sorting",
   "## Steps",
@@ -305,4 +321,27 @@ test("a note taller than the panel is a named region that Tab reaches from Edit"
   await editButton(page).focus();
   await page.keyboard.press("Tab");
   await expect(region).toBeFocused();
+});
+
+test("Ctrl+Z after a click on a rendered note leaves the PDF drawing alone", async ({ page }) => {
+  await createSubject(page, "Undo notes");
+  await importLecture(page, "Strokes.pdf", ["Strokes"]);
+  await openLecture(page, "Strokes");
+
+  await page.getByRole("button", { name: "Pen" }).click();
+  await drag(page, page.locator('[data-page-number="1"]'), [
+    [0.2, 0.2],
+    [0.7, 0.5],
+  ]);
+  await expect(page.locator('[data-page-number="1"] [data-kind="ink"]')).toHaveCount(1);
+
+  await openNotes(page);
+  await notesField(page).fill("Read me");
+  await waitForSaved(page);
+  await leaveField(page);
+  await renderedNote(page).locator("p").click();
+  await page.keyboard.press("Control+z");
+
+  await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeEnabled();
+  await expect(page.locator('[data-page-number="1"] [data-kind="ink"]')).toHaveCount(1);
 });
