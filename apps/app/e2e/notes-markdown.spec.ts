@@ -138,8 +138,10 @@ test("headings, lists, bold, a link, and a line break in a paragraph render from
   await waitForSaved(page);
   await leaveField(page);
 
-  await expect(renderedNote(page).locator("h1")).toHaveText("Sorting");
-  await expect(renderedNote(page).locator("h2")).toHaveText("Steps");
+  await expect(renderedNote(page).locator("h3")).toHaveText("Sorting");
+  await expect(renderedNote(page).locator("h3")).toHaveCSS("font-size", "22px");
+  await expect(renderedNote(page).locator("h4")).toHaveText("Steps");
+  await expect(renderedNote(page).locator("h4")).toHaveCSS("font-size", "18px");
   await expect(renderedNote(page).locator("ul").first().locator("xpath=./li")).toHaveText(["compare by key", "swap"]);
   await expect(renderedNote(page).locator("ol li")).toHaveText(["divide", "merge"]);
   // A nested item starts one 28px line below its parent, with no empty line between them.
@@ -218,7 +220,7 @@ test("a note is typed as Markdown, read rendered, edited again, and saved as its
   await notesField(page).fill(SOURCE);
   await waitForSaved(page);
   await leaveField(page);
-  await expect(renderedNote(page).locator("h1")).toHaveText("Sorting");
+  await expect(renderedNote(page).locator("h3")).toHaveText("Sorting");
 
   await editButton(page).click();
   await expect(notesField(page)).toHaveValue(SOURCE);

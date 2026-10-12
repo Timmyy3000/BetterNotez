@@ -10,6 +10,12 @@ import { isDesktop } from "../lib/platform";
  */
 const components: Components = {
   a: NoteLink,
+  // The lecture title is an h1 and the panel heading an h2, so a note's headings move down two levels, stopping at h6.
+  h1: "h3",
+  h2: "h4",
+  h3: "h5",
+  h4: "h6",
+  h5: "h6",
   img: NoteImage,
   li: NoteItem,
   table: NoteTable,
