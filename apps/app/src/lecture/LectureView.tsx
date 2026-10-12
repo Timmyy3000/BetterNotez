@@ -158,6 +158,12 @@ export function LectureView({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (isTypingTarget(event.target)) return;
+      if (event.key === "Escape") {
+        setSelectedId(undefined);
+        setTool("select");
+        window.getSelection()?.removeAllRanges();
+        return;
+      }
       // Keys pressed in the notes panel, such as on its Edit button, belong to the panel, not to the page's shortcuts.
       if (event.target instanceof Node && document.getElementById(notesId)?.contains(event.target)) return;
       const key = event.key.toLowerCase();
@@ -172,10 +178,6 @@ export function LectureView({
       } else if ((event.key === "Delete" || event.key === "Backspace") && selectedId !== undefined) {
         event.preventDefault();
         deleteSelected();
-      } else if (event.key === "Escape") {
-        setSelectedId(undefined);
-        setTool("select");
-        window.getSelection()?.removeAllRanges();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
