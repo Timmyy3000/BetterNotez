@@ -17,6 +17,9 @@ export type PlannerCardId = z.infer<typeof PlannerCardId>;
 export const TaskId = z.string().regex(ID_PATTERN).brand<"TaskId">();
 export type TaskId = z.infer<typeof TaskId>;
 
+export const FolderId = z.string().regex(ID_PATTERN).brand<"FolderId">();
+export type FolderId = z.infer<typeof FolderId>;
+
 const CROCKFORD_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const TIME_CHARS = 10;
 const RANDOM_CHARS = 16;

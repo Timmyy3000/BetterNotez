@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Annotation, TEXT_BOX_DEFAULTS, textBoxStyle, TextBox } from "./model.js";
+import { Annotation, OrganizationFile, TEXT_BOX_DEFAULTS, textBoxStyle, TextBox } from "./model.js";
 
 const id = "01TEXTBOXMODEL0000000000000";
 
@@ -52,6 +52,31 @@ describe("text box annotations", () => {
     ["a colour that is not a hex value", { color: "red" }],
   ])("refuses %s", (_, change) => {
     expect(Annotation.safeParse({ ...legacyBox, ...change }).success).toBe(false);
+  });
+});
+
+describe("organization file", () => {
+  const folderId = "01FOLDERMODEL0000000000000";
+  const lectureId = "01LECTUREMODEL0000000000000";
+
+  it("reads a folder and the status and folder of a material", () => {
+    const file = {
+      version: 1,
+      folders: [{ id: folderId, name: "Week 1", createdAt: "2026-10-08T09:00:00.000Z" }],
+      lectures: { [lectureId]: { status: "done", folderId } },
+    };
+
+    expect(OrganizationFile.parse(file)).toEqual(file);
+  });
+
+  it("refuses a version it does not know", () => {
+    expect(OrganizationFile.safeParse({ version: 2, folders: [], lectures: {} }).success).toBe(false);
+  });
+
+  it("keeps a status it does not know as stored text, so a later write leaves it in place", () => {
+    const file = { version: 1, folders: [], lectures: { [lectureId]: { status: "archived" } } };
+
+    expect(OrganizationFile.parse(file)).toEqual(file);
   });
 });
 
