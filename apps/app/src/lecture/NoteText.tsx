@@ -35,6 +35,8 @@ export function NoteText({ text }: { readonly text: string }) {
   );
 }
 
+const WEB_ADDRESS = /^(https?|mailto):/i;
+
 /**
  * A link with no address shows its text alone. Markdown leaves the address empty when it is unsafe, such as a
  * javascript: address. The desktop window must not navigate away from the app, so its links show as text too. An
@@ -42,7 +44,7 @@ export function NoteText({ text }: { readonly text: string }) {
  * text too.
  */
 function NoteLink({ href, children }: ComponentProps<"a">) {
-  if (!href || href.startsWith("#") || isDesktop()) return <span>{children}</span>;
+  if (!href || !WEB_ADDRESS.test(href) || isDesktop()) return <span>{children}</span>;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer">
       {children}

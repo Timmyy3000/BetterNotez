@@ -108,9 +108,13 @@ describe("NoteText", () => {
   it.each([
     ["https://example.com", '<a href="https://example.com" target="_blank" rel="noopener noreferrer">x</a>'],
     ["mailto:a@b.c", '<a href="mailto:a@b.c" target="_blank" rel="noopener noreferrer">x</a>'],
-    ["//example.com/x", '<a href="//example.com/x" target="_blank" rel="noopener noreferrer">x</a>'],
-    ["/path", '<a href="/path" target="_blank" rel="noopener noreferrer">x</a>'],
+    ["//example.com", "<span>x</span>"],
+    ["//example.com/x", "<span>x</span>"],
+    ["/path", "<span>x</span>"],
+    ["./x", "<span>x</span>"],
     ["#frag", "<span>x</span>"],
+    ["< #frag>", "<span>x</span>"],
+    ["<\t#frag>", "<span>x</span>"],
   ])("renders a link to %s as %s on the web", (url, inner) => {
     onWeb();
     expect(render(`[x](${url})`)).toBe(`<div class="notes-markdown"><p>${inner}</p></div>`);
