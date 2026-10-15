@@ -40,7 +40,7 @@ export function DeleteFolderDialog({
       <p className="text-sm text-muted-foreground">
         {materialCount === 0
           ? "The folder is empty, so nothing moves."
-          : `${countLabel(materialCount, "material")} ${materialCount === 1 ? "moves" : "move"} to Unfiled. Their PDFs and notes stay.`}
+          : `${countLabel(materialCount, "material")} ${materialCount === 1 ? "moves" : "move"} out of the folder. Their PDFs and notes stay.`}
       </p>
       <DialogActions>
         <Button onClick={onClose} disabled={deleting}>

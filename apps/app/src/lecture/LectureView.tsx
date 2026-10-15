@@ -1,15 +1,17 @@
 import { DEFAULT_HIGHLIGHT_COLOR, type Lecture, type Subject } from "@betternotez/core";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { ChevronLeft, FileDown, NotebookPen } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, FileDown, NotebookPen } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link, useSearchParams } from "react-router";
 import { useStore } from "zustand";
 import { useLibrary } from "../library";
+import { cn } from "../lib/cn";
 import { errorMessage } from "../lib/errors";
 import { displayTitle } from "../lib/format";
 import { savePdf } from "../lib/save-pdf";
 import { Button, iconButtonClass } from "../ui/button";
+import { IconLink } from "../ui/tooltip";
 import { commitTextEdit, createAnnotationStore, restyleTextBox } from "./annotation-store";
 import { EditorContext, isTypingTarget, type EditorValue, type EditSession, type TextStylePatch, type Tool } from "./editor";
 import { exportAnnotatedPdf } from "./export";
@@ -26,11 +28,16 @@ import { useRefreshWhileVisible } from "./use-refresh";
 export function LectureView({
   lecture,
   subject,
+  previous,
+  next,
   pdfBytes,
   doc,
 }: {
   readonly lecture: Lecture;
   readonly subject: Subject;
+  /** The material listed before and after this one on the subject page. */
+  readonly previous: Lecture | undefined;
+  readonly next: Lecture | undefined;
   readonly pdfBytes: Uint8Array;
   readonly doc: PDFDocumentProxy;
 }) {
@@ -183,6 +190,11 @@ export function LectureView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [store, selectedId, notesId]);
 
+  const openNote = useCallback((pageNumber: number) => {
+    pages.current?.goToPage(pageNumber);
+    setNotesOpen(true);
+  }, []);
+
   async function exportPdf() {
     try {
       const bytes = await exportAnnotatedPdf(pdfBytes, store.getState().annotations);
@@ -205,6 +217,12 @@ export function LectureView({
               {displayTitle(lecture.title)}
             </h1>
           </div>
+          {(previous !== undefined || next !== undefined) && (
+            <nav aria-label="Material in this subject" className="flex items-center gap-1">
+              <SiblingLink direction="previous" lecture={previous} />
+              <SiblingLink direction="next" lecture={next} />
+            </nav>
+          )}
           <Button variant="secondary" aria-pressed={notesOpen} onClick={() => setNotesOpen((open) => !open)}>
             <NotebookPen />
             Notes
@@ -225,6 +243,7 @@ export function LectureView({
               startPage={startPage}
               settleRedraw={notes.dragging}
               notedPages={pageNotes.noted}
+              onOpenNote={openNote}
               onPageChange={setPage}
             />
             <Toolbar
@@ -307,4 +326,27 @@ function parsePage(value: string | null, pageCount: number): number {
 
 function fileName(title: string): string {
   return title.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Material";
+}
+
+function SiblingLink({
+  direction,
+  lecture,
+}: {
+  readonly direction: "previous" | "next";
+  readonly lecture: Lecture | undefined;
+}) {
+  const Icon = direction === "previous" ? ArrowLeft : ArrowRight;
+  if (lecture === undefined) {
+    return (
+      <span aria-hidden className={cn(iconButtonClass, "pointer-events-none opacity-30")}>
+        <Icon />
+      </span>
+    );
+  }
+  const word = direction === "previous" ? "Previous" : "Next";
+  return (
+    <IconLink to={`/lecture/${lecture.id}`} label={`${word}: ${displayTitle(lecture.title)}`}>
+      <Icon />
+    </IconLink>
+  );
 }
