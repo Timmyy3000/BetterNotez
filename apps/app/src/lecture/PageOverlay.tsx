@@ -1,4 +1,4 @@
-import { AnnotationId, newId, type Highlight, type Ink, type TextBox } from "@betternotez/core";
+import { AnnotationId, newId, type Highlight, type ImageBox, type Ink, type TextBox } from "@betternotez/core";
 import { useMemo, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
@@ -9,13 +9,16 @@ import { distanceToPolyline, strokePath, type StrokePoint } from "./ink";
 import { type Command } from "./history";
 import { HIGHLIGHT_OPACITY, highlightAt } from "./highlight";
 import { HighlightPopover } from "./HighlightPopover";
+import { ImageBoxView } from "./ImageBox";
+import { LINE_HEIGHT, TEXT_PADDING_PT } from "./text-layout";
 import { TextBoxView } from "./TextBox";
 
 const ERASER_RADIUS_PX = 10;
 /** A touch this soon after pen contact is the palm resting on the screen. */
 const PALM_WINDOW_MS = 1500;
 const HIGHLIGHTER_WIDTH = 4;
-const NEW_TEXT_BOX = { width: 0.28, height: 0.07, fontSize: 14 } as const;
+/** A new text box is one line tall, and grows as its text wraps. */
+const NEW_TEXT_BOX = { width: 0.22, fontSize: 14 } as const;
 
 let lastPenAt = Number.NEGATIVE_INFINITY;
 
@@ -60,6 +63,7 @@ export function PageOverlay({
   );
   const texts = onPage.filter((annotation): annotation is TextBox => annotation.kind === "text");
   const highlights = onPage.filter((annotation): annotation is Highlight => annotation.kind === "highlight");
+  const pictures = onPage.filter((annotation): annotation is ImageBox => annotation.kind === "image");
   const hoveredAi = inks.find((ink) => ink.id === hovered && ink.author === "ai");
   // The popover for a selection points at its last piece, which sits on the page the selection ends on.
   const pendingPiece = pendingText?.pieces.at(-1);
@@ -146,17 +150,19 @@ export function PageOverlay({
       return;
     }
     if (tool === "text") {
+      const lineHeight = Math.min(1, ((NEW_TEXT_BOX.fontSize * LINE_HEIGHT + 2 * TEXT_PADDING_PT) * scale + 2) / height);
       const box: TextBox = {
         id: AnnotationId.parse(newId()),
         kind: "text",
         page: pageNumber,
         author: "user",
         x: Math.min(u, 1 - NEW_TEXT_BOX.width),
-        y: Math.min(v, 1 - NEW_TEXT_BOX.height),
+        y: Math.min(v, 1 - lineHeight),
         width: NEW_TEXT_BOX.width,
-        height: NEW_TEXT_BOX.height,
+        height: lineHeight,
         text: "",
         fontSize: NEW_TEXT_BOX.fontSize,
+        italic: false,
         color,
       };
       store.getState().preview([{ type: "put", next: box }]);
@@ -281,6 +287,9 @@ export function PageOverlay({
         )),
       )}
       {children}
+      {pictures.map((picture) => (
+        <ImageBoxView key={picture.id} box={picture} width={width} height={height} />
+      ))}
       <svg className="pointer-events-none absolute inset-0" width={width} height={height} aria-hidden>
         {inks.map((ink) => (
           <path

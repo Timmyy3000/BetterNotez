@@ -4,8 +4,8 @@ export const NOTES_DEFAULT_WIDTH = 340;
 export const NOTES_MIN_WIDTH = 280;
 /** Notes take at most this share of the lecture area, which is the window less the rail. */
 const NOTES_MAX_SHARE = 0.6;
-/** The PDF keeps at least this much width, however wide the notes are. The floating annotation toolbar is about 613px wide, so the PDF is never narrower than it. */
-export const PDF_MIN_WIDTH = 620;
+/** The PDF keeps at least this much width, however wide the notes are. The floating annotation toolbar is about 651px wide, so the PDF is never narrower than it. */
+export const PDF_MIN_WIDTH = 660;
 /** How far an arrow key moves the notes edge. */
 export const NOTES_KEY_STEP = 16;
 

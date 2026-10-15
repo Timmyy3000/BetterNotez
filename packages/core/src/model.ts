@@ -61,7 +61,7 @@ export const TextBox = z.object({
 });
 export type TextBox = z.infer<typeof TextBox>;
 
-/** How a text box is drawn when its style fields are left out. Italic is the look text boxes have always had. */
+/** How a text box is drawn when its style fields are left out. Italic is the look of boxes saved before the flag existed. New boxes set it. */
 export const TEXT_BOX_DEFAULTS = { fontSize: 14, bold: false, italic: true, underline: false } as const;
 
 export interface TextBoxStyle {
@@ -118,8 +118,28 @@ export const Highlight = z.object({
 });
 export type Highlight = z.infer<typeof Highlight>;
 
-/** Files written before highlights existed hold only text boxes and strokes, and still parse. */
-export const Annotation = z.discriminatedUnion("kind", [TextBox, Ink, Highlight]);
+/** The image formats a picture is stored in. These are the two a PDF can hold, so an export needs no conversion. */
+export const IMAGE_TYPES = { "image/png": "png", "image/jpeg": "jpg" } as const;
+export type ImageType = keyof typeof IMAGE_TYPES;
+
+/** The file name of a picture in a material's images folder. The pattern keeps it inside that folder. */
+export const ImageName = z.string().regex(/^[0-9A-Za-z][0-9A-Za-z_-]{0,63}\.(png|jpg)$/);
+
+export const ImageBox = z.object({
+  id: AnnotationId,
+  kind: z.literal("image"),
+  page: PageNumber,
+  author,
+  x: unitInterval,
+  y: unitInterval,
+  width: unitInterval,
+  height: unitInterval,
+  image: ImageName,
+});
+export type ImageBox = z.infer<typeof ImageBox>;
+
+/** Files written before highlights or images existed still parse. */
+export const Annotation = z.discriminatedUnion("kind", [TextBox, Ink, Highlight, ImageBox]);
 export type Annotation = z.infer<typeof Annotation>;
 export type AnnotationDraft = DistributiveOmit<z.input<typeof Annotation>, "id">;
 

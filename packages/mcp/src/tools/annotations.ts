@@ -52,7 +52,7 @@ const annotationPatch = z
 export function registerAnnotationTools(tools: ToolRegistry, library: Library): void {
   tools.tool(
     "add_text_box",
-    "Add a text box to a PDF page. Coordinates are normalized 0 to 1 from the page's top-left corner. Text is italic unless italic is false. Bold and underline are off unless set. The annotation author is ai.",
+    "Add a text box to a PDF page. Coordinates are normalized 0 to 1 from the page's top-left corner. Text is upright unless italic is true. Bold and underline are off unless set. The annotation author is ai.",
     {
       lectureId: lectureRef,
       page: pageRef,
@@ -63,7 +63,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       text: z.string(),
       fontSize: fontSize.default(14),
       bold: z.boolean().optional().describe("Bold text. Off when omitted."),
-      italic: z.boolean().optional().describe("Italic text. On when omitted. Send false for upright text."),
+      italic: z.boolean().default(false).describe("Italic text. Off when omitted."),
       underline: z.boolean().optional().describe("Underline the text. Off when omitted."),
       color: hexColor.default(DEFAULT_INK),
     },
@@ -129,7 +129,7 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
 
   tools.tool(
     "update_annotation",
-    "Change a text box or ink stroke on a piece of material. Send only the fields that apply to that annotation's kind. A text box can change its size, bold, italic, underline, and color. The author cannot change. Highlights cannot be changed here.",
+    "Change a text box or ink stroke on a piece of material. Highlights and pictures cannot be changed here. Send only the fields that apply to that annotation's kind. A text box can change its size, bold, italic, underline, and color. The author cannot change.",
     {
       lectureId: lectureRef,
       annotationId: annotationRef,
@@ -144,6 +144,9 @@ export function registerAnnotationTools(tools: ToolRegistry, library: Library): 
       }
       if (current.kind === "highlight") {
         throw new InvalidError("An assistant cannot change a highlight. The student can change or remove it in the app.");
+      }
+      if (current.kind === "image") {
+        throw new InvalidError("An assistant cannot change a picture. The student can move, resize, or remove it in the app.");
       }
 
       const changed = Object.entries(patch)
