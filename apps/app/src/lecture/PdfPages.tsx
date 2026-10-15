@@ -1,4 +1,5 @@
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import { NotebookPen } from "lucide-react";
 import {
   memo,
   useEffect,
@@ -46,6 +47,7 @@ export function PdfPages({
   startPage,
   settleRedraw,
   notedPages,
+  onOpenNote,
   onPageChange,
 }: {
   readonly ref?: Ref<PdfPagesHandle>;
@@ -58,6 +60,7 @@ export function PdfPages({
   readonly settleRedraw: boolean;
   /** The pages that have a note. Each gets a small mark in its corner. */
   readonly notedPages: ReadonlySet<number>;
+  readonly onOpenNote: (pageNumber: number) => void;
   readonly onPageChange: (page: number) => void;
 }) {
   const [geometries, setGeometries] = useState<readonly PageGeometry[]>();
@@ -141,6 +144,7 @@ export function PdfPages({
               drawWidth={drawWidth}
               scrollRef={scrollRef}
               noted={notedPages.has(index + 1)}
+              onOpenNote={onOpenNote}
             />
           );
         })}
@@ -158,6 +162,7 @@ const PageSlot = memo(function PageSlot({
   drawWidth,
   scrollRef,
   noted,
+  onOpenNote,
 }: {
   readonly doc: PDFDocumentProxy;
   readonly pageNumber: number;
@@ -167,6 +172,7 @@ const PageSlot = memo(function PageSlot({
   readonly drawWidth: number;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
   readonly noted: boolean;
+  readonly onOpenNote: (pageNumber: number) => void;
 }) {
   // CSS pixels per PDF point. Annotation sizes are stored in points, so they scale with the page.
   const scale = width / displaySize(geometry).width;
@@ -183,13 +189,17 @@ const PageSlot = memo(function PageSlot({
         <PageText doc={doc} pageNumber={pageNumber} width={width} scale={scale} scrollRef={scrollRef} />
       </PageOverlay>
       {noted && (
-        // In the margin beside the sheet, so no slide content is covered. It is a quiet mark, not a selection.
-        <span
-          aria-hidden
-          title="Has a note"
+        // A tab sticking out of the sheet's edge, like a sticky note, so no slide content is covered.
+        <button
+          type="button"
           data-has-note
-          className="absolute top-3 -right-5 size-1.5 rounded-full bg-foreground/40"
-        />
+          aria-label={`Show the note for page ${pageNumber}`}
+          title="Show this page's note"
+          onClick={() => onOpenNote(pageNumber)}
+          className="absolute top-4 -right-[22px] grid h-9 w-[22px] place-items-center rounded-r-md bg-accent text-accent-foreground shadow-sm transition-[background-color,transform] duration-150 ease-out hover:bg-accent/85 active:scale-[0.96] [&_svg]:size-3.5"
+        >
+          <NotebookPen />
+        </button>
       )}
     </section>
   );

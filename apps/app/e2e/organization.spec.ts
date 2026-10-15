@@ -58,7 +58,7 @@ test("a student files a material into a folder, marks another done, and both sta
   await page.getByLabel("Name").fill("Week 1");
   await page.getByRole("button", { name: "Create folder" }).click();
   const week1 = page.getByRole("region", { name: "Week 1" });
-  const unfiled = page.getByRole("region", { name: "Unfiled" });
+  const unfiled = page.getByRole("region", { name: "Not in a folder" });
   await expect(week1).toBeVisible();
 
   await dragTo(page, page.getByRole("button", { name: "Move Lecture 1", exact: true }), week1.getByText("Drop material here."));
@@ -81,4 +81,32 @@ test("a student files a material into a folder, marks another done, and both sta
   await expect(page.getByRole("button", { name: "Done: Lecture 2" })).toHaveAttribute("aria-pressed", "true");
 
   expect(pageErrors).toEqual([]);
+});
+
+test("a reader steps to the previous and next material in the order the subject page lists them", async ({ page }) => {
+  await createSubject(page, "Stepping");
+  await importLecture(page, "Lecture 1.pdf", ["first"]);
+  await importLecture(page, "Lecture 2.pdf", ["second"]);
+  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByLabel("Name").fill("Labs");
+  await page.getByRole("button", { name: "Create folder" }).click();
+  const labs = page.getByRole("region", { name: "Labs" });
+  await expect(labs).toBeVisible();
+  await page.getByRole("button", { name: "Actions for Lecture 2", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit details" }).click();
+  await page.getByRole("combobox", { name: "Folder" }).click();
+  await page.getByRole("option", { name: "Labs" }).click();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(labs.getByRole("link", { name: "Lecture 2", exact: true })).toBeVisible();
+
+  await labs.getByRole("link", { name: "Lecture 2", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Lecture 2", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Previous:/ })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Next: Lecture 1" }).click();
+  await expect(page.getByRole("heading", { name: "Lecture 1", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Next:/ })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Previous: Lecture 2" }).click();
+  await expect(page.getByRole("heading", { name: "Lecture 2", exact: true })).toBeVisible();
 });

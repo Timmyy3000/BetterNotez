@@ -137,6 +137,11 @@ test("each page has its own note, and the panel shows the page in view", async (
   await scrollToPage(page, 1);
   await expect.poll(() => noteText(page)).toBe("Compare adjacent items");
 
+  await page.getByRole("button", { name: "Notes", exact: true }).click();
+  await page.getByRole("button", { name: "Show the note for page 2" }).click();
+  await expect(notesHeading(page)).toContainText("Page 2");
+  await expect.poll(() => noteText(page)).toBe("Divide, then merge");
+
   await page.reload();
   await openNotes(page);
   await expect.poll(() => noteText(page)).toBe("Compare adjacent items");

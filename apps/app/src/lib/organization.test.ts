@@ -1,6 +1,6 @@
 import { Folder, FolderId, Lecture, type MaterialPlacement } from "@betternotez/core";
 import { describe, expect, it } from "vitest";
-import { countByStatus, groupLectures, type Placements } from "./organization";
+import { countByStatus, groupLectures, readingOrder, type Placements } from "./organization";
 
 const SUBJECT_ID = "01SUBJECTORG00000000000000";
 const STAMP = "2026-10-08T09:00:00.000Z";
@@ -26,6 +26,19 @@ function sectionNames(sections: ReturnType<typeof groupLectures>): string[] {
 function sectionTitles(sections: ReturnType<typeof groupLectures>): string[][] {
   return sections.map((section) => section.lectures.map((item) => item.title));
 }
+
+describe("readingOrder", () => {
+  it("lists material folder by folder, then the material in no folder", () => {
+    const placements: Placements = {
+      [lectureOne.id]: placed(week2.id, "done"),
+      [lectureThree.id]: placed(week1.id, "reading"),
+    };
+
+    const order = readingOrder([week1, week2], [lectureOne, lectureTwo, lectureThree], placements);
+
+    expect(order.map((item) => item.title)).toEqual(["Lecture 3", "Lecture 1", "Lecture 2"]);
+  });
+});
 
 describe("groupLectures", () => {
   it("puts each material under its folder, folders in the order given, and Unfiled last", () => {
