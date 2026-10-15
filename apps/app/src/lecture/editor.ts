@@ -1,6 +1,7 @@
 import type { TextBox } from "@betternotez/core";
 import { createContext, useContext, type RefObject } from "react";
 import type { AnnotationStore } from "./annotation-store";
+import type { ImageCache } from "./images";
 import type { TextSelection } from "./text-selection";
 
 export type Tool = "select" | "text" | "pen" | "highlighter" | "eraser";
@@ -23,6 +24,7 @@ export interface EditorValue {
   readonly selectedId?: string;
   readonly editing?: EditSession;
   readonly scrollRef: RefObject<HTMLDivElement | null>;
+  readonly images: ImageCache;
   readonly select: (id: string | undefined) => void;
   readonly beginEdit: (session: EditSession) => void;
   readonly endEdit: (id: string) => void;

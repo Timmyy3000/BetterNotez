@@ -219,6 +219,62 @@ describe.each(storageBackends)("Library on $name", ({ create }) => {
       expect(await library.listAnnotations(lecture.id)).toEqual([annotation]);
     });
 
+    it("stores a picture, and an image annotation that points at it reads back with its bytes", async () => {
+      const lecture = await importSampleLecture();
+      const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+
+      const name = await library.addImage(lecture.id, bytes, "image/png");
+      const image = await library.addAnnotation(lecture.id, {
+        kind: "image",
+        page: 1,
+        author: "user",
+        x: 0.2,
+        y: 0.3,
+        width: 0.4,
+        height: 0.25,
+        image: name,
+      });
+
+      expect(name).toMatch(/^[0-9A-Z]{26}\.png$/);
+      expect(await library.listAnnotations(lecture.id)).toEqual([image]);
+      expect([...(await library.getImage(lecture.id, name))]).toEqual([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+    });
+
+    it("keeps a picture's file after its annotation is removed, so an undo can show it again", async () => {
+      const lecture = await importSampleLecture();
+      const name = await library.addImage(lecture.id, new Uint8Array([0xff, 0xd8, 9]), "image/jpeg");
+      const image = await library.addAnnotation(lecture.id, {
+        kind: "image",
+        page: 1,
+        author: "user",
+        x: 0,
+        y: 0,
+        width: 0.5,
+        height: 0.5,
+        image: name,
+      });
+
+      await library.removeAnnotation(lecture.id, image.id);
+
+      expect(name).toMatch(/\.jpg$/);
+      expect([...(await library.getImage(lecture.id, name))]).toEqual([0xff, 0xd8, 9]);
+    });
+
+    it("refuses a picture name that could reach outside the images folder", async () => {
+      const lecture = await importSampleLecture();
+
+      await expect(library.getImage(lecture.id, "../lecture.pdf")).rejects.toThrow(ZodError);
+      await expect(library.getImage(lecture.id, "MISSING.png")).rejects.toThrow(NotFoundError);
+    });
+
+    it("refuses a picture that is not a PNG or a JPEG", async () => {
+      const lecture = await importSampleLecture();
+
+      await expect(library.addImage(lecture.id, new Uint8Array([1]), "image/gif" as "image/png")).rejects.toThrow(
+        InvalidError,
+      );
+    });
+
     it("adds an ink stroke with points of x, y, and pressure", async () => {
       const lecture = await importSampleLecture();
       const stroke = await library.addAnnotation(lecture.id, {
