@@ -7,6 +7,17 @@ It is local-first. There is no account, and your library is a folder of plain fi
 - **Web app:** https://timmyy3000.github.io/BetterNotez/ (runs in your browser, keeps the library in that browser)
 - **Desktop app:** installers for Windows, macOS, and Linux on the [Releases page](https://github.com/Timmyy3000/BetterNotez/releases)
 
+### Opening BetterNotez on a Mac for the first time
+
+The Mac app is not notarized by Apple yet, so macOS asks before it opens it the first time:
+
+1. Download the `.dmg` for your Mac: `aarch64` for Apple silicon (M1 and later), `x64` for Intel.
+2. Open the `.dmg` and drag BetterNotez into Applications.
+3. Open BetterNotez. macOS says it could not verify the app. Click **Done**.
+4. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to BetterNotez. Confirm with your password.
+
+After that it opens normally, and updates install from inside the app.
+
 ## Screenshots
 
 ![A lecture with its annotations and notepad](docs/screenshots/lecture-notes.png)
@@ -20,7 +31,7 @@ It is local-first. There is no account, and your library is a folder of plain fi
 ## Features
 
 - **Subjects and lectures.** Make a subject for each class and import lecture PDFs into it. Add a date to a lecture if you want to sort by it. Lectures without a date work too.
-- **Folders and reading status.** Mark each lecture Reading or Done, and filter a subject to see one or the other. Put lectures into folders inside a subject by dragging them by their grip, or with the Folder field in the Edit dialog. Folders hold one level, and deleting a folder moves its lectures to Unfiled without deleting their PDFs.
+- **Folders and reading status.** Mark each lecture Reading or Done, and filter a subject to see one or the other. Put lectures into folders inside a subject by dragging them by their grip, or with the Folder field in the Edit dialog. Folders hold one level, and deleting a folder moves its lectures out of it without deleting their PDFs.
 - **Annotate pages.** Add text boxes and type into them, or draw freehand ink for diagrams with a mouse, touch, or stylus. Select text to highlight it in a colour, then click a highlight to change or remove it. Undo and redo cover your edits during a session.
 - **Format text boxes.** Select a text box to get a small bar for its size, bold, italic, underline, and color. The bar sits above the box, or below it where the toolbar is in the way. Ctrl+B, Ctrl+I, and Ctrl+U work while you type.
 - **Notes for each page.** Every page of a material has its own note, saved as you type. The notes panel shows the note for the page you are reading, and a small mark beside the page shows which pages have notes. Notes can use Markdown, and each note is stored as plain Markdown text.
