@@ -1,4 +1,4 @@
-import { DEFAULT_HIGHLIGHT_COLOR, type Lecture, type Subject } from "@betternotez/core";
+import { AnnotationId, DEFAULT_HIGHLIGHT_COLOR, newId, type ImageBox, type Lecture, type Subject } from "@betternotez/core";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ArrowLeft, ArrowRight, ChevronLeft, FileDown, NotebookPen } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -18,7 +18,8 @@ import { exportAnnotatedPdf } from "./export";
 import { Notepad } from "./Notepad";
 import { NotesResizeHandle } from "./NotesResizeHandle";
 import { PdfPages, type PdfPagesHandle } from "./PdfPages";
-import { DEFAULT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
+import { createImageCache, imageFileIn, prepareImage } from "./images";
+import { DEFAULT_INK, DEFAULT_TEXT_INK, MAX_ZOOM, MIN_ZOOM, PEN_SIZES, Toolbar, ViewControls } from "./Toolbar";
 import { usePendingText } from "./text-selection";
 import { useNotesWidth } from "./use-notes-width";
 import { notesPageFor } from "./page-notes";
@@ -51,7 +52,12 @@ export function LectureView({
   const [color, setColor] = useState<string>(DEFAULT_INK);
   // The highlighter has its own marker palette, so its colour is kept apart from the pen's.
   const [markColor, setMarkColor] = useState<string>(DEFAULT_HIGHLIGHT_COLOR);
-  const activeColor = tool === "highlighter" ? markColor : color;
+  const [textColor, setTextColor] = useState<string>(DEFAULT_TEXT_INK);
+  const activeColor = tool === "highlighter" ? markColor : tool === "text" ? textColor : color;
+  const setActiveColor = tool === "highlighter" ? setMarkColor : tool === "text" ? setTextColor : setColor;
+  const [images] = useState(() => createImageCache(library, lecture.id));
+  useEffect(() => () => images.dispose(), [images]);
+  const imagePicker = useRef<HTMLInputElement>(null);
   const [size, setSize] = useState<number>(PEN_SIZES[1].value);
   const [selectedId, setSelectedId] = useState<string>();
   const [editing, setEditing] = useState<EditSession>();
@@ -142,13 +148,14 @@ export function LectureView({
       editing,
       pendingText,
       scrollRef,
+      images,
       select,
       beginEdit,
       endEdit,
       announce,
       restyle,
     }),
-    [store, tool, activeColor, size, selectedId, editing, pendingText, select, beginEdit, endEdit, announce, restyle],
+    [store, tool, activeColor, size, selectedId, editing, pendingText, images, select, beginEdit, endEdit, announce, restyle],
   );
 
   function deleteSelected() {
@@ -190,6 +197,57 @@ export function LectureView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [store, selectedId, notesId]);
 
+  /** Puts a picture in the middle of the visible part of the page in view, selected, so it can be moved straight away. */
+  async function addImage(file: File) {
+    try {
+      const prepared = await prepareImage(file);
+      const sheet = scrollRef.current?.querySelector<HTMLElement>(`section[data-page-number="${page}"]`);
+      const view = scrollRef.current?.getBoundingClientRect();
+      const box = sheet?.getBoundingClientRect();
+      if (box === undefined || view === undefined) return;
+      let width = 0.5;
+      let height = (width * box.width * prepared.height) / prepared.width / box.height;
+      if (height > 0.6) {
+        width *= 0.6 / height;
+        height = 0.6;
+      }
+      const visibleTop = Math.max(box.top, view.top);
+      const visibleBottom = Math.min(box.bottom, view.bottom);
+      const middle = ((visibleTop + visibleBottom) / 2 - box.top) / box.height;
+      const name = await library.addImage(lecture.id, prepared.bytes, prepared.type);
+      const image: ImageBox = {
+        id: AnnotationId.parse(newId()),
+        kind: "image",
+        page,
+        author: "user",
+        x: (1 - width) / 2,
+        y: Math.min(Math.max(middle - height / 2, 0), 1 - height),
+        width,
+        height,
+        image: name,
+      };
+      endTyping();
+      setTool("select");
+      store.getState().apply([{ type: "put", next: image }], { record: true });
+      setSelectedId(image.id);
+      announce("Image added");
+    } catch (error) {
+      toast.error(`The image could not be added. ${errorMessage(error)}`);
+    }
+  }
+
+  useEffect(() => {
+    function handlePaste(event: ClipboardEvent) {
+      if (isTypingTarget(event.target)) return;
+      const file = imageFileIn(event.clipboardData);
+      if (file === undefined) return;
+      event.preventDefault();
+      void addImage(file);
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  });
+
   const openNote = useCallback((pageNumber: number) => {
     pages.current?.goToPage(pageNumber);
     setNotesOpen(true);
@@ -197,7 +255,9 @@ export function LectureView({
 
   async function exportPdf() {
     try {
-      const bytes = await exportAnnotatedPdf(pdfBytes, store.getState().annotations);
+      const bytes = await exportAnnotatedPdf(pdfBytes, store.getState().annotations, (name) =>
+        library.getImage(lecture.id, name),
+      );
       await savePdf(bytes, `${fileName(lecture.title)}.pdf`);
     } catch (error) {
       toast.error(`The PDF could not be exported. ${errorMessage(error)}`);
@@ -250,7 +310,7 @@ export function LectureView({
               tool={tool}
               onTool={chooseTool}
               color={activeColor}
-              onColor={tool === "highlighter" ? setMarkColor : setColor}
+              onColor={setActiveColor}
               size={size}
               onSize={setSize}
               canUndo={canUndo}
@@ -267,6 +327,19 @@ export function LectureView({
               onDelete={() => {
                 endTyping();
                 deleteSelected();
+              }}
+              onAddImage={() => imagePicker.current?.click()}
+            />
+            <input
+              ref={imagePicker}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              aria-label="Image file"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (file !== undefined) void addImage(file);
               }}
             />
             <ViewControls

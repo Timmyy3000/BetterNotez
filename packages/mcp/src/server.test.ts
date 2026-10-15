@@ -143,6 +143,7 @@ describe("Lecture 1 in Digital Systems", () => {
       {
         id: expect.any(String),
         kind: "text",
+        italic: false,
         page: 2,
         author: "ai",
         x: 0.1,
@@ -734,7 +735,7 @@ describe("formatting a text box", () => {
 
     expect(styled).toMatchObject({ fontSize: 24, bold: true, italic: false, underline: true, color: "#a3321f" });
     expect(plain).not.toHaveProperty("bold");
-    expect(plain).not.toHaveProperty("italic");
+    expect(plain).toMatchObject({ italic: false });
     expect(plain).not.toHaveProperty("underline");
     expect(await storedAnnotations(lecture.id)).toEqual([styled, plain]);
   });
@@ -839,11 +840,11 @@ describe("formatting a text box", () => {
     expect(resized.fontSize).toBe(24);
   });
 
-  it("tells the assistant that text is italic unless it says otherwise", async () => {
+  it("tells the assistant that text is upright unless it asks for italic", async () => {
     const { tools } = await client.listTools();
     const addTextBox = tools.find((tool) => tool.name === "add_text_box");
 
-    expect(addTextBox?.description).toContain("Text is italic unless italic is false.");
+    expect(addTextBox?.description).toContain("Text is upright unless italic is true.");
     expect(Object.keys(addTextBox?.inputSchema.properties ?? {})).toEqual(
       expect.arrayContaining(["fontSize", "bold", "italic", "underline", "color"]),
     );

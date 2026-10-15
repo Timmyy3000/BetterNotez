@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Eraser, Highlighter, MousePointer2, Pen, Redo2, Trash2, Type, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronDown, ChevronUp, Eraser, Highlighter, ImagePlus, MousePointer2, Pen, Redo2, Trash2, Type, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { HIGHLIGHT_COLORS } from "@betternotez/core";
@@ -10,8 +10,10 @@ export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 4;
 export const ZOOM_STEP = 1.25;
 
-/** The ink a new stroke or text box starts with: the pen blue of the mockup. */
+/** The ink a new stroke starts with: the pen blue of the mockup. */
 export const DEFAULT_INK = "#2b4b78";
+/** The ink a new text box starts with: the palette's Black, as typed text usually is. */
+export const DEFAULT_TEXT_INK: string = INK_COLORS[0].value;
 
 /** The colour swatches the tool panel offers for a tool. The highlighter has its own marker palette. */
 export function paletteFor(tool: Tool): readonly { readonly label: string; readonly value: string }[] {
@@ -47,6 +49,7 @@ export function Toolbar({
   onRedo,
   canDelete,
   onDelete,
+  onAddImage,
 }: {
   readonly tool: Tool;
   readonly onTool: (tool: Tool) => void;
@@ -60,6 +63,7 @@ export function Toolbar({
   readonly onRedo: () => void;
   readonly canDelete: boolean;
   readonly onDelete: () => void;
+  readonly onAddImage: () => void;
 }) {
   return (
     <div
@@ -72,6 +76,9 @@ export function Toolbar({
           <Icon />
         </IconToggle>
       ))}
+      <IconToggle label="Add image" onClick={onAddImage}>
+        <ImagePlus />
+      </IconToggle>
 
       <Divider />
 

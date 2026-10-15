@@ -7,6 +7,10 @@ import {
   Folder,
   type Highlight,
   type Ink,
+  IMAGE_TYPES,
+  type ImageBox,
+  ImageName,
+  type ImageType,
   Lecture,
   LectureStatus,
   LecturePlacement,
@@ -49,7 +53,8 @@ export interface LecturePatch {
 export type AnnotationPatch =
   | Partial<Omit<TextBox, "id" | "kind">>
   | Partial<Omit<Ink, "id" | "kind">>
-  | Partial<Omit<Highlight, "id" | "kind">>;
+  | Partial<Omit<Highlight, "id" | "kind">>
+  | Partial<Omit<ImageBox, "id" | "kind">>;
 
 export interface PlannerCardInput {
   readonly subjectId: string;
@@ -150,7 +155,7 @@ function hasKnownKind(value: unknown): boolean {
  *   library.json
  *   planner.json, tasks.json
  *   subjects/<subjectId>/subject.json, organization.json
- *   subjects/<subjectId>/lectures/<lectureId>/{lecture.json, lecture.pdf, annotations.json, notes.json, text.json}
+ *   subjects/<subjectId>/lectures/<lectureId>/{lecture.json, lecture.pdf, annotations.json, notes.json, text.json, images/}
  *
  * Every write parses the full record before storing it, and every read parses the stored JSON.
  */
@@ -378,6 +383,30 @@ export class Library {
     const bytes = await this.storage.readBytes(`${dir}/lecture.pdf`);
     if (bytes === undefined) {
       throw new NotFoundError("PDF", id);
+    }
+    return bytes;
+  }
+
+  /**
+   * Stores a picture for the material and returns its file name, for an image annotation to point at. The file is
+   * kept when the annotation is removed, so an undo can bring the picture back.
+   */
+  async addImage(lectureId: string, bytes: Uint8Array, type: ImageType): Promise<string> {
+    const { dir } = await this.locateLecture(lectureId);
+    const extension = IMAGE_TYPES[type];
+    if (extension === undefined) {
+      throw new InvalidError("A picture must be a PNG or a JPEG.");
+    }
+    const name = ImageName.parse(`${newId()}.${extension}`);
+    await this.storage.writeBytes(`${dir}/images/${name}`, bytes);
+    return name;
+  }
+
+  async getImage(lectureId: string, name: string): Promise<Uint8Array> {
+    const { dir } = await this.locateLecture(lectureId);
+    const bytes = await this.storage.readBytes(`${dir}/images/${ImageName.parse(name)}`);
+    if (bytes === undefined) {
+      throw new NotFoundError("Image", name);
     }
     return bytes;
   }

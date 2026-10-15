@@ -242,11 +242,12 @@ for (const theme of ["warm", "dark", "light"] as const) {
     // Boxes are stored in the order they are made, so the nth box on the page is the one just added.
     for (const [index, swatch] of INK_COLORS.entries()) {
       const word = `Readable ${swatch.name}`;
+      // The text tool keeps its own ink, so the swatch is picked once the tool is chosen.
+      await page.getByRole("button", { name: "Text box", exact: true }).click();
       const swatchButton = page.getByRole("button", { name: `Color ${swatch.name}` });
       await swatchButton.click();
       await expect(swatchButton).toHaveAttribute("aria-pressed", "true");
 
-      await page.getByRole("button", { name: "Text box", exact: true }).click();
       const pageBox = await pageOne.boundingBox();
       if (pageBox === null) throw new Error("page 1 is not on screen");
       await page.mouse.click(pageBox.x + pageBox.width * 0.2, pageBox.y + pageBox.height * (0.15 + index * 0.12));
@@ -424,10 +425,10 @@ test("the keyboard moves the notes edge in steps and to its limits, and a double
   await page.keyboard.press("ArrowRight");
   await expect(edge).toHaveAttribute("aria-valuenow", "324");
 
-  // The PDF keeps 620px, which is the floating toolbar's width, so the notes stop at 596px in a 1216px lecture area.
+  // The PDF keeps 660px, which is the floating toolbar's width, so the notes stop at 556px in a 1216px lecture area.
   await page.keyboard.press("End");
-  await expect(edge).toHaveAttribute("aria-valuenow", "596");
-  await expect.poll(() => notesWidth(page)).toBeCloseTo(596, 0);
+  await expect(edge).toHaveAttribute("aria-valuenow", "556");
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(556, 0);
   await page.keyboard.press("Home");
   await expect(edge).toHaveAttribute("aria-valuenow", "280");
   await expect.poll(() => notesWidth(page)).toBeCloseTo(280, 0);
@@ -510,9 +511,9 @@ test("the annotation toolbar stays whole when the notes are as wide as they go",
   await openLecture(page, "Refraction");
   await page.getByRole("button", { name: "Notes" }).click();
 
-  // Dragged well past the limit, so the notes stop at their widest: 596px at the 1280px desktop viewport.
+  // Dragged well past the limit, so the notes stop at their widest: 556px at the 1280px desktop viewport.
   await dragNotesEdge(page, -600);
-  await expect.poll(() => notesWidth(page)).toBeCloseTo(596, 0);
+  await expect.poll(() => notesWidth(page)).toBeCloseTo(556, 0);
 
   const toolbar = await page.getByRole("toolbar", { name: "Annotate" }).boundingBox();
   const pdfColumn = await page.locator(".desk").boundingBox();
@@ -774,6 +775,7 @@ const TOOLBAR_BUTTONS = [
   "Pen",
   "Highlighter",
   "Eraser",
+  "Add image",
   "Color Black",
   "Color Red",
   "Color Green",
@@ -818,10 +820,11 @@ test("the format bar sets a box's size, style, and color, and the choices surviv
   await expect.poll(() => fontPixels(field)).toBeCloseTo(18 * scale, 1);
   await expect(page.getByRole("button", { name: "Large text", exact: true })).toHaveAttribute("aria-pressed", "true");
 
-  // Boxes are italic until they are set otherwise, so Italic starts pressed and a click takes it off.
-  await expect(page.getByRole("button", { name: "Italic" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Italic" }).click();
+  // A new box is upright, so Italic starts off and a click turns it on.
   await expect(field).toHaveCSS("font-style", "normal");
+  await expect(page.getByRole("button", { name: "Italic" })).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Italic" }).click();
+  await expect(field).toHaveCSS("font-style", "italic");
 
   await page.getByRole("button", { name: "Bold" }).click();
   await expect(field).toHaveCSS("font-weight", "700");
@@ -841,7 +844,7 @@ test("the format bar sets a box's size, style, and color, and the choices surviv
   await page.locator('[data-kind="text"]').click();
   await expect(page.getByRole("button", { name: "Large text", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "Italic" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Italic" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Underline" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Red ink" })).toHaveAttribute("aria-pressed", "true");
 });
@@ -859,7 +862,7 @@ test("Ctrl+B, Ctrl+I, and Ctrl+U style the text as it is typed, and Tab and Esca
   await page.keyboard.press("Control+b");
   await expect(field).toHaveCSS("font-weight", "700");
   await page.keyboard.press("Control+i");
-  await expect(field).toHaveCSS("font-style", "normal");
+  await expect(field).toHaveCSS("font-style", "italic");
   await page.keyboard.press("Control+u");
   await expect.poll(() => computedStyle(field, "text-decoration-line")).toContain("underline");
   await page.keyboard.type(" more");
@@ -911,11 +914,11 @@ test("a text box is recoloured after the fact, and the palette and the bar stay 
   await expect(page.getByRole("group", { name: "Format text box" })).toHaveCount(0);
   expect(await toolbarLabels(page)).toEqual(TOOLBAR_BUTTONS);
 
-  // New boxes take the palette's ink, which is Blue, so the recolour goes to Ochre.
+  // New boxes start in Black, so the recolour goes to Ochre.
   await typeBoxOnPageOne(page, { x: 0.2, y: 0.3 }, "Recolour me");
   await page.getByRole("button", { name: "Select and move" }).click();
   await page.locator('[data-page-number="1"] [data-kind="text"]').click();
-  await expect(page.getByRole("button", { name: "Blue ink" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Black ink" })).toHaveAttribute("aria-pressed", "true");
   // The toolbar's own swatches are still the only "Color" buttons, and the bar has none of its own.
   expect(await toolbarLabels(page)).toEqual(TOOLBAR_BUTTONS);
   expect(await page.getByRole("toolbar", { name: "Annotate" }).getByRole("button", { name: "Bold" }).count()).toBe(0);
@@ -924,14 +927,14 @@ test("a text box is recoloured after the fact, and the palette and the bar stay 
   await expect(page.getByRole("textbox", { name: "Text box" })).toHaveCSS("color", rgbOf(INK_COLORS[4].value));
   await expect(page.getByRole("button", { name: "Ochre ink" })).toHaveAttribute("aria-pressed", "true");
 
-  // Undo takes the box back to Blue, and redo puts Ochre back. The bar belongs to the selected box, so it stays.
+  // Undo takes the box back to Black, and redo puts Ochre back. The bar belongs to the selected box, so it stays.
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("group", { name: "Format text box" })).toHaveCount(0);
   await page.keyboard.press("Control+z");
   await expect(page.locator('[data-page-number="1"] [data-kind="text"] textarea')).toHaveCSS(
     "color",
-    rgbOf(INK_COLORS[3].value),
+    rgbOf(INK_COLORS[0].value),
   );
   await page.keyboard.press("Control+Shift+z");
   await expect(page.locator('[data-page-number="1"] [data-kind="text"] textarea')).toHaveCSS(

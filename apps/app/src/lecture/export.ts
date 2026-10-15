@@ -1,4 +1,4 @@
-import { textBoxStyle, type Annotation, type Highlight, type Ink, type TextBox } from "@betternotez/core";
+import { textBoxStyle, type Annotation, type Highlight, type ImageBox, type Ink, type TextBox } from "@betternotez/core";
 import { BlendMode, degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { displaySize, displayToUser, normalizeRotation, type PageGeometry } from "./geometry";
 import { HIGHLIGHT_OPACITY } from "./highlight";
@@ -11,10 +11,14 @@ const UNDERLINE_THICKNESS_EM = 0.05;
 
 /**
  * Returns a copy of the PDF with the annotations drawn onto their pages. Text boxes become
- * Helvetica text and ink becomes filled paths, so any PDF viewer shows them. The source bytes
- * are not changed.
+ * Helvetica text, ink becomes filled paths, and pictures are embedded, so any PDF viewer shows them.
+ * The source bytes are not changed. `loadImage` reads a stored picture by its file name.
  */
-export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: readonly Annotation[]): Promise<Uint8Array> {
+export async function exportAnnotatedPdf(
+  pdfBytes: Uint8Array,
+  annotations: readonly Annotation[],
+  loadImage: (name: string) => Promise<Uint8Array>,
+): Promise<Uint8Array> {
   const document = await PDFDocument.load(pdfBytes);
   const fonts = new Map<StandardFonts, PDFFont>();
   const pages = document.getPages();
@@ -27,6 +31,8 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
       await drawTextBox(document, fonts, page, geometry, annotation);
     } else if (annotation.kind === "ink") {
       drawInk(page, geometry, annotation);
+    } else if (annotation.kind === "image") {
+      await drawImage(document, page, geometry, annotation, await loadImage(annotation.image));
     } else {
       drawHighlight(page, geometry, annotation);
     }
@@ -36,11 +42,32 @@ export async function exportAnnotatedPdf(pdfBytes: Uint8Array, annotations: read
 
 /**
  * The order the annotations are drawn in, which is the order the screen stacks them: highlights lie under
- * the page's text, strokes lie over the highlights, and text boxes lie on top. Within a kind, the list's order holds.
+ * the page's text, pictures lie over the highlights, strokes lie over the pictures, and text boxes lie on top. Within a kind, the list's order holds.
  */
 export function paintOrder(annotations: readonly Annotation[]): Annotation[] {
-  const layer = (annotation: Annotation): number => (annotation.kind === "highlight" ? 0 : annotation.kind === "ink" ? 1 : 2);
-  return [...annotations].sort((a, b) => layer(a) - layer(b));
+  return [...annotations].sort((a, b) => LAYERS[a.kind] - LAYERS[b.kind]);
+}
+
+const LAYERS: Record<Annotation["kind"], number> = { highlight: 0, image: 1, ink: 2, text: 3 };
+
+/** The picture fills its box. Its bottom-left corner on screen is the origin, turned with the page as text is. */
+async function drawImage(
+  document: PDFDocument,
+  page: PDFPage,
+  geometry: PageGeometry,
+  box: ImageBox,
+  bytes: Uint8Array,
+): Promise<void> {
+  const image = box.image.endsWith(".png") ? await document.embedPng(bytes) : await document.embedJpg(bytes);
+  const display = displaySize(geometry);
+  const origin = displayToUser(geometry, box.x, box.y + box.height);
+  page.drawImage(image, {
+    x: origin.x,
+    y: origin.y,
+    width: box.width * display.width,
+    height: box.height * display.height,
+    rotate: degrees(geometry.rotation),
+  });
 }
 
 function pageGeometry(page: PDFPage): PageGeometry {

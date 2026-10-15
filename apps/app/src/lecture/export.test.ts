@@ -1,9 +1,11 @@
-import type { Annotation, Highlight, TextBox } from "@betternotez/core";
+import type { Annotation, Highlight, ImageBox, TextBox } from "@betternotez/core";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { degrees, PDFDict, PDFDocument, PDFName, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { AnnotationId } from "@betternotez/core";
 import { exportAnnotatedPdf, paintOrder } from "./export";
+
+const noPictures = (): Promise<Uint8Array> => Promise.reject(new Error("This test has no pictures."));
 
 /** Each page is 300 by 400 points and holds its own number as text. */
 async function makePdf(pageCount: number, rotation = 0): Promise<Uint8Array> {
@@ -40,6 +42,38 @@ function textBox(overrides: Partial<TextBox>): TextBox {
 
 type OperatorList = { fnArray: number[]; argsArray: unknown[] };
 
+const ONE_PIXEL_PNG = Uint8Array.from(
+  atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="),
+  (char) => char.charCodeAt(0),
+);
+
+/** Where each picture lands, as x, y, width, height in PDF points: the unit square under the transforms in force. */
+function imageBoxes(list: OperatorList): number[][] {
+  const boxes: number[][] = [];
+  const stack: number[][] = [];
+  let matrix = [1, 0, 0, 1, 0, 0];
+  list.fnArray.forEach((fn, index) => {
+    if (fn === pdfjs.OPS.save) stack.push(matrix);
+    else if (fn === pdfjs.OPS.restore) matrix = stack.pop() ?? [1, 0, 0, 1, 0, 0];
+    else if (fn === pdfjs.OPS.transform) matrix = multiply(list.argsArray[index] as number[], matrix);
+    else if (fn === pdfjs.OPS.paintImageXObject) {
+      const [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0] = matrix;
+      const xs = [e, a + e, c + e, a + c + e];
+      const ys = [f, b + f, d + f, b + d + f];
+      const left = Math.min(...xs);
+      const bottom = Math.min(...ys);
+      boxes.push([left, bottom, Math.max(...xs) - left, Math.max(...ys) - bottom].map((value) => Math.round(value * 1000) / 1000));
+    }
+  });
+  return boxes;
+}
+
+function multiply(m: readonly number[], n: readonly number[]): number[] {
+  const [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0] = m;
+  const [g = 0, h = 0, i = 0, j = 0, k = 0, l = 0] = n;
+  return [a * g + b * i, a * h + b * j, c * g + d * i, c * h + d * j, e * g + f * i + k, e * h + f * j + l];
+}
+
 /**
  * The first filled path on a page as x, y, width, height in PDF points. pdf-lib places each box
  * with a translation inside its own save and restore pair, and pdf.js reports the path's extents
@@ -72,7 +106,7 @@ function graphicsStates(list: OperatorList): unknown[] {
 
 describe("exportAnnotatedPdf", () => {
   it("draws a text box on its own page and leaves the other pages without it", async () => {
-    const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({})]);
+    const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({})], noPictures);
     const pdf = await openPdf(exported);
 
     const onPage2 = (await (await pdf.getPage(2)).getTextContent()).items.map((item) => ("str" in item ? item.str : ""));
@@ -83,7 +117,7 @@ describe("exportAnnotatedPdf", () => {
   });
 
   it("places the text where the box is, measured from the top-left of an unrotated page", async () => {
-    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [textBox({})]));
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [textBox({})], noPictures));
     const page = await pdf.getPage(2);
     const item = (await page.getTextContent()).items.find((entry) => "str" in entry && entry.str.includes("Hello"));
     if (item === undefined || !("transform" in item)) throw new Error("exported text not found");
@@ -95,7 +129,7 @@ describe("exportAnnotatedPdf", () => {
   });
 
   it("keeps the text on the same spot of a page rotated 90 degrees clockwise", async () => {
-    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3, 90), [textBox({})]));
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3, 90), [textBox({})], noPictures));
     const page = await pdf.getPage(2);
     const item = (await page.getTextContent()).items.find((entry) => "str" in entry && entry.str.includes("Hello"));
     if (item === undefined || !("transform" in item)) throw new Error("exported text not found");
@@ -130,11 +164,50 @@ describe("exportAnnotatedPdf", () => {
       color: "#ffd21f",
     };
 
-    expect(paintOrder([text, stroke, highlight]).map((annotation) => annotation.kind)).toEqual([
+    const picture: ImageBox = {
+      id: AnnotationId.parse("01ORDERIMAGE0000000000000"),
+      kind: "image",
+      page: 2,
+      author: "user",
+      x: 0.1,
+      y: 0.1,
+      width: 0.2,
+      height: 0.2,
+      image: "01ORDERPICTURE00000000000.jpg",
+    };
+
+    expect(paintOrder([text, stroke, picture, highlight]).map((annotation) => annotation.kind)).toEqual([
       "highlight",
+      "image",
       "ink",
       "text",
     ]);
+  });
+
+  it("draws a picture filling its box, and reads it by its stored name", async () => {
+    const picture: ImageBox = {
+      id: AnnotationId.parse("01IMAGEEXPORT000000000000"),
+      kind: "image",
+      page: 2,
+      author: "user",
+      x: 0.1,
+      y: 0.2,
+      width: 0.5,
+      height: 0.25,
+      image: "01PICTURE0000000000000000.png",
+    };
+    const asked: string[] = [];
+
+    const pdf = await openPdf(
+      await exportAnnotatedPdf(await makePdf(3), [picture], async (name) => {
+        asked.push(name);
+        return ONE_PIXEL_PNG;
+      }),
+    );
+
+    expect(asked).toEqual(["01PICTURE0000000000000000.png"]);
+    expect(imageBoxes(await (await pdf.getPage(2)).getOperatorList())).toEqual([[30, 220, 150, 100]]);
+    expect(imageBoxes(await (await pdf.getPage(1)).getOperatorList())).toEqual([]);
   });
 
   it("draws a pen stroke as a filled path on its page", async () => {
@@ -151,7 +224,7 @@ describe("exportAnnotatedPdf", () => {
       color: "#2563eb",
       size: 3,
     };
-    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [stroke]));
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [stroke], noPictures));
     const pageThree = await (await pdf.getPage(3)).getOperatorList();
     const pageOne = await (await pdf.getPage(1)).getOperatorList();
 
@@ -170,7 +243,7 @@ describe("exportAnnotatedPdf", () => {
       text: "Original page 2",
       color: "#a8701b",
     };
-    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [highlightBox]));
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(3), [highlightBox], noPictures));
     const pageTwo = await (await pdf.getPage(2)).getOperatorList();
     const pageOne = await (await pdf.getPage(1)).getOperatorList();
 
@@ -191,7 +264,7 @@ describe("exportAnnotatedPdf", () => {
       text: "Original page 1",
       color: "#2b4b78",
     };
-    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(1, 90), [highlightBox]));
+    const pdf = await openPdf(await exportAnnotatedPdf(await makePdf(1, 90), [highlightBox], noPictures));
 
     // On the reader's 400 by 300 page the box spans x 40 to 160 and y 60 to 90. Unrotated, that is
     // x 60 to 90 and y 40 to 160.
@@ -199,7 +272,7 @@ describe("exportAnnotatedPdf", () => {
   });
 
   it("writes characters Helvetica cannot draw as question marks instead of failing", async () => {
-    const exported = await exportAnnotatedPdf(await makePdf(1), [textBox({ page: 1, text: "x → y" })]);
+    const exported = await exportAnnotatedPdf(await makePdf(1), [textBox({ page: 1, text: "x → y" })], noPictures);
     const pdf = await openPdf(exported);
     const text = (await (await pdf.getPage(1)).getTextContent()).items.map((item) => ("str" in item ? item.str : "")).join("");
 
@@ -229,14 +302,14 @@ describe("exportAnnotatedPdf", () => {
     }
 
     it("draws a box at the size it was set to", async () => {
-      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ fontSize: 24 })]);
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ fontSize: 24 })], noPictures);
 
       expect((await textOf(exported, 2, "Hello")).size).toBeCloseTo(24, 3);
     });
 
     it("uses the 14 point size for a box that does not set one", async () => {
       const { fontSize: _fontSize, ...withoutSize } = textBox({});
-      const exported = await exportAnnotatedPdf(await makePdf(3), [withoutSize as Annotation]);
+      const exported = await exportAnnotatedPdf(await makePdf(3), [withoutSize as Annotation], noPictures);
 
       expect((await textOf(exported, 2, "Hello")).size).toBeCloseTo(14, 3);
     });
@@ -248,13 +321,13 @@ describe("exportAnnotatedPdf", () => {
         [{ bold: true, italic: true }, "Helvetica-BoldOblique"],
       ] as const;
       for (const [style, face] of cases) {
-        const exported = await exportAnnotatedPdf(await makePdf(3), [textBox(style)]);
+        const exported = await exportAnnotatedPdf(await makePdf(3), [textBox(style)], noPictures);
         expect(await baseFontsOn(exported, 2)).toContain(face);
       }
     });
 
     it("draws upright Helvetica for a box with neither bold nor italic", async () => {
-      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ bold: false, italic: false })]);
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ bold: false, italic: false })], noPictures);
       const fonts = await baseFontsOn(exported, 2);
 
       expect(fonts).not.toContain("Helvetica-Bold");
@@ -264,13 +337,13 @@ describe("exportAnnotatedPdf", () => {
 
     it("exports a box with no italic setting in italic, the face it has always been drawn in on screen", async () => {
       const { italic: _italic, ...withoutItalic } = textBox({});
-      const exported = await exportAnnotatedPdf(await makePdf(3), [withoutItalic as Annotation]);
+      const exported = await exportAnnotatedPdf(await makePdf(3), [withoutItalic as Annotation], noPictures);
 
       expect(await baseFontsOn(exported, 2)).toContain("Helvetica-Oblique");
     });
 
     it("draws the text in the box's colour", async () => {
-      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ color: "#a3321f" })]);
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ color: "#a3321f" })], noPictures);
       const page = await (await openPdf(exported)).getPage(2);
       const operators = await page.getOperatorList();
       const fill = operators.fnArray.reduce<number[]>((found, fn, index) => {
@@ -283,8 +356,8 @@ describe("exportAnnotatedPdf", () => {
     });
 
     it("draws a line under each line of an underlined box, and none under a plain one", async () => {
-      const underlined = await exportAnnotatedPdf(await makePdf(3), [textBox({ underline: true, text: "One two" })]);
-      const plain = await exportAnnotatedPdf(await makePdf(3), [textBox({ text: "One two" })]);
+      const underlined = await exportAnnotatedPdf(await makePdf(3), [textBox({ underline: true, text: "One two" })], noPictures);
+      const plain = await exportAnnotatedPdf(await makePdf(3), [textBox({ text: "One two" })], noPictures);
       const strokes = async (bytes: Uint8Array) =>
         (await (await openPdf(bytes)).getPage(2)).getOperatorList().then((list) =>
           list.fnArray.filter((fn) => fn === pdfjs.OPS.constructPath).length,
@@ -303,7 +376,7 @@ describe("exportAnnotatedPdf", () => {
     }
 
     it("places the underline under its text, running along the line from the left edge", async () => {
-      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ underline: true, text: "Hello" })]);
+      const exported = await exportAnnotatedPdf(await makePdf(3), [textBox({ underline: true, text: "Hello" })], noPictures);
       const { origin } = await textOf(exported, 2, "Hello");
       const [minX = Number.NaN, minY = Number.NaN, maxX = Number.NaN, maxY = Number.NaN] = await lastStrokeBox(exported, 2);
 
@@ -314,7 +387,7 @@ describe("exportAnnotatedPdf", () => {
     });
 
     it("turns the underline with the text on a page rotated 90 degrees", async () => {
-      const exported = await exportAnnotatedPdf(await makePdf(3, 90), [textBox({ underline: true, text: "Hello" })]);
+      const exported = await exportAnnotatedPdf(await makePdf(3, 90), [textBox({ underline: true, text: "Hello" })], noPictures);
       const { origin, size } = await textOf(exported, 2, "Hello");
       const [minX = Number.NaN, minY = Number.NaN, maxX = Number.NaN, maxY = Number.NaN] = await lastStrokeBox(exported, 2);
 
