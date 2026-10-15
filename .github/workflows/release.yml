@@ -63,6 +63,14 @@ jobs:
           args: ${{ matrix.args }}
           uploadUpdaterJson: true
 
+      # An app whose bundle is not signed as a whole opens on a Mac as "damaged", with only a Move to Trash button.
+      - name: Check the macOS app is signed as a whole
+        if: matrix.platform == 'macos-latest'
+        run: |
+          app=$(find apps/app/src-tauri/target -type d -name BetterNotez.app -path '*/bundle/macos/*')
+          test -n "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+
   mcp-bundle:
     needs: publish
     permissions:
