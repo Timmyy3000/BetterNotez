@@ -3,6 +3,8 @@ import { CircleAlert } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { errorMessage } from "../lib/errors";
+import { sortLectures } from "../lib/lectures";
+import { readingOrder, readOrganization } from "../lib/organization";
 import { useLibrary, useLibraryQuery } from "../library";
 import { EmptyState } from "../ui/empty-state";
 import { QueryError } from "../ui/query-error";
@@ -12,10 +14,22 @@ const LectureView = lazy(() => import("../lecture/LectureView").then((module) =>
 
 export function LecturePage() {
   const { lectureId = "" } = useParams();
+  // Stepping to another material changes only the route, so a fresh page keeps the last PDF from showing in the next one.
+  return <LectureScreen key={lectureId} lectureId={lectureId} />;
+}
+
+function LectureScreen({ lectureId }: { readonly lectureId: string }) {
   const page = useLibraryQuery(
     async (library) => {
       const lecture = await library.getLecture(lectureId);
-      return { lecture, subject: await library.getSubject(lecture.subjectId) };
+      const [subject, lectures, organization] = await Promise.all([
+        library.getSubject(lecture.subjectId),
+        library.listLectures(lecture.subjectId),
+        readOrganization(library, lecture.subjectId),
+      ]);
+      const order = readingOrder(organization.folders, sortLectures(lectures), organization.lectures);
+      const at = order.findIndex((item) => item.id === lecture.id);
+      return { lecture, subject, previous: order[at - 1], next: order[at + 1] };
     },
     [lectureId],
   );
@@ -44,9 +58,10 @@ export function LecturePage() {
   return (
     <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Opening material…</div>}>
       <LectureView
-        key={lectureId}
         lecture={page.data.lecture}
         subject={page.data.subject}
+        previous={page.data.previous}
+        next={page.data.next}
         pdfBytes={pdf.bytes}
         doc={pdf.doc}
       />

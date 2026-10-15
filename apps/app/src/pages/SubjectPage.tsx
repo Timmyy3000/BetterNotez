@@ -11,14 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  UnreadableOrganizationError,
-  type Folder,
-  type Lecture,
-  type LectureStatus,
-  type Library,
-  type SubjectOrganization,
-} from "@betternotez/core";
+import type { Folder, Lecture, LectureStatus } from "@betternotez/core";
 import { Check, Ellipsis, FileText, FolderPlus, GripVertical, Pencil, Trash2, Upload } from "lucide-react";
 import { useRef, useState, type DragEvent, type ReactNode, type RefObject } from "react";
 import { Link, useParams } from "react-router";
@@ -33,7 +26,7 @@ import { cn } from "../lib/cn";
 import { errorMessage } from "../lib/errors";
 import { countLabel, displayTitle, lectureMeta } from "../lib/format";
 import { revealAt } from "../lib/motion";
-import { countByStatus, groupLectures, type Section, type StatusFilter } from "../lib/organization";
+import { countByStatus, groupLectures, readOrganization, type Section, type StatusFilter } from "../lib/organization";
 import { sortLectures } from "../lib/lectures";
 import { subjectTone } from "../lib/subject-colors";
 import { selectPdfs } from "../pdf/import";
@@ -63,6 +56,7 @@ const FILTERS: readonly { readonly value: StatusFilter; readonly label: string }
 ];
 
 const UNFILED_TARGET = "unfiled";
+const UNFILED_NAME = "Not in a folder";
 const FOLDER_TARGET = "folder:";
 
 export function SubjectPage() {
@@ -108,7 +102,7 @@ export function SubjectPage() {
   const nameOfTarget = (id: string | number | undefined) => {
     if (id === undefined) return "a folder";
     const target = targetFolder(String(id));
-    return target === null ? "Unfiled" : (folders.find((folder) => folder.id === target)?.name ?? "a folder");
+    return target === null ? UNFILED_NAME : (folders.find((folder) => folder.id === target)?.name ?? "a folder");
   };
   const close = () => setDialog(null);
 
@@ -361,25 +355,13 @@ export function SubjectPage() {
   );
 }
 
-async function readOrganization(
-  library: Library,
-  subjectId: string,
-): Promise<SubjectOrganization & { readonly readable: boolean }> {
-  try {
-    return { ...(await library.getOrganization(subjectId)), readable: true };
-  } catch (error) {
-    if (error instanceof UnreadableOrganizationError) return { folders: [], lectures: {}, readable: false };
-    throw error;
-  }
-}
-
 function targetFolder(target: string): string | null {
   return target === UNFILED_TARGET ? null : target.slice(FOLDER_TARGET.length);
 }
 
 function emptyHint(section: Section, filter: StatusFilter): string {
   if (filter !== "all") return "No material matches this filter.";
-  return section.folder === undefined ? "Drop material here to unfile it." : "Drop material here.";
+  return section.folder === undefined ? "Drop material here to take it out of its folder." : "Drop material here.";
 }
 
 function FolderSection({
@@ -394,7 +376,7 @@ function FolderSection({
   readonly onDelete: (folder: Folder) => void;
 }) {
   const { folder } = section;
-  const name = folder?.name ?? "Unfiled";
+  const name = folder?.name ?? UNFILED_NAME;
   const { setNodeRef, isOver } = useDroppable({
     id: folder === undefined ? UNFILED_TARGET : `${FOLDER_TARGET}${folder.id}`,
   });

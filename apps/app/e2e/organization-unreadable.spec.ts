@@ -107,7 +107,7 @@ test("a subject whose organization.json cannot be read still lists its material,
 
   await expect(page.getByRole("link", { name: "Lecture 1", exact: true })).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText(ALERT);
-  await expect(page.getByRole("heading", { name: "Unfiled", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Not in a folder", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Done: / })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Move Lecture 1", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "New folder" })).toHaveCount(0);
