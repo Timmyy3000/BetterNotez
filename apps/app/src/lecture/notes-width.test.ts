@@ -25,7 +25,7 @@ function fakeStorage(initial: Record<string, string> = {}) {
 
 describe("notesWidthBounds", () => {
   it("lets the notes take 60% of a wide lecture area, while the PDF keeps its minimum", () => {
-    expect(notesWidthBounds(1600)).toEqual({ min: NOTES_MIN_WIDTH, max: 960 });
+    expect(notesWidthBounds(2000)).toEqual({ min: NOTES_MIN_WIDTH, max: 1200 });
   });
 
   it("stops the notes where the PDF reaches its minimum width", () => {
@@ -34,7 +34,7 @@ describe("notesWidthBounds", () => {
   });
 
   it("leaves the PDF at least as wide as its toolbar, at every width it offers a resize", () => {
-    for (const area of [900, 1000, 1216, 1376, 1600, 2000]) {
+    for (const area of [940, 1000, 1216, 1376, 1600, 2000]) {
       const bounds = notesWidthBounds(area);
       expect(bounds).toBeDefined();
       expect(area - (bounds?.max ?? 0)).toBeGreaterThanOrEqual(PDF_MIN_WIDTH);

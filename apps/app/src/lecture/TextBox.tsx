@@ -152,7 +152,10 @@ export function TextBoxView({
   function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
     const current = currentBox();
     if (current === undefined) return;
-    store.getState().preview([{ type: "put", next: { ...current, text: event.target.value } }]);
+    // The box grows to fit text that wraps past its bottom edge. The border is the 2 pixels the field does not count.
+    const needed = Math.min((event.target.scrollHeight + 2) / height, 1 - current.y);
+    const grown = needed > current.height ? { height: needed } : {};
+    store.getState().preview([{ type: "put", next: { ...current, ...grown, text: event.target.value } }]);
     scheduleSave();
   }
 
